@@ -501,7 +501,9 @@ Every request runs its queries in a transaction that starts with:
 SELECT set_config('app.garage_id', $1, true);   -- true = local to this transaction
 ```
 
-Implement this once as a Prisma client extension (`$allOperations` wrapped in `$transaction`) in `packages/database`, used through the tenant context from `apps/api/src/common`. Application code never calls `set_config` directly.
+This is implemented once as `runAsTenant(client, garageId, fn)` in `packages/database/src/tenant.ts`: an interactive `$transaction` that runs `set_config` first and then `fn(tx)`. The API uses it only through `TenantDb.run(fn)` (`apps/api/src/common/db`), which takes the garage from the request context. Application code never calls `set_config` directly and never gets the raw `gearva_app` client.
+
+Why not a `$allOperations` client extension: it wraps each query in its own batch transaction, so it cannot hold a row lock across several queries. Invoice numbering and payments (flow.md sections 7.1 and 8.1) need exactly that, so one explicit transaction per unit of work is used instead.
 
 ### 6.4 Owner (mobile) access
 

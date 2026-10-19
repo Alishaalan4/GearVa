@@ -125,7 +125,7 @@ cp .env.example .env
 npm run db:up
 
 # 4. Database
-npm run db:migrate        # apply migrations (also applies RLS SQL)
+(cd packages/database && npx prisma migrate deploy)   # apply all migrations (incl. RLS SQL); rerun after any DB wipe
 npm run db:seed           # super-admin, default service types, a demo garage
 
 # 5. Run everything

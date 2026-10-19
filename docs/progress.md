@@ -10,8 +10,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Docs | Review and first doc fixes | ✅ Done | 2026-10-19 ~09:56 |
 | 0 | Skeleton | ✅ Done | 2026-10-19 10:37 |
 | 1 | 1.1 Database base (roles, schema, RLS, guard-rail tests) | ✅ Done | 2026-10-19 11:02 |
-| 1 | 1.2 API foundations | ⏳ Next | |
-| 1 | 1.3 Minimal notifications | | |
+| 1 | 1.2 API foundations | ✅ Done | 2026-10-19 14:38 |
+| 1 | 1.3 Minimal notifications | ⏳ Next | |
 | 1 | 1.4 Admin auth (2FA) | | |
 | 1 | 1.5 Admin garage management | | |
 | 1 | 1.6 Staff side (login, roles, branches, lock) | | |
@@ -88,5 +88,48 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Verified:** `npx prisma migrate dev`, `npm test` in `packages/database` (7 passing), `npm run lint`, `npm run typecheck`.
 **Commit:** `1b44307` — 2026-10-19 11:02
+
+---
+
+## Phase 1 · Step 1.2 — API foundations
+**When:** 2026-10-19 ~12:10 → 14:38 (~2 h 30 min, including three test-setup fixes)
+
+**Implements:** README sections 5.1 (items 2–4), 5.4 (pagination), 5.6 (error shape, audit), rate limiting from section 2; database.md section 6.3.
+
+**Summary:** The API now has everything later endpoints build on: it refuses to start with bad env vars; every request carries a tenant context (who, which garage, role, branch); garage code reaches tenant tables only through `TenantDb.run()`, which sets `app.garage_id` inside one transaction so RLS filters every query; errors always come back as `{ code, message, details }`; lists use one shared pagination schema (max 50); every successful mutating request writes an `audit_logs` row; requests are rate limited (120/min per IP, stored in Redis).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/errors.ts` | `ERROR_CODES` constants + `ApiErrorBody` type |
+| `packages/contracts/src/pagination.ts` | `paginationQuerySchema` (Zod, max 50, default 20) + `Paginated<T>` |
+| `packages/contracts/src/index.ts`, `package.json` | Export the above; add `zod` |
+| `packages/database/src/tenant.ts` | `runAsTenant()`: one transaction, `set_config` first — the only place it is called |
+| `packages/database/src/index.ts`, `src/client.ts` | Export `runAsTenant`, `TenantTx`; comment update |
+| `apps/api/src/config/env.ts`, `env.module.ts` | Zod-validated env (`ENV` provider); reads root `.env` with `parseEnv` |
+| `apps/api/src/common/context/request-context.ts` | `Actor` + `RequestContext` on nestjs-cls; `requireGarageId()` fails closed |
+| `apps/api/src/common/db/*` | `TenantDb` (gearva_app + RLS), `PlatformDb` (gearva_platform), providers, `DatabaseModule` (raw clients not exported) |
+| `apps/api/src/common/errors/*` | `AppException` + `AllExceptionsFilter` (error shape, no leaked internals) |
+| `apps/api/src/common/pagination.ts` | `PaginationQueryDto`, `toSkipTake()`, `paginated()` |
+| `apps/api/src/common/redis/redis.module.ts` | Shared Redis connection, closed on shutdown |
+| `apps/api/src/audit/*` | `@Audit()` decorator, `AuditService`, global `AuditInterceptor` |
+| `apps/api/src/app.module.ts` | Wires CLS, DB, Redis, throttler (Redis storage), Zod pipe, filter, guard |
+| `apps/api/src/main.ts` | Port from env; `trust proxy` for Render |
+| `apps/api/src/health/health.controller.ts` | `@SkipThrottle()` |
+| `apps/api/test/foundations.spec.ts` | 7 HTTP tests: health, 404 shape, max page size, garage A/B isolation, fail-closed, audit row |
+| `apps/api/package.json`, `tsconfig.spec.json` | New deps; Jest + ts-jest config; `test` runs Jest with `--experimental-vm-modules` |
+| `README.md` | Getting started: `npx prisma migrate deploy` (rerun after a DB wipe) |
+
+**Doc changes:** database.md 6.3 — the tenant wrapper is an explicit `runAsTenant()` transaction, not a `$allOperations` extension, because invoice numbering and payments need row locks held across several queries. README section 4 — migration command.
+
+**Problems hit and fixed**
+- Local DB had been recreated empty → applied the migration with `npx prisma migrate deploy`.
+- Jest gives each test file its own `process.env`, so `process.loadEnvFile()` did not reach it → env is parsed with `parseEnv` and copied in.
+- Prisma 7 loads its query engine with `import()`, which Jest only allows with `--experimental-vm-modules` → added the flag to the `test` script.
+
+**Known shortcut:** API tests leave two `[test]` garages in the local DB (their audit rows are append-only). `npm run db:reset` clears them; step 1.7 moves tests to their own database.
+
+**Verified:** `npm test` (7 database + 7 API tests passing), `npm run typecheck`, `npm run lint`, `npm run format`.
+**Commit:** pending — `Phase 1.2: API foundations`
 
 ---

@@ -1,12 +1,283 @@
 // Source of truth for this schema: docs/database.md.
-// Models are added from Phase 1 onwards.
+// RLS policies, grants and partial indexes live as raw SQL in the migrations (section 10).
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums (database.md section 5)
+// ---------------------------------------------------------------------------
+
+enum GarageStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  MECHANIC
+  RECEPTIONIST
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum SubjectType {
+  STAFF
+  ADMIN
+  OWNER
+}
+
+enum ActorType {
+  STAFF
+  ADMIN
+  OWNER
+  SYSTEM
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+  PUSH
+  WHATSAPP
+}
+
+enum NotificationType {
+  SERVICE_REMINDER
+  MONTHLY_REMINDER
+  INVOICE
+  OFFER
+  INVITE
+  CAR_READY
+  WARRANTY_END
+  PAYMENT_REMINDER
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+// ---------------------------------------------------------------------------
+// Platform tables (section 4.1, no garage_id, no RLS)
+// ---------------------------------------------------------------------------
+
+model AdminUser {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  name              String
+  role              AdminRole
+  totpSecretEnc     String?   @map("totp_secret_enc")
+  totpEnabled       Boolean   @default(false) @map("totp_enabled")
+  recoveryCodesHash String[]  @default([]) @map("recovery_codes_hash")
+  isActive          Boolean   @default(true) @map("is_active")
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdGarages Garage[]
+
+  @@map("admin_users")
+}
+
+model Session {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  subjectType      SubjectType @map("subject_type")
+  // id in users / admin_users / owners, so no foreign key
+  subjectId        String      @map("subject_id") @db.Uuid
+  refreshTokenHash String      @unique @map("refresh_token_hash")
+  userAgent        String?     @map("user_agent")
+  ip               String?
+  expiresAt        DateTime    @map("expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime?   @map("revoked_at") @db.Timestamptz(3)
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([subjectType, subjectId])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Tenant root and settings (section 4.2)
+// ---------------------------------------------------------------------------
+
+model Garage {
+  id               String       @id @default(uuid(7)) @db.Uuid
+  name             String
+  email            String
+  phone            String
+  locationText     String       @map("location_text")
+  timezone         String       @default("Asia/Beirut")
+  defaultLocale    String       @map("default_locale")
+  status           GarageStatus
+  isPaid           Boolean      @default(false) @map("is_paid")
+  trialEndsAt      DateTime?    @map("trial_ends_at") @db.Timestamptz(3)
+  expiresAt        DateTime?    @map("expires_at") @db.Timestamptz(3)
+  suspendedAt      DateTime?    @map("suspended_at") @db.Timestamptz(3)
+  suspendedReason  String?      @map("suspended_reason")
+  createdByAdminId String       @map("created_by_admin_id") @db.Uuid
+  lastLoginAt      DateTime?    @map("last_login_at") @db.Timestamptz(3)
+  deletedAt        DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdByAdmin AdminUser       @relation(fields: [createdByAdminId], references: [id])
+  settings       GarageSettings?
+  branches       Branch[]
+  users          User[]
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+
+  @@index([status, expiresAt])
+  @@map("garages")
+}
+
+model GarageSettings {
+  garageId            String   @id @map("garage_id") @db.Uuid
+  // FK to files is added in the Phase 3 migration (forward reference, section 10)
+  logoFileId          String?  @map("logo_file_id") @db.Uuid
+  brandColor          String   @default("#111827") @map("brand_color")
+  invoiceNumberFormat String   @default("{BRANCH}-{YYYY}-{SEQ:4}") @map("invoice_number_format")
+  termsText           String?  @map("terms_text")
+  autoSendInvoice     Boolean  @default(false) @map("auto_send_invoice")
+  showLbp             Boolean  @default(false) @map("show_lbp")
+  // display-only rate: LBP per 1 USD
+  lbpRate             Int?     @map("lbp_rate")
+  vatEnabled          Boolean  @default(false) @map("vat_enabled")
+  vatRatePercent      Decimal? @map("vat_rate_percent") @db.Decimal(5, 2)
+  vatNumber           String?  @map("vat_number")
+  paymentReminderDays Int?     @map("payment_reminder_days")
+  reminderLeadKm      Int      @default(500) @map("reminder_lead_km")
+  reminderLeadDays    Int      @default(7) @map("reminder_lead_days")
+  defaultDailyKm      Int?     @map("default_daily_km")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage Garage @relation(fields: [garageId], references: [id])
+
+  @@map("garage_settings")
+}
+
+model Branch {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  garageId  String   @map("garage_id") @db.Uuid
+  name      String
+  code      String
+  address   String?
+  phone     String?
+  isMain    Boolean  @default(false) @map("is_main")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage Garage @relation(fields: [garageId], references: [id])
+  users  User[]
+
+  @@unique([garageId, code])
+  @@map("branches")
+}
+
+model User {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  garageId        String    @map("garage_id") @db.Uuid
+  // null = access to all branches (owner/manager)
+  branchId        String?   @map("branch_id") @db.Uuid
+  // globally unique login identity, stored lowercase
+  email           String    @unique
+  passwordHash    String?   @map("password_hash")
+  name            String
+  role            StaffRole
+  locale          String
+  isActive        Boolean   @default(true) @map("is_active")
+  inviteTokenHash String?   @unique @map("invite_token_hash")
+  inviteExpiresAt DateTime? @map("invite_expires_at") @db.Timestamptz(3)
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage        Garage         @relation(fields: [garageId], references: [id])
+  branch        Branch?        @relation(fields: [branchId], references: [id])
+  notifications Notification[]
+
+  @@index([garageId, role])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications and audit (section 4.6)
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id           String              @id @default(uuid(7)) @db.Uuid
+  garageId     String              @map("garage_id") @db.Uuid
+  // FK to owners is added in the Phase 2 migration (forward reference, section 10)
+  ownerId      String?             @map("owner_id") @db.Uuid
+  userId       String?             @map("user_id") @db.Uuid
+  channel      NotificationChannel
+  type         NotificationType
+  template     String
+  locale       String
+  recipient    String?
+  payload      Json
+  status       NotificationStatus  @default(QUEUED)
+  error        String?
+  dedupeKey    String              @map("dedupe_key")
+  scheduledFor DateTime?           @map("scheduled_for") @db.Timestamptz(3)
+  sentAt       DateTime?           @map("sent_at") @db.Timestamptz(3)
+  deliveredAt  DateTime?           @map("delivered_at") @db.Timestamptz(3)
+  readAt       DateTime?           @map("read_at") @db.Timestamptz(3)
+  refType      String?             @map("ref_type")
+  refId        String?             @map("ref_id") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage Garage @relation(fields: [garageId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@unique([garageId, dedupeKey])
+  @@index([garageId, status, scheduledFor])
+  @@index([ownerId, readAt])
+  @@map("notifications")
+}
+
+// Append-only: no updatedAt, and no UPDATE/DELETE grant for the runtime roles.
+model AuditLog {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  // null only for admin/system actions that touch no garage
+  garageId   String?   @map("garage_id") @db.Uuid
+  actorType  ActorType @map("actor_type")
+  actorId    String?   @map("actor_id") @db.Uuid
+  action     String
+  entityType String    @map("entity_type")
+  entityId   String?   @map("entity_id") @db.Uuid
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // RESTRICT, not SET NULL: audit rows are never rewritten.
+  garage Garage? @relation(fields: [garageId], references: [id], onDelete: Restrict)
+
+  @@index([garageId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
 }

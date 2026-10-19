@@ -6,10 +6,16 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: gearva
+      # Local-only passwords for the three app roles; they match .env.example.
+      GEARVA_MIGRATOR_PASSWORD: gearva_migrator
+      GEARVA_APP_PASSWORD: gearva_app
+      GEARVA_PLATFORM_PASSWORD: gearva_platform
     ports:
       - '5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./packages/database/sql:/gearva-sql:ro
+      - ./packages/database/sql/docker-init.sh:/docker-entrypoint-initdb.d/10-gearva-roles.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d gearva']
       interval: 5s

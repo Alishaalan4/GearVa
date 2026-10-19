@@ -152,7 +152,9 @@ Key/value (`key` PK, `value` jsonb). Examples: `reminder.sendTimeLocal`, `remind
 The branch count is derived from active `branches` rows (extra branches are billed separately, so the admin sees `COUNT(branches) - 1`).
 
 #### `garage_settings` (1:1 with garage, `garageId` is PK)
-`logoFileId?` (FK to `files` added in the Phase 3 migration), `brandColor`, `invoiceNumberFormat` (default `{BRANCH}-{YYYY}-{SEQ:4}`), `termsText?`, `autoSendInvoice` bool, `showLbp` bool, `lbpRate` int?, `vatEnabled` bool (default false), `vatRatePercent` numeric?, `vatNumber?`, `paymentReminderDays` int?, `reminderLeadKm` int (default 500), `reminderLeadDays` int (default 7), `defaultDailyKm` int?, `invoiceEditWindow` (default `SAME_DAY`).
+`logoFileId?` (FK to `files` added in the Phase 3 migration), `brandColor` (default `#111827`), `invoiceNumberFormat` (default `{BRANCH}-{YYYY}-{SEQ:4}`), `termsText?`, `autoSendInvoice` bool (default false), `showLbp` bool (default false), `lbpRate` int? (LBP per 1 USD, display only), `vatEnabled` bool (default false), `vatRatePercent` numeric(5,2)?, `vatNumber?`, `paymentReminderDays` int?, `reminderLeadKm` int (default 500), `reminderLeadDays` int (default 7), `defaultDailyKm` int?, `invoiceEditWindow` (default `SAME_DAY`).
+
+`invoiceEditWindow` is added in the Phase 3 migration, together with its enum, because its possible values are defined by the invoice edit rules (flow.md section 7.5). All other columns exist from Phase 1.
 
 #### `branches`
 `id`, `garageId`, `name`, `code` (e.g. `BR1`, **U** per garage), `address?`, `phone?`, `isMain` bool, `isActive` bool.
@@ -412,7 +414,7 @@ Dedupe key examples: `SERVICE_REMINDER:{reminderId}:{notifyCount}`, `MONTHLY_REM
 #### `files`
 `id`, `garageId`, `kind` (`LOGO`, `SERVICE_PHOTO`, `INVOICE_PDF`, `OFFER_IMAGE`), `storageKey`, `mimeType`, `sizeBytes`, `serviceRecordId?`, `createdById`. Photos belong to a service record. Access is always through the API (signed, short-lived URLs).
 
-#### `audit_logs` (append-only)
+#### `audit_logs` (append-only, `createdAt` only, no `updatedAt`)
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
@@ -466,7 +468,7 @@ Enum values are mirrored in `packages/contracts` so the API, web and mobile apps
 
 **Creating the roles.** Roles are cluster-level and need a superuser (or `CREATEROLE`), which `gearva_migrator` must not have, so they are **not** created in a Prisma migration. Instead:
 - A one-time bootstrap script `packages/database/sql/bootstrap-roles.sql` creates the three roles (passwords from env) and makes `gearva_migrator` the owner of the database's `public` schema. Locally, Docker Compose runs it on first start of an empty Postgres volume. On Render, run it once as the admin user from the dashboard's shell or `psql`.
-- The first Prisma migration (run as `gearva_migrator`) then grants table rights to `gearva_app` and `gearva_platform`, and sets `ALTER DEFAULT PRIVILEGES` so tables from later migrations get the same rights. Keep the passwords in env variables.
+- Every Prisma migration (run as `gearva_migrator`) grants rights on **the tables it creates**, by name: `SELECT, INSERT, UPDATE, DELETE` to `gearva_app` and `gearva_platform` (platform tables from section 2 go to `gearva_platform` only, unless the table's section says the API needs them under tenant context), or `SELECT, INSERT` only for append-only tables (`audit_logs`, `payments`). There are no default privileges, so a new table has no access until its migration grants it, and neither runtime role has any right on `_prisma_migrations`. Keep the passwords in env variables.
 
 **Managed Postgres note (Render):** managed databases usually do not let you grant `BYPASSRLS`. If that is the case, do not give `gearva_platform` that attribute. Instead add an explicit policy for that role on every tenant table:
 
@@ -515,7 +517,7 @@ CREATE POLICY owner_read ON invoices FOR SELECT
 ### 6.5 Guard rails
 - A test queries `pg_tables`/`pg_policies` and **fails if any table with a `garage_id` column has no RLS policy**.
 - The tenancy suite (`npm run test:tenancy`) runs through the HTTP API with two garages.
-- Migrations that add a tenant table must add its policy in the same migration. Keep the list of tenant tables in one place (`packages/database/tenant-tables.ts`) and generate the policy SQL from it.
+- Migrations that add a tenant table must add its policy in the same migration. Keep the list of tenant tables in one place (`packages/database/src/tenant-tables.ts`) and generate the policy SQL from it (`npm run rls:sql -w @gearva/database -- <table>`).
 
 ---
 
@@ -523,7 +525,7 @@ CREATE POLICY owner_read ON invoices FOR SELECT
 
 ```
 garages            (status, expiresAt)
-users              U(email); (garageId, role)
+users              U(email); U(inviteTokenHash); (garageId, role); U(garageId) WHERE role = 'OWNER' (exactly one owner)
 branches           U(garageId, code)
 garage_customers   U(garageId, ownerId); (garageId, deletedAt)
 owners             U(phone)
@@ -575,7 +577,7 @@ CHECK constraints:
 
 ## 10. Migration workflow
 
-- Change `schema.prisma`, then `npm run db:migrate -- --name <what_changed>`.
+- Change `schema.prisma`, then from `packages/database` run `npx prisma migrate dev --create-only --name <what_changed>`, add the hand-written SQL (grants, RLS, partial indexes, CHECKs) to the generated file, then `npx prisma migrate dev` to apply it. Run Prisma directly like this rather than `npm run db:migrate -- --name ...`: Windows PowerShell drops the `--`, so the flags never reach Prisma.
 - Prisma cannot express RLS policies, partial unique indexes or CHECK constraints. Add them as raw SQL in the same migration folder.
 - Never edit a migration that has already been applied anywhere. Create a new one.
 - Forward references (section 1): when a migration creates a table that an earlier table already points to, the same migration adds the missing FK. Known cases: `notifications.ownerId` → `owners` (Phase 2), `garage_settings.logoFileId` → `files` (Phase 3).

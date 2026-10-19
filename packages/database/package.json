@@ -1,0 +1,21 @@
+{
+  "name": "@gearva/database",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "reset": "prisma migrate reset",
+    "studio": "prisma studio",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@gearva/config": "*",
+    "@types/node": "^24.19.2",
+    "eslint": "^9.39.5",
+    "prisma": "~7.10.1",
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,0 +1,12 @@
+// Source of truth for this schema: docs/database.md.
+// Models are added from Phase 1 onwards.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -1,0 +1,8 @@
+node_modules
+dist
+.next
+.turbo
+coverage
+package-lock.json
+packages/database/src/generated
+*.md

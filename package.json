@@ -1,0 +1,32 @@
+{
+  "name": "gearva",
+  "private": true,
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "prettier": "@gearva/config/prettier",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "npm run generate -w @gearva/database",
+    "db:migrate": "npm run migrate -w @gearva/database --",
+    "db:reset": "npm run reset -w @gearva/database",
+    "db:studio": "npm run studio -w @gearva/database"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.9"
+  }
+}

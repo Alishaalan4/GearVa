@@ -10,3 +10,7 @@ Follow the architecture rules in README section 5, especially
 tenant isolation and money in cents.
 Do not add packages, folders or dependencies the current phase
 does not need.
+
+After every step, append an entry to docs/progress.md (time,
+summary, files changed, doc changes, how it was verified, commit)
+ending with a `---` line, and update the status table at its top.

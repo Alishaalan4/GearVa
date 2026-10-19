@@ -227,7 +227,7 @@ interface NotificationChannel {
 }
 ```
 
-Build `EMAIL` and `IN_APP` first. `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `NotificationLog` row (status, channel, error) and uses a dedupe key.
+Build `EMAIL` and `IN_APP` first. `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it.
 
 ### 5.6 API conventions
 - REST + JSON, validated with Zod schemas from `packages/contracts`.

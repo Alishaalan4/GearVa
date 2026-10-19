@@ -11,8 +11,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 0 | Skeleton | ✅ Done | 2026-10-19 10:37 |
 | 1 | 1.1 Database base (roles, schema, RLS, guard-rail tests) | ✅ Done | 2026-10-19 11:02 |
 | 1 | 1.2 API foundations | ✅ Done | 2026-10-19 14:38 |
-| 1 | 1.3 Minimal notifications | ⏳ Next | |
-| 1 | 1.4 Admin auth (2FA) | | |
+| 1 | 1.3 Minimal notifications | ✅ Done | 2026-10-19 14:52 |
+| 1 | 1.4 Admin auth (2FA) | ⏳ Next | |
 | 1 | 1.5 Admin garage management | | |
 | 1 | 1.6 Staff side (login, roles, branches, lock) | | |
 | 1 | 1.7 Tenancy suite and CI | | |
@@ -130,6 +130,38 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Known shortcut:** API tests leave two `[test]` garages in the local DB (their audit rows are append-only). `npm run db:reset` clears them; step 1.7 moves tests to their own database.
 
 **Verified:** `npm test` (7 database + 7 API tests passing), `npm run typecheck`, `npm run lint`, `npm run format`.
-**Commit:** pending — `Phase 1.2: API foundations`
+**Commit:** `05d76b9` — 2026-10-19 14:39
+
+---
+
+## Phase 1 · Step 1.3 — Minimal notifications
+**When:** 2026-10-19 ~14:42 → 14:52 (~10 min)
+
+**Implements:** README sections 5.5 (channel interface) and 5.6 (heavy work on BullMQ); flow.md 9.4 (pipeline, Phase 1 part); database.md 4.6 (`notifications`).
+
+**Summary:** Every outgoing message now goes one way: `record()` writes a `QUEUED` row inside the caller's transaction (a repeated dedupe key never creates a second row), `dispatch()` adds a BullMQ job after commit (job id = notification id, so never queued twice), and the worker `deliver()`s it through the channel adapter and stores `SENT`, `FAILED` or `SKIPPED` with the reason. The only channel so far is EMAIL with a console adapter that prints the email. The first template is the staff invite in English and Arabic, which step 1.5 uses for the garage owner's invite. The worker runs inside the API and handles each job as a `SYSTEM` actor in that notification's garage, so it goes through RLS like everything else.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/notifications/notification-channel.ts` | `NotificationChannel` interface (README 5.5), `SendInput`, `SendResult`, channel list token |
+| `apps/api/src/notifications/adapters/console-email.channel.ts` | EMAIL adapter for `EMAIL_ADAPTER=console` |
+| `apps/api/src/notifications/templates/index.ts`, `staff-invite.ts` | Template registry + Zod-validated `staff-invite` (en/ar) |
+| `apps/api/src/notifications/notifications.service.ts` | `record()`, `dispatch()`, `deliver()`; starts the worker on bootstrap |
+| `apps/api/src/notifications/notifications.queue.ts` | BullMQ queue + worker on its own Redis connection |
+| `apps/api/src/notifications/notifications.module.ts` | Registers channels, queue, service |
+| `apps/api/src/app.module.ts` | Imports `NotificationsModule` |
+| `apps/api/src/config/env.ts` | `EMAIL_ADAPTER` (console only for now), `EMAIL_FROM` |
+| `apps/api/package.json` | `bullmq` |
+| `apps/api/test/helpers/garages.ts` | Shared `createTestGarages()` + `waitFor()` |
+| `apps/api/test/foundations.spec.ts` | Uses the shared helper |
+| `apps/api/test/notifications.spec.ts` | 7 tests: SENT (en, ar), dedupe, same key in another garage, missing channel, missing recipient, bad template data |
+
+**Doc changes:** README 5.5 — the log row is a `notifications` row (log and inbox are one table, database.md 4.6); `SendResult` shape written down.
+
+**Notes:** Nest's testing logger prints errors only, so the invite emails do not appear in test output; they print in `npm run dev`. Test output was then made quiet: the fail-closed test now captures and asserts its own error log, and the API `test` script passes `--disable-warning=ExperimentalWarning` (`apps/api/test/foundations.spec.ts`, `apps/api/package.json`).
+
+**Verified:** `npm test` — 7 database + 14 API tests passing (2 suites).
+**Commit:** pending — `Phase 1.3: minimal notifications`
 
 ---

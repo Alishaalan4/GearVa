@@ -1,7 +1,14 @@
 // Step 1.2 foundations through the real HTTP stack, real Postgres and real Redis:
 // error shape, validation, pagination, tenant context + RLS wrapper, audit rows.
-import { randomUUID } from 'node:crypto';
-import { Controller, Get, Headers, type INestApplication, Post, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  type INestApplication,
+  Logger,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -10,6 +17,7 @@ import { RequestContext } from '../src/common/context/request-context';
 import { PlatformDb } from '../src/common/db/platform-db';
 import { TenantDb } from '../src/common/db/tenant-db';
 import { PaginationQueryDto, paginated, toSkipTake } from '../src/common/pagination';
+import { createTestGarages } from './helpers/garages';
 
 /**
  * Test-only endpoints. The real auth guards (steps 1.4/1.6) will set the actor from a
@@ -49,9 +57,8 @@ class ProbeController {
 describe('API foundations', () => {
   let app: INestApplication;
   let platform: PlatformDb['client'];
-  const adminId = randomUUID();
-  const garageA = randomUUID();
-  const garageB = randomUUID();
+  let garageA: string;
+  let garageB: string;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -61,34 +68,8 @@ describe('API foundations', () => {
     app = moduleRef.createNestApplication();
     await app.init();
 
-    // Test data is created through the platform role, as the admin module will.
-    // It is not deleted: the audit row written below is append-only and keeps its
-    // garage. Step 1.7 moves tests to their own database.
     platform = app.get(PlatformDb).client;
-    await platform.adminUser.create({
-      data: {
-        id: adminId,
-        email: `test-${adminId}@test.local`,
-        passwordHash: 'x',
-        name: '[test]',
-        role: 'ADMIN',
-      },
-    });
-    for (const id of [garageA, garageB]) {
-      await platform.garage.create({
-        data: {
-          id,
-          name: `[test] ${id}`,
-          email: `${id}@test.local`,
-          phone: '+9610000000',
-          locationText: 'Test',
-          defaultLocale: 'en',
-          status: 'ACTIVE',
-          createdByAdminId: adminId,
-          branches: { create: { name: 'Main', code: 'BR1', isMain: true } },
-        },
-      });
-    }
+    ({ garageA, garageB } = await createTestGarages(platform));
   });
 
   afterAll(async () => {
@@ -131,12 +112,20 @@ describe('API foundations', () => {
   });
 
   it('a tenant query without a tenant context fails closed', async () => {
-    const res = await request(app.getHttpServer()).get('/probe/branches').expect(500);
-    expect(res.body).toEqual({
-      code: 'INTERNAL_ERROR',
-      message: 'Internal server error',
-      details: {},
-    });
+    // The filter logs unknown errors; capture it here instead of printing it.
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    try {
+      const res = await request(app.getHttpServer()).get('/probe/branches').expect(500);
+      expect(res.body).toEqual({
+        code: 'INTERNAL_ERROR',
+        message: 'Internal server error',
+        details: {},
+      });
+      // The client sees nothing internal, but the server log has the real reason.
+      expect(logged).toHaveBeenCalledWith(expect.stringContaining('No tenant context'));
+    } finally {
+      logged.mockRestore();
+    }
   });
 
   it('a mutating request writes one audit row in the right garage', async () => {

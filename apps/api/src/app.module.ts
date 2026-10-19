@@ -12,6 +12,7 @@ import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 import { REDIS, RedisModule } from './common/redis/redis.module';
 import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { HealthModule } from './health/health.module';
       }),
     }),
     AuditModule,
+    NotificationsModule,
     HealthModule,
   ],
   providers: [

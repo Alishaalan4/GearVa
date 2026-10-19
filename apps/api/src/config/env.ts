@@ -10,6 +10,9 @@ const envSchema = z.object({
   DATABASE_URL: z.url(),
   PLATFORM_DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
+  // Only the console adapter exists until the first deployment (Phase 3).
+  EMAIL_ADAPTER: z.enum(['console']).default('console'),
+  EMAIL_FROM: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

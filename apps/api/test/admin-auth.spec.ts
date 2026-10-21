@@ -1,0 +1,217 @@
+// Step 1.4: admin login with 2FA through the real HTTP stack (flow.md 2.3, README 5.2):
+// password -> TOTP setup on first login -> session cookies -> refresh rotation -> logout.
+import { randomUUID } from 'node:crypto';
+import type { INestApplication } from '@nestjs/common';
+import type { PrismaClient } from '@gearva/database';
+import { Secret, TOTP } from 'otpauth';
+import request from 'supertest';
+import { PasswordService } from '../src/auth/password.service';
+import { PlatformDb } from '../src/common/db/platform-db';
+import { cookiesOf, createTestApp } from './helpers/app';
+
+const AT = 'gv_admin_at';
+const RT = 'gv_admin_rt';
+const MFA = 'gv_admin_mfa';
+
+function currentCode(secret: string): string {
+  return new TOTP({ secret: Secret.fromBase32(secret), digits: 6, period: 30 }).generate();
+}
+
+describe('Admin auth', () => {
+  let app: INestApplication;
+  let platform: PrismaClient;
+  const email = `admin-${randomUUID()}@test.local`;
+  const password = 'correct horse battery staple';
+  let adminId: string;
+
+  // Shared across the ordered tests below.
+  let totpSecret: string;
+  let recoveryCodes: string[];
+
+  const http = () => request(app.getHttpServer());
+  const withCookies = (cookies: Record<string, string | undefined>) =>
+    Object.entries(cookies)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('; ');
+
+  /** Password step; returns the 2FA challenge cookie. */
+  async function passwordStep(expectedNext: string): Promise<string> {
+    const res = await http().post('/admin/v1/auth/login').send({ email, password }).expect(200);
+    expect(res.body).toEqual({ next: expectedNext });
+    const mfa = cookiesOf(res)[MFA];
+    expect(mfa).toBeTruthy();
+    return mfa as string;
+  }
+
+  /** Full login with a TOTP code; returns the session cookies. */
+  async function fullLogin(): Promise<{ at: string; rt: string }> {
+    const mfa = await passwordStep('TOTP_VERIFY');
+    const res = await http()
+      .post('/admin/v1/auth/totp/verify')
+      .set('Cookie', withCookies({ [MFA]: mfa }))
+      .send({ code: currentCode(totpSecret) })
+      .expect(200);
+    const c = cookiesOf(res);
+    return { at: c[AT] as string, rt: c[RT] as string };
+  }
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    platform = app.get(PlatformDb).client;
+    const admin = await platform.adminUser.create({
+      data: {
+        email,
+        name: '[test] admin',
+        role: 'SUPER_ADMIN',
+        passwordHash: await app.get(PasswordService).hash(password),
+      },
+    });
+    adminId = admin.id;
+  });
+
+  afterAll(async () => {
+    await app?.close();
+  });
+
+  it('a wrong password is rejected with INVALID_CREDENTIALS', async () => {
+    const res = await http()
+      .post('/admin/v1/auth/login')
+      .send({ email, password: 'wrong' })
+      .expect(401);
+    expect(res.body.code).toBe('INVALID_CREDENTIALS');
+  });
+
+  it('an unknown email gets exactly the same answer', async () => {
+    const res = await http()
+      .post('/admin/v1/auth/login')
+      .send({ email: `nobody-${randomUUID()}@test.local`, password })
+      .expect(401);
+    expect(res.body).toEqual({
+      code: 'INVALID_CREDENTIALS',
+      message: 'Wrong email or password',
+      details: {},
+    });
+  });
+
+  it('2FA setup without passing the password step is refused', async () => {
+    await http().post('/admin/v1/auth/totp/setup').expect(401);
+  });
+
+  it('first login: password, then TOTP setup, then a session and 10 recovery codes', async () => {
+    const mfa = await passwordStep('TOTP_SETUP');
+
+    const setup = await http()
+      .post('/admin/v1/auth/totp/setup')
+      .set('Cookie', withCookies({ [MFA]: mfa }))
+      .expect(200);
+    expect(setup.body.otpauthUri).toMatch(/^otpauth:\/\/totp\//);
+    totpSecret = setup.body.secret;
+
+    // The secret is stored encrypted, never as the plain base32 value.
+    const stored = await platform.adminUser.findUniqueOrThrow({ where: { id: adminId } });
+    expect(stored.totpSecretEnc).toBeTruthy();
+    expect(stored.totpSecretEnc).not.toContain(totpSecret);
+
+    const wrong = await http()
+      .post('/admin/v1/auth/totp/verify')
+      .set('Cookie', withCookies({ [MFA]: mfa }))
+      .send({ code: '000000' })
+      .expect(401);
+    expect(wrong.body.code).toBe('INVALID_2FA_CODE');
+
+    const ok = await http()
+      .post('/admin/v1/auth/totp/verify')
+      .set('Cookie', withCookies({ [MFA]: mfa }))
+      .send({ code: currentCode(totpSecret) })
+      .expect(200);
+    expect(ok.body).toMatchObject({ id: adminId, email, role: 'SUPER_ADMIN' });
+    expect(ok.body.recoveryCodes).toHaveLength(10);
+    recoveryCodes = ok.body.recoveryCodes;
+
+    const cookies = cookiesOf(ok);
+    expect(cookies[AT]).toBeTruthy();
+    expect(cookies[RT]).toBeTruthy();
+    expect(cookies[MFA]).toBe(''); // challenge cleared
+
+    const me = await http()
+      .get('/admin/v1/auth/me')
+      .set('Cookie', withCookies({ [AT]: cookies[AT] }))
+      .expect(200);
+    expect(me.body).toEqual({ id: adminId, email, name: '[test] admin', role: 'SUPER_ADMIN' });
+  });
+
+  it('the login wrote an admin.login audit row with no garage', async () => {
+    const rows = await platform.auditLog.findMany({
+      where: { action: 'admin.login', actorId: adminId },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorType: 'ADMIN', garageId: null, entityId: adminId });
+  });
+
+  it('protected endpoints need the access cookie', async () => {
+    const res = await http().get('/admin/v1/auth/me').expect(401);
+    expect(res.body.code).toBe('UNAUTHORIZED');
+  });
+
+  it('after setup, login asks for the code; a recovery code works exactly once', async () => {
+    const code = recoveryCodes[0] as string;
+
+    const mfa = await passwordStep('TOTP_VERIFY');
+    await http()
+      .post('/admin/v1/auth/totp/verify')
+      .set('Cookie', withCookies({ [MFA]: mfa }))
+      .send({ recoveryCode: code })
+      .expect(200);
+
+    const again = await passwordStep('TOTP_VERIFY');
+    const reused = await http()
+      .post('/admin/v1/auth/totp/verify')
+      .set('Cookie', withCookies({ [MFA]: again }))
+      .send({ recoveryCode: code })
+      .expect(401);
+    expect(reused.body.code).toBe('INVALID_2FA_CODE');
+  });
+
+  it('refresh replaces the token; reusing an old one revokes every session', async () => {
+    const { rt } = await fullLogin();
+
+    const first = await http()
+      .post('/admin/v1/auth/refresh')
+      .set('Cookie', withCookies({ [RT]: rt }))
+      .expect(200);
+    const rt2 = cookiesOf(first)[RT] as string;
+    expect(rt2).toBeTruthy();
+    expect(rt2).not.toBe(rt);
+
+    // The old token again: treated as stolen.
+    await http()
+      .post('/admin/v1/auth/refresh')
+      .set('Cookie', withCookies({ [RT]: rt }))
+      .expect(401);
+    // ...so even the newest token no longer works.
+    await http()
+      .post('/admin/v1/auth/refresh')
+      .set('Cookie', withCookies({ [RT]: rt2 }))
+      .expect(401);
+  });
+
+  it('logout ends the session immediately', async () => {
+    const { at, rt } = await fullLogin();
+    await http()
+      .get('/admin/v1/auth/me')
+      .set('Cookie', withCookies({ [AT]: at }))
+      .expect(200);
+
+    await http()
+      .post('/admin/v1/auth/logout')
+      .set('Cookie', withCookies({ [RT]: rt }))
+      .expect(204);
+
+    // The access token has not expired yet, but its session is closed.
+    await http()
+      .get('/admin/v1/auth/me')
+      .set('Cookie', withCookies({ [AT]: at }))
+      .expect(401);
+  });
+});

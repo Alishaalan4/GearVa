@@ -2,14 +2,13 @@
 // record (deduplicated) -> dispatch (BullMQ) -> deliver (console email) -> stored outcome.
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import type { PrismaClient } from '@gearva/database';
-import { AppModule } from '../src/app.module';
 import { PlatformDb } from '../src/common/db/platform-db';
 import {
   NotificationsService,
   type NewNotification,
 } from '../src/notifications/notifications.service';
+import { createTestApp } from './helpers/app';
 import { createTestGarages, waitFor } from './helpers/garages';
 
 describe('Notifications', () => {
@@ -20,9 +19,7 @@ describe('Notifications', () => {
   let garageB: string;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
-    await app.init();
+    app = await createTestApp();
     platform = app.get(PlatformDb).client;
     notifications = app.get(NotificationsService);
     ({ garageA, garageB } = await createTestGarages(platform));

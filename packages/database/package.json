@@ -17,14 +17,16 @@
     "migrate:deploy": "prisma migrate deploy",
     "reset": "prisma migrate reset",
     "studio": "prisma studio",
+    "seed": "npm run build && prisma db seed",
     "rls:sql": "tsc -p tsconfig.build.json && node dist/scripts/print-rls-sql.js",
     "lint": "eslint .",
-    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
-    "test": "prisma generate && vitest run"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@prisma/adapter-pg": "~7.10.1",
-    "@prisma/client": "~7.10.1"
+    "@prisma/client": "~7.10.1",
+    "argon2": "^0.45.1"
   },
   "devDependencies": {
     "@gearva/config": "*",

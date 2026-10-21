@@ -9,14 +9,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
 import { Audit } from '../src/audit/audit.decorator';
 import { RequestContext } from '../src/common/context/request-context';
 import { PlatformDb } from '../src/common/db/platform-db';
 import { TenantDb } from '../src/common/db/tenant-db';
 import { PaginationQueryDto, paginated, toSkipTake } from '../src/common/pagination';
+import { createTestApp } from './helpers/app';
 import { createTestGarages } from './helpers/garages';
 
 /**
@@ -61,13 +60,7 @@ describe('API foundations', () => {
   let garageB: string;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-      controllers: [ProbeController],
-    }).compile();
-    app = moduleRef.createNestApplication();
-    await app.init();
-
+    app = await createTestApp([ProbeController]);
     platform = app.get(PlatformDb).client;
     ({ garageA, garageB } = await createTestGarages(platform));
   });

@@ -11,6 +11,8 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    // Compiled with the package (src/seed.ts), so no TypeScript runner is needed.
+    seed: 'node dist/seed.js',
   },
   datasource: {
     // Migrations run as gearva_migrator (database.md section 6.1).

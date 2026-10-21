@@ -23,7 +23,8 @@
     "db:generate": "npm run generate -w @gearva/database",
     "db:migrate": "npm run migrate -w @gearva/database --",
     "db:reset": "npm run reset -w @gearva/database",
-    "db:studio": "npm run studio -w @gearva/database"
+    "db:studio": "npm run studio -w @gearva/database",
+    "db:seed": "npm run seed -w @gearva/database"
   },
   "devDependencies": {
     "prettier": "^3.9.10",

@@ -12,8 +12,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.1 Database base (roles, schema, RLS, guard-rail tests) | ✅ Done | 2026-10-19 11:02 |
 | 1 | 1.2 API foundations | ✅ Done | 2026-10-19 14:38 |
 | 1 | 1.3 Minimal notifications | ✅ Done | 2026-10-19 14:52 |
-| 1 | 1.4 Admin auth (2FA) | ⏳ Next | |
-| 1 | 1.5 Admin garage management | | |
+| 1 | 1.4 Admin auth (2FA) | ✅ Done | 2026-10-21 08:49 |
+| 1 | 1.5 Admin garage management | ⏳ Next | |
 | 1 | 1.6 Staff side (login, roles, branches, lock) | | |
 | 1 | 1.7 Tenancy suite and CI | | |
 
@@ -162,6 +162,51 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Notes:** Nest's testing logger prints errors only, so the invite emails do not appear in test output; they print in `npm run dev`. Test output was then made quiet: the fail-closed test now captures and asserts its own error log, and the API `test` script passes `--disable-warning=ExperimentalWarning` (`apps/api/test/foundations.spec.ts`, `apps/api/package.json`).
 
 **Verified:** `npm test` — 7 database + 14 API tests passing (2 suites).
-**Commit:** pending — `Phase 1.3: minimal notifications`
+**Commit:** `c1f4bd5` — 2026-10-19 14:56
+
+---
+
+## Phase 1 · Step 1.4 — Admin auth (2FA)
+**When:** 2026-10-21 ~07:30 → 08:49 (~1 h 20 min, including one test-ordering fix)
+
+**Implements:** flow.md 2.3; README 5.2; database.md 4.1 (`admin_users`, `sessions`) and 9 (seed).
+
+**Summary:** The platform owner can now sign in to the admin API. `npm run db:seed` creates the first super-admin. Login is password (argon2id) → a 5-minute 2FA challenge cookie → on the very first login a TOTP secret for any authenticator app (stored encrypted with AES-256-GCM) → a 6-digit code or a one-time recovery code → session. The first verified code turns 2FA on and returns 10 recovery codes once. Sessions are a 15-minute access JWT plus a 30-day refresh token that is stored only as a hash and replaced on every use; reusing an old one revokes all of that admin's sessions. `AdminGuard` protects `/admin/v1` and sets the ADMIN actor, so logins write `admin.login` audit rows with no garage. 10 failed attempts lock an email for 15 minutes, on top of a 10/min per-IP limit on the auth endpoints.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/auth.ts`, `index.ts` | Admin login + 2FA schemas and response types (shared with the admin web app) |
+| `packages/contracts/src/errors.ts` | `INVALID_CREDENTIALS`, `INVALID_2FA_CODE` |
+| `apps/api/src/auth/password.service.ts` | argon2id hash/verify; same timing for unknown users |
+| `apps/api/src/auth/totp.service.ts` | TOTP secrets, codes, AES-256-GCM encryption, hashed one-time recovery codes |
+| `apps/api/src/auth/session.service.ts` | Sessions, refresh rotation with reuse detection, access + 2FA-challenge JWTs |
+| `apps/api/src/auth/cookies.ts`, `auth.module.ts` | Host-only, path-limited httpOnly cookies; JWT setup |
+| `apps/api/src/admin/admin.guard.ts` | Protects `/admin/v1`; sets the ADMIN actor |
+| `apps/api/src/admin/auth/admin-auth.controller.ts`, `admin-auth.service.ts` | `login`, `totp/setup`, `totp/verify`, `refresh`, `logout`, `me`; per-email lockout in Redis |
+| `apps/api/src/admin/admin.module.ts`, `app.module.ts` | Wiring; throttler skipped when `NODE_ENV=test` |
+| `apps/api/src/app.setup.ts`, `main.ts` | Shared app setup (trust proxy, cookie parser) used by main and tests |
+| `apps/api/src/config/env.ts` | `JWT_ACCESS_SECRET` (32+ chars in production), `TOTP_ENCRYPTION_KEY` (must be 32 bytes) |
+| `apps/api/package.json` | `@nestjs/jwt` 11 (12 is ESM-only), `argon2`, `otpauth`, `cookie-parser` |
+| `packages/database/src/seed.ts`, `prisma.config.ts`, `package.json` | Seed for the first super-admin, compiled with the package; `argon2` |
+| `package.json` (root) | `db:seed` script |
+| `packages/database/turbo.json` | `test`/`typecheck` wait for this package's `build` (fixes a `prisma generate` race) |
+| `apps/api/test/helpers/app.ts` | `createTestApp()` (same setup as main.ts) + `cookiesOf()` |
+| `apps/api/test/admin-auth.spec.ts` | 10 tests: wrong password, unknown email, setup → verify → session, encrypted secret, audit row, guard, one-time recovery code, refresh reuse, logout |
+| `apps/api/test/foundations.spec.ts`, `notifications.spec.ts` | Use `createTestApp()` |
+| `.env.example` | Removed `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`; key-generation hint; empty secrets |
+
+**Doc changes**
+- README 5.2 — refresh tokens are random values stored hashed (so `JWT_REFRESH_SECRET` is gone); cookies are host-only and each web app forwards its API paths (`/admin/v1/*`, `/v1/*`) to the API, so no CORS and no `COOKIE_DOMAIN`.
+- README 4 and 9 — env block and seed comment; custom domains no longer needed for cookies.
+- flow.md 2.2 — cookie wording; flow.md 2.3 — exact admin login steps.
+- database.md 9 — which seed item arrives in which step; seed is compiled, only creates missing rows.
+
+**Problems hit and fixed:** `@gearva/database` build and test both ran `prisma generate` at the same time → test now waits for the package's own build.
+
+**Known limit:** a TOTP code can be reused within its 30–90 s window (it still needs the password and is rate-limited). Close before launch.
+
+**Verified:** `npm test` (7 database + 24 API tests), `npm run typecheck`, `npm run lint`, `npm run db:seed`; manual `POST /admin/v1/auth/login` → `{"next":"TOTP_SETUP"}` with the challenge cookie.
+**Commit:** pending — `Phase 1.4: admin auth with 2FA`
 
 ---

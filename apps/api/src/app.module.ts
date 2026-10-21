@@ -6,10 +6,12 @@ import type { Request } from 'express';
 import type Redis from 'ioredis';
 import { ClsModule } from 'nestjs-cls';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { AdminModule } from './admin/admin.module';
 import { AuditModule } from './audit/audit.module';
 import { DatabaseModule } from './common/db/database.module';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 import { REDIS, RedisModule } from './common/redis/redis.module';
+import { ENV, type Env } from './config/env';
 import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -31,15 +33,18 @@ import { NotificationsModule } from './notifications/notifications.module';
     DatabaseModule,
     RedisModule,
     // Default limit per client IP; auth endpoints get stricter limits (flow.md 2.2).
+    // Off in tests: the counters live in Redis and would carry over between test runs.
     ThrottlerModule.forRootAsync({
-      inject: [REDIS],
-      useFactory: (redis: Redis) => ({
+      inject: [REDIS, ENV],
+      useFactory: (redis: Redis, env: Env) => ({
         throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }],
         storage: new ThrottlerStorageRedisService(redis),
+        skipIf: () => env.NODE_ENV === 'test',
       }),
     }),
     AuditModule,
     NotificationsModule,
+    AdminModule,
     HealthModule,
   ],
   providers: [

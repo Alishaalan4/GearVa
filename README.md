@@ -126,7 +126,7 @@ npm run db:up
 
 # 4. Database
 (cd packages/database && npx prisma migrate deploy)   # apply all migrations (incl. RLS SQL); rerun after any DB wipe
-npm run db:seed           # super-admin, default service types, a demo garage
+npm run db:seed           # the first super-admin (more seed data arrives with later steps)
 
 # 5. Run everything
 npm run dev               # turbo runs api + garage-web + admin
@@ -157,17 +157,15 @@ PLATFORM_DATABASE_URL=postgresql://gearva_platform:gearva_platform@localhost:543
 REDIS_URL=redis://localhost:6379
 
 # Auth
-JWT_ACCESS_SECRET=change-me
-JWT_REFRESH_SECRET=change-me-too
-COOKIE_DOMAIN=localhost
+JWT_ACCESS_SECRET=change-me                          # signs access tokens; 32+ chars in production
 APP_URL_GARAGE=http://localhost:3000
 APP_URL_ADMIN=http://localhost:3001
-API_URL=http://localhost:4000
-TOTP_ENCRYPTION_KEY=change-me-32-bytes-base64        # encrypts admin_users.totpSecretEnc (AES-256-GCM)
+API_URL=http://localhost:4000                        # where the web apps forward /v1 and /admin/v1
+TOTP_ENCRYPTION_KEY=                                 # 32 random bytes, base64; encrypts admin TOTP secrets (AES-256-GCM)
 
-# Seed (npm run db:seed): the first SUPER_ADMIN
+# Seed (npm run db:seed): the first SUPER_ADMIN (password: 12+ characters)
 SEED_ADMIN_EMAIL=admin@gearva.online
-SEED_ADMIN_PASSWORD=change-me-now
+SEED_ADMIN_PASSWORD=
 
 # Email (adapter: console | resend | ses)
 EMAIL_ADAPTER=console
@@ -203,7 +201,8 @@ Anyone writing code here (human or AI) must follow these.
 - Garage staff roles: `OWNER`, `MANAGER`, `MECHANIC`, `RECEPTIONIST`. Permission matrix in `flow.md`.
 - Admin roles: `SUPER_ADMIN`, `ADMIN`. Admin login needs TOTP 2FA. Admin endpoints live only under `apps/api/src/admin` with `AdminGuard`.
 - Owners (mobile) log in by phone number with a one-time code.
-- Access tokens last 15 minutes, refresh tokens 30 days with rotation. Both live in httpOnly, secure, SameSite=Lax cookies on `.gearva.online`.
+- Access tokens are JWTs that last 15 minutes. Refresh tokens are random values that last 30 days; only their hash is stored in `sessions`. Every refresh replaces the token, and presenting an already-replaced one revokes all of that person's sessions (it means the token was copied).
+- Both live in httpOnly, SameSite=Lax cookies (Secure in production) that are **host-only**: each web app forwards its API paths to the API (`admin` forwards `/admin/v1/*`, `garage-web` forwards `/v1/*`), so the browser sees the cookies as belonging to `admin.gearva.online` or `app.gearva.online` and never sends admin cookies to the garage app or the other way round. No CORS and no shared cookie domain are needed.
 
 ### 5.3 Subscription lock
 A global guard rejects every garage request when the garage is `SUSPENDED` or `expiresAt < now`, with error code `GARAGE_LOCKED`. The web app shows a lock screen. No manual work is needed after the date passes.
@@ -343,7 +342,7 @@ Keep **one repo**. Each service points at its folder inside the monorepo and bui
 3. Run migrations as the API's **pre-deploy command**: `npx prisma migrate deploy` (it uses `MIGRATION_DATABASE_URL`).
 4. Put environment variables in a Render **environment group** shared by the services. Never commit secrets.
 5. Deploys happen automatically on every push to `main`. Use a separate Render project or branch for staging if you need one.
-6. Custom domains: `app.gearva.online` (garage-web), `admin.gearva.online` (admin), `api.gearva.online` (api), with `COOKIE_DOMAIN=.gearva.online`. A custom domain is required, because login cookies do not work across the default `onrender.com` subdomains.
+6. Custom domains: `app.gearva.online` (garage-web), `admin.gearva.online` (admin), `api.gearva.online` (api), and `API_URL=https://api.gearva.online` for the two web apps. Login cookies are host-only and travel through each web app's forwarding (section 5.2), so they work on any domain; the custom domains are for the product, not for cookies.
 
 ### Things to check when you set it up
 - **Postgres roles:** the design uses three DB roles (database.md section 6). Confirm that Render's Postgres lets you create roles. If it does not allow `BYPASSRLS`, use the policy fallback described in database.md section 6.1.

@@ -47,11 +47,17 @@ This matrix is enforced by a `RolesGuard` in the API. The web app hides what a r
 1. `POST /v1/auth/login` with email and password.
 2. Auth looks up the user by email (platform DB role), checks `isActive`, verifies the argon2 hash, and loads the garage.
 3. If the garage is `SUSPENDED` or expired, return `GARAGE_LOCKED` (the web app shows a lock screen with the garage's renewal message).
-4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies on `.gearva.online`.
+4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies, host-only on `app.gearva.online` through the app's API forwarding (README 5.2).
 5. Login attempts are rate limited per IP and per email.
 
 ### 2.3 Admin login
 Same as above, plus a second step: after the password, the admin enters a TOTP code (or a recovery code). The session is only issued after both. Admin cookies are scoped to `admin.gearva.online` only.
+
+1. `POST /admin/v1/auth/login` (email, password). On success it sets a 5-minute 2FA challenge cookie and answers `TOTP_SETUP` (first login) or `TOTP_VERIFY`. No session yet.
+2. First login only: `POST /admin/v1/auth/totp/setup` returns a new secret as an `otpauth://` URI (shown as a QR code) and as text.
+3. `POST /admin/v1/auth/totp/verify` with `code` (6 digits) or `recoveryCode`. The first successful code turns 2FA on and returns 10 recovery codes **once**; each recovery code works once. Then the session cookies are set and an `admin.login` audit row is written.
+4. `POST /admin/v1/auth/refresh` rotates the refresh token; `POST /admin/v1/auth/logout` revokes it; `GET /admin/v1/auth/me` returns the signed-in admin.
+5. 10 failed password or 2FA attempts for one email lock it for 15 minutes, on top of the per-IP limit.
 
 ### 2.4 Owner (customer) login on mobile (Phase 6)
 1. Owner enters their phone number. The API creates an `owner_otps` row and sends a code (email or SMS now, WhatsApp later). Same response whether or not the number exists, to avoid revealing who is a customer.

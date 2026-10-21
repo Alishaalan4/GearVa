@@ -14,8 +14,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.3 Minimal notifications | ✅ Done | 2026-10-19 14:52 |
 | 1 | 1.4 Admin auth (2FA) | ✅ Done | 2026-10-21 08:49 |
 | 1 | 1.5a Admin garage management — API | ✅ Done | 2026-10-21 10:56 |
-| 1 | 1.5b Admin garage management — admin web screens | ⏳ Next | |
-| 1 | 1.6 Staff side (login, roles, branches, lock) | | |
+| 1 | 1.5b Admin garage management — admin web screens (+ optional 2FA) | ✅ Done | 2026-10-21 11:43 |
+| 1 | 1.6 Staff side (login, roles, branches, lock) | ⏳ Next | |
 | 1 | 1.7 Tenancy suite and CI | | |
 
 ---
@@ -243,6 +243,48 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Not in this step:** the lock guard that actually blocks a suspended garage (step 1.6); `trial.days` and subscription payments (Phase 5).
 
 **Verified:** `npm test` (7 database + 33 API tests), API typecheck and lint.
-**Commit:** pending — `Phase 1.5a: admin garage management API`
+**Commit:** `8098e8c` — 2026-10-21 10:57
+
+---
+
+## Phase 1 · Step 1.5b — Admin web screens (+ 2FA made optional)
+**When:** 2026-10-21 ~11:00 → 11:43 (~45 min, including the 2FA change and three setup fixes)
+
+**Implements:** flow.md 2.1 and 2.3 (admin side); README 5.2 (API forwarding), 5.7 (TanStack Query, react-hook-form + the API's Zod schemas, next-intl, logical Tailwind classes).
+
+**Summary:** The admin panel at `localhost:3001` is now usable, in English and Arabic (right-to-left). An admin signs in, sees the garage list (search, status filter, pages), creates a garage (trial or paid) and opens it to resend the invite, send a password reset, suspend with a reason or reactivate. The app forwards `/admin/v1/*` to the API, so session cookies belong to the admin site; an expired 15-minute session is refreshed once automatically.
+
+**Decision (user, 2026-10-21): admin 2FA is optional, not mandatory.** With 2FA off the password signs in directly. Any admin can turn it on from the new **Account** page (QR code or typed key → one code → 10 recovery codes shown once) and off again (needs a current or recovery code). With 2FA on, login asks for the code or a recovery code. The docs still recommend it for every admin.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/admin/package.json` | `next-intl`, `@tanstack/react-query`, `react-hook-form`, `@hookform/resolvers` 5.9 (6.0 has conflicting optional peers), `qrcode.react`, `zod`, `@gearva/contracts` |
+| `apps/admin/next.config.ts` | next-intl plugin; forwards `/admin/v1/*` to `API_URL` |
+| `apps/admin/proxy.ts`, `i18n/*` | `/en` and `/ar` routing (Next 16 proxy), locale-aware navigation, dates shown in UTC |
+| `apps/admin/messages/en.json`, `ar.json` | Every visible string |
+| `apps/admin/lib/api.ts` | Fetch wrapper: error shape → `ApiError`, one automatic session refresh |
+| `apps/admin/components/*` | Providers, small Tailwind UI pieces, translated error alert, language toggle, signed-in shell with header |
+| `apps/admin/features/auth/*` | Login, code / recovery-code step, recovery codes, `useAdmin` |
+| `apps/admin/features/account/*` | Account page with turning 2FA on/off |
+| `apps/admin/features/garages/*` | List, new-garage form, detail page, status badge |
+| `apps/admin/app/[locale]/**` | Pages: login, login/verify, garages, garages/new, garages/[garageId], account (Phase 0 `app/layout.tsx`, `app/page.tsx` removed) |
+| `apps/admin/postcss.config.mjs`, `apps/garage-web/postcss.config.mjs` | Named export (lint warning) |
+| `packages/contracts/src/auth.ts`, `errors.ts` | Login answer `DONE` \| `TOTP_VERIFY`; enable schema; `totpEnabled` on the profile; `TOTP_*` error codes |
+| `apps/api/src/admin/auth/admin-auth.service.ts`, `admin-auth.controller.ts` | Password-only login when 2FA is off; signed-in `totp/setup`, `totp/enable`, `totp/disable` |
+| `apps/api/src/admin/admin.guard.ts` | No longer requires 2FA |
+| `apps/api/test/admin-auth.spec.ts` | Rewritten for the new flow (11 tests) |
+| `packages/database/src/seed.ts` | Seed message |
+| `turbo.json` | `API_URL` passed through to tasks |
+
+**Doc changes**
+- README 1 (admin is Arabic/English, optional 2FA), 2 (auth row), 5.2, Phase 1 roadmap line.
+- flow.md 1 (actors) and 2.3 rewritten: optional 2FA with the decision date, the new endpoints.
+- database.md `admin_users.totpEnabled` and seed note.
+
+**Problems hit and fixed:** `@hookform/resolvers` 6.0 peer conflict → 5.9.2; stale `apps/admin/.next` route types from before the `[locale]` move → cache deleted (safe, regenerated); two lint warnings (`useWatch`, named PostCSS export).
+
+**Verified:** `npm test` (7 database + 34 API tests), `npm run typecheck`, `npm run lint` (0 warnings); manual check in the browser: login, create garage, invite email in the console, resend invite, suspend/reactivate, list search/filter, Arabic layout.
+**Commit:** pending — `Phase 1.5b: admin web screens, optional admin 2FA`
 
 ---

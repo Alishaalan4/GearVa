@@ -4,7 +4,8 @@
     "DATABASE_URL",
     "MIGRATION_DATABASE_URL",
     "PLATFORM_DATABASE_URL",
-    "REDIS_URL"
+    "REDIS_URL",
+    "API_URL"
   ],
   "tasks": {
     "build": {

@@ -77,7 +77,7 @@ Legend: **PK** primary key, **FK** foreign key, **U** unique, `?` nullable. All 
 | name | text | |
 | role | AdminRole | `SUPER_ADMIN`, `ADMIN` |
 | totpSecretEnc | text? | encrypted TOTP secret |
-| totpEnabled | bool | must be true for login to complete |
+| totpEnabled | bool | 2FA is optional (default false); when true, login also needs a TOTP or recovery code |
 | recoveryCodesHash | text[] | |
 | isActive | bool | |
 | lastLoginAt | timestamptz? | |
@@ -572,7 +572,7 @@ CHECK constraints:
 
 ## 9. Seed data (`npm run db:seed`)
 
-1. One `SUPER_ADMIN` (email and password from env, 2FA must be set up at first login). Added in Phase 1 step 1.4.
+1. One `SUPER_ADMIN` (email and password from env; 2FA is optional and can be turned on from the Account page). Added in Phase 1 step 1.4.
 2. Global `service_types` with the starting values from section 4.4. Added in Phase 2.
 3. `system_settings` defaults. Added with the phases that read them.
 4. Development only: a demo garage with owner login, two branches, a few customers, vehicles and visits. The garage and owner are added in step 1.6 (staff login); customers, vehicles and visits in Phase 2.

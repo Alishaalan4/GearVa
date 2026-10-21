@@ -1,8 +1,8 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import {
   type AdminLoginInput,
-  type AdminLoginNext,
   type AdminProfile,
+  type AdminTotpEnableResponse,
   type AdminTotpSetupResponse,
   type AdminTotpVerifyInput,
   ERROR_CODES,
@@ -26,14 +26,25 @@ export interface AdminTokens {
   refreshToken: string;
 }
 
+export type PasswordStepResult =
+  | { next: 'DONE'; profile: AdminProfile; tokens: AdminTokens }
+  | { next: 'TOTP_VERIFY'; adminId: string };
+
 function toProfile(admin: AdminUser): AdminProfile {
-  return { id: admin.id, email: admin.email, name: admin.name, role: admin.role };
+  return {
+    id: admin.id,
+    email: admin.email,
+    name: admin.name,
+    role: admin.role,
+    totpEnabled: admin.totpEnabled,
+  };
 }
 
 /**
- * Admin login (flow.md 2.3): password, then TOTP. The very first login sets up TOTP and
- * returns the recovery codes once. admin_users is a platform table (no garage), so all
- * reads and writes use the platform role.
+ * Admin login (flow.md 2.3). 2FA is optional per admin: without it the password opens the
+ * session; with it a TOTP code (or a one-time recovery code) is needed too. An admin turns
+ * it on or off from their account while signed in. admin_users is a platform table (no
+ * garage), so all reads and writes use the platform role.
  */
 @Injectable()
 export class AdminAuthService {
@@ -46,16 +57,11 @@ export class AdminAuthService {
     @Inject(REDIS) private readonly redis: Redis,
   ) {}
 
-  /** Step 1: email + password. Same error for unknown email, wrong password, inactive. */
-  async checkPassword(input: AdminLoginInput): Promise<{ adminId: string; next: AdminLoginNext }> {
+  /** Email + password. Same error for unknown email, wrong password and inactive admin. */
+  async passwordStep(input: AdminLoginInput, meta: ClientMeta): Promise<PasswordStepResult> {
     await this.assertNotLockedOut(input.email);
-    const admin = await this.platformDb.client.adminUser.findUnique({
-      where: { email: input.email },
-    });
-    const ok = await this.passwords.verify(
-      admin?.isActive ? admin.passwordHash : null,
-      input.password,
-    );
+    const admin = await this.platformDb.client.adminUser.findUnique({ where: { email: input.email } });
+    const ok = await this.passwords.verify(admin?.isActive ? admin.passwordHash : null, input.password);
     if (!admin || !ok) {
       await this.recordFailure(input.email);
       throw new AppException(
@@ -64,14 +70,32 @@ export class AdminAuthService {
         'Wrong email or password',
       );
     }
-    return { adminId: admin.id, next: admin.totpEnabled ? 'TOTP_VERIFY' : 'TOTP_SETUP' };
+    if (admin.totpEnabled) return { next: 'TOTP_VERIFY', adminId: admin.id };
+    return { next: 'DONE', ...(await this.completeLogin(admin, meta)) };
   }
 
-  /** First login only: a new secret for the authenticator app. Calling again replaces it. */
-  async setupTotp(adminId: string): Promise<AdminTotpSetupResponse> {
+  /** Second step, only for admins with 2FA on: a TOTP code or a one-time recovery code. */
+  async verifySecondFactor(
+    adminId: string,
+    input: AdminTotpVerifyInput,
+    meta: ClientMeta,
+  ): Promise<{ profile: AdminProfile; tokens: AdminTokens }> {
+    const admin = await this.activeAdmin(adminId);
+    await this.assertNotLockedOut(admin.email);
+    if (!admin.totpEnabled) throw this.invalidCode();
+    await this.checkSecondFactor(admin, input);
+    return this.completeLogin(admin, meta);
+  }
+
+  /** Signed in, 2FA off: a new secret for the authenticator app. Calling again replaces it. */
+  async startTotpSetup(adminId: string): Promise<AdminTotpSetupResponse> {
     const admin = await this.activeAdmin(adminId);
     if (admin.totpEnabled) {
-      throw new AppException(HttpStatus.FORBIDDEN, ERROR_CODES.FORBIDDEN, '2FA is already set up');
+      throw new AppException(
+        HttpStatus.CONFLICT,
+        ERROR_CODES.TOTP_ALREADY_ENABLED,
+        'Two-factor authentication is already on',
+      );
     }
     const secret = this.totp.newSecret();
     await this.platformDb.client.adminUser.update({
@@ -81,52 +105,53 @@ export class AdminAuthService {
     return { secret, otpauthUri: this.totp.otpauthUri(secret, admin.email) };
   }
 
-  /** Step 2: a TOTP code (or a recovery code once 2FA is on). Opens the session. */
-  async verifySecondFactor(
-    adminId: string,
-    input: AdminTotpVerifyInput,
-    meta: ClientMeta,
-  ): Promise<{ profile: AdminProfile; tokens: AdminTokens; recoveryCodes?: string[] }> {
+  /** Turns 2FA on once a code from the app matches; returns the recovery codes once. */
+  async enableTotp(adminId: string, code: string): Promise<AdminTotpEnableResponse> {
     const admin = await this.activeAdmin(adminId);
-    await this.assertNotLockedOut(admin.email);
-    if (!admin.totpSecretEnc) throw this.invalidCode();
-
-    const db = this.platformDb.client;
-    let recoveryCodes: string[] | undefined;
-
-    if (input.code !== undefined) {
-      if (!this.totp.verify(this.totp.decrypt(admin.totpSecretEnc), input.code)) {
-        await this.recordFailure(admin.email);
-        throw this.invalidCode();
-      }
-      if (!admin.totpEnabled) {
-        // First successful code: 2FA is now on, and the recovery codes are shown once.
-        const generated = this.totp.newRecoveryCodes();
-        recoveryCodes = generated.codes;
-        await db.adminUser.update({
-          where: { id: admin.id },
-          data: { totpEnabled: true, recoveryCodesHash: generated.hashes },
-        });
-      }
-    } else {
-      const index = admin.totpEnabled
-        ? this.totp.findRecoveryCode(admin.recoveryCodesHash, input.recoveryCode ?? '')
-        : -1;
-      if (index < 0) {
-        await this.recordFailure(admin.email);
-        throw this.invalidCode();
-      }
-      // Each recovery code works once.
-      await db.adminUser.update({
-        where: { id: admin.id },
-        data: { recoveryCodesHash: admin.recoveryCodesHash.filter((_, i) => i !== index) },
-      });
+    if (admin.totpEnabled) {
+      throw new AppException(
+        HttpStatus.CONFLICT,
+        ERROR_CODES.TOTP_ALREADY_ENABLED,
+        'Two-factor authentication is already on',
+      );
     }
+    if (!admin.totpSecretEnc) {
+      throw new AppException(
+        HttpStatus.CONFLICT,
+        ERROR_CODES.TOTP_SETUP_REQUIRED,
+        'Start the setup first',
+      );
+    }
+    await this.assertNotLockedOut(admin.email);
+    if (!this.totp.verify(this.totp.decrypt(admin.totpSecretEnc), code)) {
+      await this.recordFailure(admin.email);
+      throw this.invalidCode();
+    }
+    const { codes, hashes } = this.totp.newRecoveryCodes();
+    await this.platformDb.client.adminUser.update({
+      where: { id: admin.id },
+      data: { totpEnabled: true, recoveryCodesHash: hashes },
+    });
+    return { recoveryCodes: codes };
+  }
 
-    await db.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
-    await this.redis.del(this.failureKey(admin.email));
-    const tokens = await this.openSession(admin, meta);
-    return { profile: toProfile(admin), tokens, recoveryCodes };
+  /** Turns 2FA off; needs a current code or a recovery code, so a stolen session cannot. */
+  async disableTotp(adminId: string, input: AdminTotpVerifyInput): Promise<AdminProfile> {
+    const admin = await this.activeAdmin(adminId);
+    if (!admin.totpEnabled) {
+      throw new AppException(
+        HttpStatus.CONFLICT,
+        ERROR_CODES.TOTP_NOT_ENABLED,
+        'Two-factor authentication is not on',
+      );
+    }
+    await this.assertNotLockedOut(admin.email);
+    await this.checkSecondFactor(admin, input);
+    const updated = await this.platformDb.client.adminUser.update({
+      where: { id: admin.id },
+      data: { totpEnabled: false, totpSecretEnc: null, recoveryCodesHash: [] },
+    });
+    return toProfile(updated);
   }
 
   async refresh(
@@ -138,7 +163,7 @@ export class AdminAuthService {
     const admin = await this.platformDb.client.adminUser.findUnique({
       where: { id: rotated.session.subjectId },
     });
-    if (!admin?.isActive || !admin.totpEnabled) {
+    if (!admin?.isActive) {
       await this.sessions.revokeAll('ADMIN', rotated.session.subjectId);
       return null;
     }
@@ -148,10 +173,7 @@ export class AdminAuthService {
       sid: rotated.session.id,
       typ: 'admin',
     });
-    return {
-      profile: toProfile(admin),
-      tokens: { accessToken, refreshToken: rotated.refreshToken },
-    };
+    return { profile: toProfile(admin), tokens: { accessToken, refreshToken: rotated.refreshToken } };
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -167,16 +189,44 @@ export class AdminAuthService {
     return toProfile(await this.activeAdmin(adminId));
   }
 
-  private async openSession(admin: AdminUser, meta: ClientMeta): Promise<AdminTokens> {
-    const { session, refreshToken } = await this.sessions.create('ADMIN', admin.id, meta);
-    const accessToken = await this.sessions.signAccess({
-      sub: admin.id,
-      sid: session.id,
-      typ: 'admin',
+  /** Throws INVALID_2FA_CODE unless the code (or an unused recovery code) matches. */
+  private async checkSecondFactor(admin: AdminUser, input: AdminTotpVerifyInput): Promise<void> {
+    if (input.code !== undefined) {
+      const ok =
+        admin.totpSecretEnc !== null &&
+        this.totp.verify(this.totp.decrypt(admin.totpSecretEnc), input.code);
+      if (!ok) {
+        await this.recordFailure(admin.email);
+        throw this.invalidCode();
+      }
+      return;
+    }
+    const index = this.totp.findRecoveryCode(admin.recoveryCodesHash, input.recoveryCode ?? '');
+    if (index < 0) {
+      await this.recordFailure(admin.email);
+      throw this.invalidCode();
+    }
+    // Each recovery code works once.
+    await this.platformDb.client.adminUser.update({
+      where: { id: admin.id },
+      data: { recoveryCodesHash: admin.recoveryCodesHash.filter((_, i) => i !== index) },
     });
+  }
+
+  private async completeLogin(
+    admin: AdminUser,
+    meta: ClientMeta,
+  ): Promise<{ profile: AdminProfile; tokens: AdminTokens }> {
+    await this.platformDb.client.adminUser.update({
+      where: { id: admin.id },
+      data: { lastLoginAt: new Date() },
+    });
+    await this.redis.del(this.failureKey(admin.email));
+    const { session, refreshToken } = await this.sessions.create('ADMIN', admin.id, meta);
+    const accessToken = await this.sessions.signAccess({ sub: admin.id, sid: session.id, typ: 'admin' });
     // From here on the request has an actor, so the audit interceptor records the login.
     this.setActor(admin);
-    return { accessToken, refreshToken };
+    return { profile: toProfile(admin), tokens: { accessToken, refreshToken } };
   }
 
   private setActor(admin: AdminUser): void {

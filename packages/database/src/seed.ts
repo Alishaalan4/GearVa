@@ -37,7 +37,9 @@ async function main(): Promise<void> {
         passwordHash: await hash(password, { type: argon2id }),
       },
     });
-    console.log(`Created super-admin ${email}. Sign in at the admin app to set up 2FA.`);
+    console.log(
+      `Created super-admin ${email}. Two-factor authentication is optional: turn it on from Account in the admin app.`,
+    );
   } finally {
     await db.$disconnect();
   }

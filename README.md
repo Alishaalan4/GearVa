@@ -11,7 +11,7 @@ This repository is the single monorepo for everything. **Read this file first, t
 | # | Product | Users | Where | Purpose |
 |---|---|---|---|---|
 | V1 | **Garage System** (`garage-web`) | Garage owner, manager, mechanic, receptionist | Responsive web (phone + laptop), Arabic/English, RTL | Customers, vehicles, quick service entry, invoices, payments, reminders, offers |
-| V2 | **Admin System** (`admin`) | The platform owner (super-admin) + optional admins | Web, separate domain, 2FA | Create garage accounts, subscriptions, usage monitoring, system settings |
+| V2 | **Admin System** (`admin`) | The platform owner (super-admin) + optional admins | Web, separate domain, optional 2FA, Arabic/English | Create garage accounts, subscriptions, usage monitoring, system settings |
 | V3 | **Owner App** (`mobile`) | Car owners (garage customers) | React Native (Expo) | See cars, service history, invoices, offers, notifications. Login by phone number |
 
 One backend (`api`) serves all three.
@@ -42,7 +42,7 @@ TypeScript everywhere. Use the current stable major version of each tool, and ch
 | PDF | **Puppeteer** (HTML to PDF) in a BullMQ worker | Handles Arabic RTL well |
 | Email | Behind a channel adapter (Resend, Amazon SES or Brevo) | |
 | Files | S3-compatible storage (Cloudflare R2 in production, local disk in dev) | |
-| Auth | JWT access + refresh tokens in httpOnly cookies (web), TOTP 2FA for admin | |
+| Auth | JWT access + refresh tokens in httpOnly cookies (web), optional TOTP 2FA for admins | |
 | Tests | Jest + Supertest (api), Vitest (packages), Playwright (e2e, later) | |
 | Lint / format | **ESLint 9** (pinned) + Prettier, shared from `packages/config` | Flat config. `eslint-config-next` plugins (react, import, jsx-a11y) do not support ESLint 10 yet |
 | Local infra | Docker Compose (Postgres + Redis only) | Apps run with `npm run dev`, not in Docker |
@@ -199,7 +199,7 @@ Anyone writing code here (human or AI) must follow these.
 
 ### 5.2 Auth and roles
 - Garage staff roles: `OWNER`, `MANAGER`, `MECHANIC`, `RECEPTIONIST`. Permission matrix in `flow.md`.
-- Admin roles: `SUPER_ADMIN`, `ADMIN`. Admin login needs TOTP 2FA. Admin endpoints live only under `apps/api/src/admin` with `AdminGuard`.
+- Admin roles: `SUPER_ADMIN`, `ADMIN`. Admin TOTP 2FA is optional per admin and recommended (flow.md 2.3). Admin endpoints live only under `apps/api/src/admin` with `AdminGuard`.
 - Owners (mobile) log in by phone number with a one-time code.
 - Access tokens are JWTs that last 15 minutes. Refresh tokens are random values that last 30 days; only their hash is stored in `sessions`. Every refresh replaces the token, and presenting an already-replaced one revokes all of that person's sessions (it means the token was copied).
 - Both live in httpOnly, SameSite=Lax cookies (Secure in production) that are **host-only**: each web app forwards its API paths to the API (`admin` forwards `/admin/v1/*`, `garage-web` forwards `/v1/*`), so the browser sees the cookies as belonging to `admin.gearva.online` or `app.gearva.online` and never sends admin cookies to the garage app or the other way round. No CORS and no shared cookie domain are needed.
@@ -257,7 +257,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - Minimal notification module: the channel interface and the email adapter (console output in dev), because the garage owner's invite email is needed now. Later phases only enqueue notifications
 - Audit interceptor, so every mutating endpoint writes an `AuditLog` row from day one
 - Two DB roles, RLS policies, tenant context, Prisma wrapper
-- Admin login with 2FA; admin creates a garage, generates the owner login (invite email), suspends, resets password
+- Admin login (optional 2FA); admin creates a garage, generates the owner login (invite email), suspends, resets password
 - Staff login, staff roles, branches
 - Subscription lock guard
 - **Done when:** admin creates a garage, owner logs in, and `test:tenancy` proves isolation. A suspended garage is locked.

@@ -8,7 +8,7 @@ How the system behaves, step by step. `database.md` defines the tables used here
 
 | Actor | App | How they log in |
 |---|---|---|
-| Super admin / admin | V2 `admin` | Email + password + TOTP 2FA |
+| Super admin / admin | V2 `admin` | Email + password, plus a TOTP code if the admin turned on 2FA (optional, recommended) |
 | Garage OWNER | V1 `garage-web` | Email + password (invite link sets the password) |
 | MANAGER, MECHANIC, RECEPTIONIST | V1 `garage-web` | Email + password |
 | Car owner (customer) | V3 `mobile` | Phone number + one-time code |
@@ -58,13 +58,17 @@ Details (Phase 1, step 1.5):
 5. Login attempts are rate limited per IP and per email.
 
 ### 2.3 Admin login
-Same as above, plus a second step: after the password, the admin enters a TOTP code (or a recovery code). The session is only issued after both. Admin cookies are scoped to `admin.gearva.online` only.
+Same as above. **Two-factor authentication (TOTP) is optional per admin** (decision 2026-10-21): an admin without it signs in with the password alone; an admin who turned it on also needs a code (or a recovery code), and the session is only issued after both. It is recommended for every admin, because the admin account can create, suspend and reset every garage. Admin cookies are scoped to `admin.gearva.online` only.
 
-1. `POST /admin/v1/auth/login` (email, password). On success it sets a 5-minute 2FA challenge cookie and answers `TOTP_SETUP` (first login) or `TOTP_VERIFY`. No session yet.
-2. First login only: `POST /admin/v1/auth/totp/setup` returns a new secret as an `otpauth://` URI (shown as a QR code) and as text.
-3. `POST /admin/v1/auth/totp/verify` with `code` (6 digits) or `recoveryCode`. The first successful code turns 2FA on and returns 10 recovery codes **once**; each recovery code works once. Then the session cookies are set and an `admin.login` audit row is written.
-4. `POST /admin/v1/auth/refresh` rotates the refresh token; `POST /admin/v1/auth/logout` revokes it; `GET /admin/v1/auth/me` returns the signed-in admin.
-5. 10 failed password or 2FA attempts for one email lock it for 15 minutes, on top of the per-IP limit.
+1. `POST /admin/v1/auth/login` (email, password).
+   - 2FA off: the session cookies are set at once and the answer is `{ next: "DONE", admin }`.
+   - 2FA on: a 5-minute challenge cookie is set and the answer is `{ next: "TOTP_VERIFY" }`. No session yet.
+2. 2FA on: `POST /admin/v1/auth/totp/verify` with `code` (6 digits) or `recoveryCode` opens the session. Each recovery code works once.
+3. Every completed login writes one `admin.login` audit row.
+4. Turning 2FA on (signed in, Account page): `POST /admin/v1/auth/totp/setup` returns a new secret as an `otpauth://` URI (shown as a QR code) and as text; `POST /admin/v1/auth/totp/enable` with one correct code turns it on and returns 10 recovery codes **once**.
+5. Turning 2FA off (signed in): `POST /admin/v1/auth/totp/disable` with a current code or a recovery code. The secret and recovery codes are deleted.
+6. `POST /admin/v1/auth/refresh` rotates the refresh token; `POST /admin/v1/auth/logout` revokes it; `GET /admin/v1/auth/me` returns the signed-in admin (including `totpEnabled`).
+7. 10 failed password or 2FA attempts for one email lock it for 15 minutes, on top of the per-IP limit.
 
 ### 2.4 Owner (customer) login on mobile (Phase 6)
 1. Owner enters their phone number. The API creates an `owner_otps` row and sends a code (email or SMS now, WhatsApp later). Same response whether or not the number exists, to avoid revealing who is a customer.

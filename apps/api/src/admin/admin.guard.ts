@@ -9,7 +9,8 @@ import { AppException } from '../common/errors/app-exception';
 
 /**
  * Protects every /admin/v1 endpoint except the login steps (README 5.2). Needs a valid
- * access cookie whose session is still open and an active admin with 2FA enabled.
+ * access cookie whose session is still open and an active admin (2FA, when the admin
+ * turned it on, was already checked when the session opened).
  * Sets the request actor (ADMIN, no garage) for audit rows.
  */
 @Injectable()
@@ -28,7 +29,7 @@ export class AdminGuard implements CanActivate {
     if (!claims || !(await this.sessions.isActive(claims.sid))) throw notSignedIn();
 
     const admin = await this.platformDb.client.adminUser.findUnique({ where: { id: claims.sub } });
-    if (!admin?.isActive || !admin.totpEnabled) throw notSignedIn();
+    if (!admin?.isActive) throw notSignedIn();
 
     this.context.setActor({
       type: 'ADMIN',

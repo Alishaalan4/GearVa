@@ -51,10 +51,16 @@ export class AuditInterceptor implements NestInterceptor {
       mergeMap(async (result: unknown) => {
         if (!this.context.actor) return result;
         try {
+          const entityType = meta?.entityType ?? 'unknown';
+          const entityId =
+            asUuid((result as { id?: unknown } | null)?.id) ?? asUuid(req.params?.id);
           await this.audit.record({
             action: meta?.action ?? `${req.method} ${routePath}`,
-            entityType: meta?.entityType ?? 'unknown',
-            entityId: asUuid((result as { id?: unknown } | null)?.id) ?? asUuid(req.params?.id),
+            entityType,
+            entityId,
+            // Admin actions on a garage: the `:garageId` route param, or the garage just
+            // created. Ignored for staff, whose garage always comes from their session.
+            garageId: asUuid(req.params?.garageId) ?? (entityType === 'garage' ? entityId : null),
           });
         } catch (error) {
           // The change is already committed; failing the response now would invite a

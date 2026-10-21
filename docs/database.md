@@ -409,7 +409,9 @@ Payments are append-only. Rule: `SUM(payments.amountCents) = invoices.paidCents`
 | readAt | timestamptz? | for `IN_APP` |
 | refType / refId | text? / uuid? | e.g. `reminder`, `invoice`, `offer` |
 
-Dedupe key examples: `SERVICE_REMINDER:{reminderId}:{notifyCount}`, `MONTHLY_REMINDER:{ownerId}:2026-10`, `INVOICE:{invoiceId}:EMAIL`.
+Dedupe key examples: `SERVICE_REMINDER:{reminderId}:{notifyCount}`, `MONTHLY_REMINDER:{ownerId}:2026-10`, `INVOICE:{invoiceId}:EMAIL`, `INVITE:{userId}:{issuedAtMs}`, `PASSWORD_RESET:{userId}:{issuedAtMs}`.
+
+Invite and password-reset emails use type `INVITE` with templates `staff-invite` and `password-reset`. **Their `payload` holds the one-time set-password link**, so no screen may show `payload` (the Phase 4 notification log shows type, channel, recipient, status and error only); otherwise a manager could open the owner's reset link.
 
 #### `files`
 `id`, `garageId`, `kind` (`LOGO`, `SERVICE_PHOTO`, `INVOICE_PDF`, `OFFER_IMAGE`), `storageKey`, `mimeType`, `sizeBytes`, `serviceRecordId?`, `createdById`. Photos belong to a service record. Access is always through the API (signed, short-lived URLs).

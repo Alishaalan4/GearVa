@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { Locale } from '../notification-channel';
+import { passwordReset } from './password-reset';
 import { staffInvite } from './staff-invite';
 
 export interface RenderedEmail {
@@ -16,6 +17,7 @@ export interface EmailTemplate<T> {
 /** Template names are stored in notifications.template; add new ones here. */
 const EMAIL_TEMPLATES = {
   'staff-invite': staffInvite,
+  'password-reset': passwordReset,
 };
 
 export type EmailTemplateName = keyof typeof EMAIL_TEMPLATES;

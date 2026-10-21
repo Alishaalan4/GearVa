@@ -14,6 +14,8 @@ const envSchema = z
     // Only the console adapter exists until the first deployment (Phase 3).
     EMAIL_ADAPTER: z.enum(['console']).default('console'),
     EMAIL_FROM: z.string().min(1),
+    // Base URL of garage-web: invite and password-reset links point there.
+    APP_URL_GARAGE: z.url(),
     // Signs the 15-minute access tokens (and the 5-minute 2FA challenge).
     JWT_ACCESS_SECRET: z.string().min(1),
     // Encrypts admin_users.totpSecretEnc with AES-256-GCM.

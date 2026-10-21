@@ -13,7 +13,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.2 API foundations | ✅ Done | 2026-10-19 14:38 |
 | 1 | 1.3 Minimal notifications | ✅ Done | 2026-10-19 14:52 |
 | 1 | 1.4 Admin auth (2FA) | ✅ Done | 2026-10-21 08:49 |
-| 1 | 1.5 Admin garage management | ⏳ Next | |
+| 1 | 1.5a Admin garage management — API | ✅ Done | 2026-10-21 10:56 |
+| 1 | 1.5b Admin garage management — admin web screens | ⏳ Next | |
 | 1 | 1.6 Staff side (login, roles, branches, lock) | | |
 | 1 | 1.7 Tenancy suite and CI | | |
 
@@ -207,6 +208,41 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Known limit:** a TOTP code can be reused within its 30–90 s window (it still needs the password and is rate-limited). Close before launch.
 
 **Verified:** `npm test` (7 database + 24 API tests), `npm run typecheck`, `npm run lint`, `npm run db:seed`; manual `POST /admin/v1/auth/login` → `{"next":"TOTP_SETUP"}` with the challenge cookie.
-**Commit:** pending — `Phase 1.4: admin auth with 2FA`
+**Commit:** `7f9c1a1` — 2026-10-21 08:55
+
+---
+
+## Phase 1 · Step 1.5a — Admin garage management (API)
+**When:** 2026-10-21 ~09:00 → 10:56 (~2 h, including one type fix)
+
+**Implements:** flow.md 2.1 (admin creates a garage) and the suspend/reactivate part of 11.1; database.md 4.2.
+
+**Summary:** Step 1.5 is split in two: this is the API, 1.5b is the admin screens. An admin can now create a garage (trial for 30 days, or paid until a chosen day): one transaction creates the garage, its default settings, the main branch `BR1` and the OWNER account without a password, and queues the invite email, which is sent after commit. Admins can list garages (search, status filter, pagination), open one (owner status, link expiry, branches), resend the invite (only before the owner has a password), send a 24-hour password reset (only after), suspend with a reason and reactivate. Set-password links carry a random token; only its SHA-256 is stored. Every mutation writes an audit row that records the garage.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/garages.ts`, `index.ts` | Create (trial \| paid), list query, suspend schemas; list/detail response types; `TRIAL_DAYS` |
+| `packages/contracts/src/errors.ts` | `EMAIL_ALREADY_USED`, `OWNER_ALREADY_ACTIVE`, `OWNER_NOT_ACTIVATED`, `GARAGE_ALREADY_SUSPENDED`, `GARAGE_NOT_SUSPENDED` |
+| `apps/api/src/admin/garages/admin-garages.service.ts` | Create, list, detail, resend invite, password reset, suspend, reactivate |
+| `apps/api/src/admin/garages/admin-garages.controller.ts` | `/admin/v1/garages` endpoints behind `AdminGuard`; create body validated with the schema directly (union) |
+| `apps/api/src/admin/admin.module.ts` | Registers the garages controller/service; imports notifications |
+| `apps/api/src/auth/access-links.ts` | One-time set-password links (invite 7 days, reset 24 hours), hashed tokens |
+| `apps/api/src/notifications/templates/password-reset.ts`, `index.ts` | Reset email (en/ar) |
+| `apps/api/src/audit/audit.interceptor.ts` | Admin audit rows record the garage (`:garageId` param or the created garage) |
+| `apps/api/src/config/env.ts` | `APP_URL_GARAGE` (base of the links) |
+| `apps/api/test/helpers/admin.ts` | `signInAsNewAdmin()` through the real login endpoints |
+| `apps/api/test/admin-garages.spec.ts` | 9 tests: auth required, trial create (rows, invite link = stored hash, audit), paid create, bad dates, duplicate email with no partial rows, list/search/filter/page size, 404, invite vs reset rules, suspend/reactivate + audit |
+
+**Doc changes**
+- flow.md 2.1 — details: owner email = garage email, trial/paid dates, main branch name, link lifetimes and rules, endpoint list.
+- database.md 4.6 — invite/reset dedupe keys; **`notifications.payload` holds the one-time link, so no screen may show `payload`**.
+
+**Problems hit and fixed:** a class cannot extend the trial-or-paid union type → that body is validated with `ZodValidationPipe(createGarageSchema)` directly.
+
+**Not in this step:** the lock guard that actually blocks a suspended garage (step 1.6); `trial.days` and subscription payments (Phase 5).
+
+**Verified:** `npm test` (7 database + 33 API tests), API typecheck and lint.
+**Commit:** pending — `Phase 1.5a: admin garage management API`
 
 ---

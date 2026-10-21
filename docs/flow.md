@@ -43,6 +43,13 @@ This matrix is enforced by a `RolesGuard` in the API. The web app hides what a r
 4. The owner opens the link, sets a password, and is logged in.
 5. Admin can regenerate the invite or trigger a password reset from V2 at any time.
 
+Details (Phase 1, step 1.5):
+- The garage email is also the owner's login email (`users.email` is globally unique, so an email that is already a login is refused with `EMAIL_ALREADY_USED` and nothing is created). The admin also enters the owner's name.
+- Trial: `trialEndsAt = now + 30 days` (constant until `trial.days` exists in Phase 5). Paid: the admin picks the last paid day; `expiresAt` is the end of that day (UTC).
+- Main branch: `code = BR1`, named after the garage.
+- Links: the invite lasts 7 days; a password reset lasts 24 hours. Both are `app.gearva.online/set-password?token=...` and share `users.inviteTokenHash` (only the token's SHA-256 is stored); a new link replaces the previous one. Resend invite only while the owner has no password (`OWNER_ALREADY_ACTIVE`), reset only after (`OWNER_NOT_ACTIVATED`).
+- Endpoints: `POST /admin/v1/garages`, `GET /admin/v1/garages` (`q`, `status`, pagination), `GET /admin/v1/garages/:garageId`, `POST .../:garageId/invite`, `.../password-reset`, `.../suspend` (reason required), `.../reactivate` (back to `TRIAL` if unpaid with a trial, else `ACTIVE`). Each mutation writes an audit row with the garage id.
+
 ### 2.2 Login (garage staff)
 1. `POST /v1/auth/login` with email and password.
 2. Auth looks up the user by email (platform DB role), checks `isActive`, verifies the argon2 hash, and loads the garage.

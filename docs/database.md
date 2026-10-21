@@ -575,7 +575,7 @@ CHECK constraints:
 1. One `SUPER_ADMIN` (email and password from env; 2FA is optional and can be turned on from the Account page). Added in Phase 1 step 1.4.
 2. Global `service_types` with the starting values from section 4.4. Added in Phase 2.
 3. `system_settings` defaults. Added with the phases that read them.
-4. Development only: a demo garage with owner login, two branches, a few customers, vehicles and visits. The garage and owner are added in step 1.6 (staff login); customers, vehicles and visits in Phase 2.
+4. Development only: a demo garage with owner login, two branches, a few customers, vehicles and visits. Added in step 1.6: "Demo Garage" (ACTIVE, paid for a year, branches BR1 and BR2) with an OWNER whose login is `SEED_DEMO_OWNER_EMAIL` / `SEED_DEMO_OWNER_PASSWORD`; skipped in production or when those are empty. Customers, vehicles and visits are added in Phase 2.
 
 The seed is `packages/database/src/seed.ts`, compiled with the package. It only creates missing rows and never changes existing ones.
 

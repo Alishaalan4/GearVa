@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   type CreateGarageInput,
   ERROR_CODES,
@@ -10,15 +10,11 @@ import {
   TRIAL_DAYS,
 } from '@gearva/contracts';
 import { Prisma, type Garage, type Notification } from '@gearva/database';
-import { RESET_LINK_HOURS, newAccessLink } from '../../auth/access-links';
+import { UserAccessLinksService } from '../../auth/user-access-links.service';
 import { RequestContext } from '../../common/context/request-context';
 import { PlatformDb } from '../../common/db/platform-db';
 import { AppException } from '../../common/errors/app-exception';
 import { paginated, toSkipTake } from '../../common/pagination';
-import { ENV, type Env } from '../../config/env';
-import { NotificationsService } from '../../notifications/notifications.service';
-
-type Tx = Prisma.TransactionClient;
 
 const garageWithCounts = {
   _count: { select: { branches: { where: { isActive: true } } } },
@@ -57,9 +53,8 @@ function notFound(): AppException {
 export class AdminGaragesService {
   constructor(
     private readonly platformDb: PlatformDb,
-    private readonly notifications: NotificationsService,
+    private readonly links: UserAccessLinksService,
     private readonly context: RequestContext,
-    @Inject(ENV) private readonly env: Env,
   ) {}
 
   /**
@@ -70,7 +65,6 @@ export class AdminGaragesService {
     const adminId = this.context.actor?.id;
     if (!adminId) throw new Error('create garage needs an admin actor');
     const now = new Date();
-    const link = newAccessLink(this.env.APP_URL_GARAGE, 'invite');
 
     let invite: Notification;
     let garageId: string;
@@ -107,11 +101,9 @@ export class AdminGaragesService {
             name: input.ownerName,
             role: 'OWNER',
             locale: input.defaultLocale,
-            inviteTokenHash: link.tokenHash,
-            inviteExpiresAt: link.expiresAt,
           },
         });
-        const { notification } = await this.recordInvite(tx, garage, owner, link.url, now);
+        const notification = await this.links.issue(tx, owner, garage.name, 'invite');
         return { garageId: garage.id, invite: notification };
       }));
     } catch (error) {
@@ -125,7 +117,7 @@ export class AdminGaragesService {
       throw error;
     }
 
-    await this.notifications.dispatch(invite);
+    await this.links.dispatch(invite);
     return this.detail(garageId);
   }
 
@@ -203,16 +195,10 @@ export class AdminGaragesService {
         'The owner already set a password. Send a password reset instead.',
       );
     }
-    const link = newAccessLink(this.env.APP_URL_GARAGE, 'invite');
-    const now = new Date();
-    const invite = await this.platformDb.client.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: owner.id },
-        data: { inviteTokenHash: link.tokenHash, inviteExpiresAt: link.expiresAt },
-      });
-      return (await this.recordInvite(tx, garage, owner, link.url, now)).notification;
-    });
-    await this.notifications.dispatch(invite);
+    const invite = await this.platformDb.client.$transaction((tx) =>
+      this.links.issue(tx, owner, garage.name, 'invite'),
+    );
+    await this.links.dispatch(invite);
     return this.detail(garageId);
   }
 
@@ -226,29 +212,10 @@ export class AdminGaragesService {
         'The owner has not set a password yet. Resend the invite instead.',
       );
     }
-    const link = newAccessLink(this.env.APP_URL_GARAGE, 'reset');
-    const now = new Date();
-    const reset = await this.platformDb.client.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: owner.id },
-        data: { inviteTokenHash: link.tokenHash, inviteExpiresAt: link.expiresAt },
-      });
-      const { notification } = await this.notifications.record(tx, {
-        garageId: garage.id,
-        userId: owner.id,
-        channel: 'EMAIL',
-        type: 'INVITE',
-        template: 'password-reset',
-        locale: owner.locale === 'ar' ? 'ar' : 'en',
-        recipient: owner.email,
-        payload: { name: owner.name, link: link.url, hours: RESET_LINK_HOURS },
-        dedupeKey: `PASSWORD_RESET:${owner.id}:${now.getTime()}`,
-        refType: 'user',
-        refId: owner.id,
-      });
-      return notification;
-    });
-    await this.notifications.dispatch(reset);
+    const reset = await this.platformDb.client.$transaction((tx) =>
+      this.links.issue(tx, owner, garage.name, 'reset'),
+    );
+    await this.links.dispatch(reset);
     return this.detail(garageId);
   }
 
@@ -288,29 +255,6 @@ export class AdminGaragesService {
       },
     });
     return this.detail(garageId);
-  }
-
-  private recordInvite(
-    tx: Tx,
-    garage: Garage,
-    owner: { id: string; name: string; email: string; locale: string },
-    url: string,
-    now: Date,
-  ) {
-    return this.notifications.record(tx, {
-      garageId: garage.id,
-      userId: owner.id,
-      channel: 'EMAIL',
-      type: 'INVITE',
-      template: 'staff-invite',
-      locale: owner.locale === 'ar' ? 'ar' : 'en',
-      recipient: owner.email,
-      payload: { name: owner.name, garageName: garage.name, link: url },
-      // One row per issued link: a resend is a new intent, a retried request is not.
-      dedupeKey: `INVITE:${owner.id}:${now.getTime()}`,
-      refType: 'user',
-      refId: owner.id,
-    });
   }
 
   private async activeGarage(garageId: string): Promise<Garage> {

@@ -63,11 +63,16 @@ export class SessionService {
     return { session, refreshToken };
   }
 
-  /** Replaces a refresh token. Returns null when it is unknown, expired or reused. */
+  /**
+   * Replaces a refresh token. Returns null when it is unknown, expired or reused.
+   * `beforeRotate` runs on a valid session before the token is retired; if it throws,
+   * the session is left exactly as it was (a garage lock must not sign anyone out).
+   */
   async rotate(
     subjectType: SubjectType,
     refreshToken: string,
     meta: ClientMeta,
+    beforeRotate?: (session: Session) => Promise<void>,
   ): Promise<{ session: Session; refreshToken: string } | null> {
     const db = this.platformDb.client;
     const current = await db.session.findUnique({
@@ -79,6 +84,7 @@ export class SessionService {
       return null;
     }
     if (current.expiresAt <= new Date()) return null;
+    await beforeRotate?.(current);
 
     // Only one request can retire this token; a second one at the same time is a reuse.
     const retired = await db.session.updateMany({

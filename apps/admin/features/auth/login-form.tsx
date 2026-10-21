@@ -1,11 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  type AdminLoginInput,
-  type AdminLoginResponse,
-  adminLoginSchema,
-} from '@gearva/contracts';
+import { type AdminLoginInput, type AdminLoginResponse, adminLoginSchema } from '@gearva/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';

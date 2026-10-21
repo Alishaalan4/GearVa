@@ -8,6 +8,9 @@ import { ClsModule } from 'nestjs-cls';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AdminModule } from './admin/admin.module';
 import { AuditModule } from './audit/audit.module';
+import { AuthModule } from './auth/auth.module';
+import { StaffGuard } from './auth/staff.guard';
+import { BranchesModule } from './branches/branches.module';
 import { DatabaseModule } from './common/db/database.module';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 import { REDIS, RedisModule } from './common/redis/redis.module';
@@ -15,6 +18,7 @@ import { ENV, type Env } from './config/env';
 import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -44,13 +48,18 @@ import { NotificationsModule } from './notifications/notifications.module';
     }),
     AuditModule,
     NotificationsModule,
+    AuthModule,
     AdminModule,
+    BranchesModule,
+    UsersModule,
     HealthModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    // Order matters: rate limit first, then the staff session + lock + roles for /v1.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useExisting: StaffGuard },
   ],
 })
 export class AppModule {}

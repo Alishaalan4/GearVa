@@ -38,7 +38,10 @@ export function Select({ className = '', ...props }: SelectHTMLAttributes<HTMLSe
   return <select className={`${CONTROL} ${className}`} {...props} />;
 }
 
-export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({
+  className = '',
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={`${CONTROL} ${className}`} {...props} />;
 }
 
@@ -68,22 +71,41 @@ export function Field({
   );
 }
 
-export function Card({ title, children, className = '' }: { title?: string; children: ReactNode; className?: string }) {
+export function Card({
+  title,
+  children,
+  className = '',
+}: {
+  title?: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`}>
+    <section
+      className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`}
+    >
       {title && <h2 className="mb-4 text-base font-semibold">{title}</h2>}
       {children}
     </section>
   );
 }
 
-export function Alert({ tone = 'error', children }: { tone?: 'error' | 'success'; children: ReactNode }) {
+export function Alert({
+  tone = 'error',
+  children,
+}: {
+  tone?: 'error' | 'success';
+  children: ReactNode;
+}) {
   const styles =
     tone === 'error'
       ? 'border-red-200 bg-red-50 text-red-800'
       : 'border-emerald-200 bg-emerald-50 text-emerald-800';
   return (
-    <div className={`rounded-md border px-3 py-2 text-sm ${styles}`} role={tone === 'error' ? 'alert' : 'status'}>
+    <div
+      className={`rounded-md border px-3 py-2 text-sm ${styles}`}
+      role={tone === 'error' ? 'alert' : 'status'}
+    >
       {children}
     </div>
   );

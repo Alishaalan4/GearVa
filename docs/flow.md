@@ -57,6 +57,11 @@ Details (Phase 1, step 1.5):
 4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies, host-only on `app.gearva.online` through the app's API forwarding (README 5.2).
 5. Login attempts are rate limited per IP and per email.
 
+Details (Phase 1, step 1.6):
+- **Set password** (`POST /v1/auth/set-password` with `token` and `password`, at least 10 characters): the invite and the reset link both land here. The link must be unused and not expired (else `INVALID_LINK`). The password is saved, the link is cleared, every other session of that user is ended, and the user is signed in, unless the garage is locked (`GARAGE_LOCKED`; the password stays set).
+- Other endpoints: `POST /v1/auth/refresh` (rotation, as for admins; refused with `GARAGE_LOCKED` when locked), `POST /v1/auth/logout`, `GET /v1/auth/me` (the user and their garage). Login and set-password update `users.lastLoginAt` and `garages.lastLoginAt`, and write a `user.login` / `user.set_password` audit row.
+- Staff have no 2FA. The per-email lockout (10 failures, 15 minutes) is separate from the admin one.
+
 ### 2.3 Admin login
 Same as above. **Two-factor authentication (TOTP) is optional per admin** (decision 2026-10-21): an admin without it signs in with the password alone; an admin who turned it on also needs a code (or a recovery code), and the session is only issued after both. It is recommended for every admin, because the admin account can create, suspend and reset every garage. Admin cookies are scoped to `admin.gearva.online` only.
 
@@ -76,15 +81,17 @@ Same as above. **Two-factor authentication (TOTP) is optional per admin** (decis
 3. The `owners` row already exists because a garage created it when adding the customer. A number nobody added cannot log in.
 
 ### 2.5 Subscription lock
-Every garage request passes `GarageActiveGuard` after authentication:
+Every garage request passes this check after authentication:
 
 ```
 if garage.status == SUSPENDED            -> 403 GARAGE_LOCKED (reason: suspended)
 if garage.status == EXPIRED              -> 403 GARAGE_LOCKED (reason: expired)
 if garage.expiresAt < now                -> 403 GARAGE_LOCKED (reason: expired)
-if garage.status == TRIAL and trialEndsAt < now and not paid -> 403 GARAGE_LOCKED
+if garage.status == TRIAL and trialEndsAt < now and not paid -> 403 GARAGE_LOCKED (reason: trial_ended)
 else continue
 ```
+
+Implementation (step 1.6): the rule is one function (`apps/api/src/common/garage-lock.ts`), used by staff login, set-password, refresh and `StaffGuard`. `StaffGuard` is a **global** guard for every `/v1/*` route: it checks the staff session, then this lock, then the role from `@Roles(...)` (section 1), then sets the tenant context (section 2.6). Only login, set-password, refresh and logout are marked `@Public()`, so a new endpoint cannot skip the lock or the tenant context by accident. The reason is sent as `details.reason`, so the web app can show the right lock screen. A lock never deletes anything; sessions stay valid and work again as soon as the garage is unlocked.
 
 An `ACTIVE` garage always has an `expiresAt` (set at creation in Phase 1, by subscription payments from Phase 5), so it can never stay unlocked forever. A daily job also sets `status = EXPIRED` for garages whose `expiresAt` passed, so lists in V2 are accurate. When the admin records a payment (section 11), the status returns to `ACTIVE` and the garage works again immediately.
 

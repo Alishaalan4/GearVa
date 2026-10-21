@@ -67,7 +67,9 @@ export function GarageDetail({ garageId }: { garageId: string }) {
   const date = (iso: string | null) =>
     iso ? format.dateTime(new Date(iso), { dateStyle: 'medium' }) : tCommon('none');
   const dateTime = (iso: string | null) =>
-    iso ? format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' }) : tCommon('none');
+    iso
+      ? format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' })
+      : tCommon('none');
 
   return (
     <div className="space-y-6">
@@ -161,7 +163,9 @@ export function GarageDetail({ garageId }: { garageId: string }) {
             <div className="space-y-3">
               <p className="text-sm">{t('suspendedSince', { date: dateTime(g.suspendedAt) })}</p>
               {g.suspendedReason && (
-                <p className="text-sm text-slate-600">{t('reasonText', { reason: g.suspendedReason })}</p>
+                <p className="text-sm text-slate-600">
+                  {t('reasonText', { reason: g.suspendedReason })}
+                </p>
               )}
               <Button
                 disabled={action.isPending}

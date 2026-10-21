@@ -15,7 +15,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.4 Admin auth (2FA) | ✅ Done | 2026-10-21 08:49 |
 | 1 | 1.5a Admin garage management — API | ✅ Done | 2026-10-21 10:56 |
 | 1 | 1.5b Admin garage management — admin web screens (+ optional 2FA) | ✅ Done | 2026-10-21 11:43 |
-| 1 | 1.6 Staff side (login, roles, branches, lock) | ⏳ Next | |
+| 1 | 1.6a Staff side — API (login, roles, branches, staff, lock) | ✅ Done | 2026-10-21 12:31 |
+| 1 | 1.6b Staff side — garage-web screens | ⏳ Next | |
 | 1 | 1.7 Tenancy suite and CI | | |
 
 ---
@@ -285,6 +286,43 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Problems hit and fixed:** `@hookform/resolvers` 6.0 peer conflict → 5.9.2; stale `apps/admin/.next` route types from before the `[locale]` move → cache deleted (safe, regenerated); two lint warnings (`useWatch`, named PostCSS export).
 
 **Verified:** `npm test` (7 database + 34 API tests), `npm run typecheck`, `npm run lint` (0 warnings); manual check in the browser: login, create garage, invite email in the console, resend invite, suspend/reactivate, list search/filter, Arabic layout.
-**Commit:** pending — `Phase 1.5b: admin web screens, optional admin 2FA`
+**Commit:** `a148ceb` — `Phase 1.5b: admin web screens, optional admin 2FA`
+
+---
+
+## Phase 1 · Step 1.6a — Staff side API (login, lock, branches, staff)
+**When:** 2026-10-21 ~11:50 → 12:31 (~40 min)
+
+**Implements:** flow.md 1 (permission matrix for branches/staff), 2.2 (staff invite, set password, login), 2.5 (subscription lock); README 5.1 (tenant isolation), 5.2 (sessions, cookies).
+
+**Summary:** Garage staff can now use the API. An invited person opens the link, sets a password (10+ characters, link works once, other sessions end) and is signed in. Staff log in, refresh and log out with `gv_at` / `gv_rt` cookies; there is no staff 2FA. A global `StaffGuard` protects every `/v1/*` route (session → garage lock → `@Roles` → tenant context); only set-password, login, refresh and logout are `@Public()`. A garage that is suspended, expired or whose trial ended gets `403 GARAGE_LOCKED` with `details.reason`, mid-session and at login, and nothing is deleted: after reactivation the same session works again. The owner manages branches (automatic codes `BR2`, `BR3`…; the main branch can't be deactivated) and staff (invite with role and branch, edit, deactivate = signed out at once, resend invite, password reset; the owner account can't be changed here). Managers can list branches. The per-email login lockout and invite/reset links are now shared services used by admin and staff. The dev seed creates a Demo Garage with an owner login.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/staff.ts` (new), `errors.ts`, `index.ts` | Staff/branch schemas and types; `GARAGE_LOCKED`, `INVALID_LINK`, `USER_ALREADY_ACTIVE`, `USER_NOT_ACTIVATED`, `CANNOT_MODIFY_OWNER`, `MAIN_BRANCH_REQUIRED` |
+| `apps/api/src/common/garage-lock.ts` (new) | The flow.md 2.5 lock rule as one function |
+| `apps/api/src/auth/staff.guard.ts`, `staff-access.decorators.ts` (new) | Global guard, `@Public()`, `@Roles()` |
+| `apps/api/src/auth/staff-auth.service.ts`, `staff-auth.controller.ts` (new) | `/v1/auth/set-password`, `login`, `refresh`, `logout`, `me` |
+| `apps/api/src/auth/login-attempts.service.ts`, `user-access-links.service.ts` (new) | Shared lockout and invite/reset links |
+| `apps/api/src/auth/session.service.ts` | `rotate()` takes a check that runs before the token is replaced (a lock no longer ends the session) |
+| `apps/api/src/auth/cookies.ts`, `auth.module.ts`, `app.module.ts`, `admin/*` | Staff cookies; global `StaffGuard`; admin code uses the shared services |
+| `apps/api/src/branches/*`, `apps/api/src/users/*` (new) | Branch and staff endpoints |
+| `apps/api/test/staff-auth.spec.ts`, `staff-management.spec.ts`, `garage-lock.spec.ts`, `helpers/staff.ts` (new) | 22 new tests incl. the Phase 1 story end to end and isolation |
+| `apps/api/package.json` | Jest `testTimeout` 30 s |
+| `packages/database/src/seed.ts` | Demo Garage (BR1, BR2) with owner login, development only |
+| `.env.example` | `SEED_DEMO_OWNER_EMAIL`, `SEED_DEMO_OWNER_PASSWORD` |
+| `apps/admin/**`, `apps/api/test/admin-auth.spec.ts` | Formatting only (`npm run format`) |
+
+**Doc changes**
+- flow.md 2.2: set-password rules, staff endpoints, no staff 2FA, lockout.
+- flow.md 2.5: `trial_ended` reason, global guard, a lock deletes nothing.
+- database.md 9: Demo Garage seed.
+- README 4: `SEED_DEMO_OWNER_*`.
+
+**Problems hit and fixed:** first full run timed out in every app suite's `beforeAll` (7 apps booting at once with a cold ts-jest cache took over Jest's 5 s default) → `testTimeout` 30 s. One real bug: a refresh while locked replaced and then revoked the session, so the user was signed out after reactivation (against flow.md 2.5) → the lock is checked before rotating.
+
+**Verified:** `npm test` (7 database + 56 API tests in 7 suites), `npm run typecheck`, `npm run lint`, `npm run format`, `npm run db:seed` (Demo Garage created) — run by the user.
+**Commit:** pending — `Phase 1.6a: staff auth, garage lock, branches and staff API`
 
 ---

@@ -166,6 +166,8 @@ TOTP_ENCRYPTION_KEY=                                 # 32 random bytes, base64; 
 # Seed (npm run db:seed): the first SUPER_ADMIN (password: 12+ characters)
 SEED_ADMIN_EMAIL=admin@gearva.online
 SEED_ADMIN_PASSWORD=
+SEED_DEMO_OWNER_EMAIL=owner@demo.gearva.local       # development only: demo garage owner login
+SEED_DEMO_OWNER_PASSWORD=                            # 10+ characters; empty = no demo garage
 
 # Email (adapter: console | resend | ses)
 EMAIL_ADAPTER=console

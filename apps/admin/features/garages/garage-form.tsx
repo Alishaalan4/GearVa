@@ -18,7 +18,15 @@ import { useRouter } from '@/i18n/navigation';
 import { ApiError, apiPost } from '@/lib/api';
 
 type FormInput = z.input<typeof createGarageSchema>;
-type FieldName = 'name' | 'email' | 'phone' | 'locationText' | 'timezone' | 'defaultLocale' | 'ownerName' | 'paidUntil';
+type FieldName =
+  | 'name'
+  | 'email'
+  | 'phone'
+  | 'locationText'
+  | 'timezone'
+  | 'defaultLocale'
+  | 'ownerName'
+  | 'paidUntil';
 
 /** flow.md 2.1 step 1: the "New garage" form, validated with the API's own schema. */
 export function GarageForm() {
@@ -85,7 +93,12 @@ export function GarageForm() {
                   : errorFor('email')
               }
             >
-              <Input type="email" dir="ltr" aria-invalid={!!errors.email} {...form.register('email')} />
+              <Input
+                type="email"
+                dir="ltr"
+                aria-invalid={!!errors.email}
+                {...form.register('email')}
+              />
             </Field>
           </div>
           <div className="sm:col-span-2">

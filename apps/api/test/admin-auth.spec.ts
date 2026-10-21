@@ -108,7 +108,9 @@ describe('Admin auth', () => {
       .expect(200);
     expect(me.body.totpEnabled).toBe(false);
 
-    const rows = await platform.auditLog.findMany({ where: { action: 'admin.login', actorId: adminId } });
+    const rows = await platform.auditLog.findMany({
+      where: { action: 'admin.login', actorId: adminId },
+    });
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ actorType: 'ADMIN', garageId: null, entityId: adminId });
   });
@@ -122,7 +124,10 @@ describe('Admin auth', () => {
   it('a signed-in admin can turn 2FA on: setup, then one correct code', async () => {
     const at = cookiesOf(await passwordStep())[AT];
     const asAdmin = (path: string, body?: object) =>
-      http().post(path).set('Cookie', withCookies({ [AT]: at })).send(body);
+      http()
+        .post(path)
+        .set('Cookie', withCookies({ [AT]: at }))
+        .send(body);
 
     // Enabling before setup is refused.
     const early = await asAdmin('/admin/v1/auth/totp/enable', { code: '123456' }).expect(409);
@@ -166,7 +171,10 @@ describe('Admin auth', () => {
     expect(wrong.body.code).toBe('INVALID_2FA_CODE');
 
     const { at } = await loginWithCode();
-    const me = await http().get('/admin/v1/auth/me').set('Cookie', withCookies({ [AT]: at })).expect(200);
+    const me = await http()
+      .get('/admin/v1/auth/me')
+      .set('Cookie', withCookies({ [AT]: at }))
+      .expect(200);
     expect(me.body.totpEnabled).toBe(true);
   });
 
@@ -204,19 +212,34 @@ describe('Admin auth', () => {
     expect(rt2).not.toBe(rt);
 
     // The old token again: treated as stolen...
-    await http().post('/admin/v1/auth/refresh').set('Cookie', withCookies({ [RT]: rt })).expect(401);
+    await http()
+      .post('/admin/v1/auth/refresh')
+      .set('Cookie', withCookies({ [RT]: rt }))
+      .expect(401);
     // ...so even the newest token no longer works.
-    await http().post('/admin/v1/auth/refresh').set('Cookie', withCookies({ [RT]: rt2 })).expect(401);
+    await http()
+      .post('/admin/v1/auth/refresh')
+      .set('Cookie', withCookies({ [RT]: rt2 }))
+      .expect(401);
   });
 
   it('logout ends the session immediately', async () => {
     const { at, rt } = await loginWithCode();
-    await http().get('/admin/v1/auth/me').set('Cookie', withCookies({ [AT]: at })).expect(200);
+    await http()
+      .get('/admin/v1/auth/me')
+      .set('Cookie', withCookies({ [AT]: at }))
+      .expect(200);
 
-    await http().post('/admin/v1/auth/logout').set('Cookie', withCookies({ [RT]: rt })).expect(204);
+    await http()
+      .post('/admin/v1/auth/logout')
+      .set('Cookie', withCookies({ [RT]: rt }))
+      .expect(204);
 
     // The access token has not expired yet, but its session is closed.
-    await http().get('/admin/v1/auth/me').set('Cookie', withCookies({ [AT]: at })).expect(401);
+    await http()
+      .get('/admin/v1/auth/me')
+      .set('Cookie', withCookies({ [AT]: at }))
+      .expect(401);
   });
 
   it('turning 2FA off needs a valid code, then the password alone signs in again', async () => {
@@ -234,7 +257,11 @@ describe('Admin auth', () => {
     expect(off.body.totpEnabled).toBe(false);
 
     const stored = await platform.adminUser.findUniqueOrThrow({ where: { id: adminId } });
-    expect(stored).toMatchObject({ totpEnabled: false, totpSecretEnc: null, recoveryCodesHash: [] });
+    expect(stored).toMatchObject({
+      totpEnabled: false,
+      totpSecretEnc: null,
+      recoveryCodesHash: [],
+    });
 
     expect((await passwordStep()).body.next).toBe('DONE');
   });

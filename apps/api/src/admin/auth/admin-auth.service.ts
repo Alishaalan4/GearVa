@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   type AdminLoginInput,
   type AdminProfile,
@@ -8,18 +8,13 @@ import {
   ERROR_CODES,
 } from '@gearva/contracts';
 import type { AdminUser } from '@gearva/database';
-import type Redis from 'ioredis';
+import { LoginAttemptsService } from '../../auth/login-attempts.service';
 import { PasswordService } from '../../auth/password.service';
 import { type ClientMeta, SessionService } from '../../auth/session.service';
 import { TotpService } from '../../auth/totp.service';
 import { RequestContext } from '../../common/context/request-context';
 import { PlatformDb } from '../../common/db/platform-db';
 import { AppException } from '../../common/errors/app-exception';
-import { REDIS } from '../../common/redis/redis.module';
-
-/** Failed password or 2FA attempts per email before a 15-minute lockout (flow.md 2.2). */
-const MAX_FAILURES = 10;
-const FAILURE_WINDOW_SECONDS = 15 * 60;
 
 export interface AdminTokens {
   accessToken: string;
@@ -54,14 +49,19 @@ export class AdminAuthService {
     private readonly totp: TotpService,
     private readonly sessions: SessionService,
     private readonly context: RequestContext,
-    @Inject(REDIS) private readonly redis: Redis,
+    private readonly attempts: LoginAttemptsService,
   ) {}
 
   /** Email + password. Same error for unknown email, wrong password and inactive admin. */
   async passwordStep(input: AdminLoginInput, meta: ClientMeta): Promise<PasswordStepResult> {
     await this.assertNotLockedOut(input.email);
-    const admin = await this.platformDb.client.adminUser.findUnique({ where: { email: input.email } });
-    const ok = await this.passwords.verify(admin?.isActive ? admin.passwordHash : null, input.password);
+    const admin = await this.platformDb.client.adminUser.findUnique({
+      where: { email: input.email },
+    });
+    const ok = await this.passwords.verify(
+      admin?.isActive ? admin.passwordHash : null,
+      input.password,
+    );
     if (!admin || !ok) {
       await this.recordFailure(input.email);
       throw new AppException(
@@ -173,7 +173,10 @@ export class AdminAuthService {
       sid: rotated.session.id,
       typ: 'admin',
     });
-    return { profile: toProfile(admin), tokens: { accessToken, refreshToken: rotated.refreshToken } };
+    return {
+      profile: toProfile(admin),
+      tokens: { accessToken, refreshToken: rotated.refreshToken },
+    };
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -221,9 +224,13 @@ export class AdminAuthService {
       where: { id: admin.id },
       data: { lastLoginAt: new Date() },
     });
-    await this.redis.del(this.failureKey(admin.email));
+    await this.attempts.clear('admin', admin.email);
     const { session, refreshToken } = await this.sessions.create('ADMIN', admin.id, meta);
-    const accessToken = await this.sessions.signAccess({ sub: admin.id, sid: session.id, typ: 'admin' });
+    const accessToken = await this.sessions.signAccess({
+      sub: admin.id,
+      sid: session.id,
+      typ: 'admin',
+    });
     // From here on the request has an actor, so the audit interceptor records the login.
     this.setActor(admin);
     return { profile: toProfile(admin), tokens: { accessToken, refreshToken } };
@@ -251,24 +258,11 @@ export class AdminAuthService {
     return new AppException(HttpStatus.UNAUTHORIZED, ERROR_CODES.INVALID_2FA_CODE, 'Wrong code');
   }
 
-  private failureKey(email: string): string {
-    return `auth:failures:admin:${email}`;
+  private recordFailure(email: string): Promise<void> {
+    return this.attempts.recordFailure('admin', email);
   }
 
-  private async recordFailure(email: string): Promise<void> {
-    const key = this.failureKey(email);
-    const count = await this.redis.incr(key);
-    if (count === 1) await this.redis.expire(key, FAILURE_WINDOW_SECONDS);
-  }
-
-  private async assertNotLockedOut(email: string): Promise<void> {
-    const count = Number(await this.redis.get(this.failureKey(email)));
-    if (count >= MAX_FAILURES) {
-      throw new AppException(
-        HttpStatus.TOO_MANY_REQUESTS,
-        ERROR_CODES.RATE_LIMITED,
-        'Too many failed attempts. Try again in 15 minutes.',
-      );
-    }
+  private assertNotLockedOut(email: string): Promise<void> {
+    return this.attempts.assertNotLockedOut('admin', email);
   }
 }

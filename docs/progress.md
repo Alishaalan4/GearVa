@@ -16,8 +16,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.5a Admin garage management — API | ✅ Done | 2026-10-21 10:56 |
 | 1 | 1.5b Admin garage management — admin web screens (+ optional 2FA) | ✅ Done | 2026-10-21 11:43 |
 | 1 | 1.6a Staff side — API (login, roles, branches, staff, lock) | ✅ Done | 2026-10-21 12:31 |
-| 1 | 1.6b Staff side — garage-web screens | ⏳ Next | |
-| 1 | 1.7 Tenancy suite and CI | | |
+| 1 | 1.6b Staff side — garage-web screens | ✅ Done | 2026-10-22 ~12:30 |
+| 1 | 1.7 Tenancy suite and CI | ⏳ Next | |
 
 ---
 
@@ -323,6 +323,43 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Problems hit and fixed:** first full run timed out in every app suite's `beforeAll` (7 apps booting at once with a cold ts-jest cache took over Jest's 5 s default) → `testTimeout` 30 s. One real bug: a refresh while locked replaced and then revoked the session, so the user was signed out after reactivation (against flow.md 2.5) → the lock is checked before rotating.
 
 **Verified:** `npm test` (7 database + 56 API tests in 7 suites), `npm run typecheck`, `npm run lint`, `npm run format`, `npm run db:seed` (Demo Garage created) — run by the user.
-**Commit:** pending — `Phase 1.6a: staff auth, garage lock, branches and staff API`
+**Commit:** `63a6412` — `Phase 1.6a: staff auth, garage lock, branches and staff API`
+
+---
+
+## Phase 1 · Step 1.6b — Garage web screens (staff side)
+**When:** 2026-10-21 ~12:40 → 2026-10-22 ~12:30 (about 1 h of work; verification finished the next day)
+
+**Implements:** flow.md 1 (owner-only staff and branch settings), 2.1 step 4 and 2.2 (set password, login), 2.5 (lock screen); README 5.2 (API forwarding), 5.7 (TanStack Query, react-hook-form + the API's Zod schemas, next-intl, logical Tailwind classes).
+
+**Summary:** The garage app at `localhost:3000` is usable. Staff sign in; an invited person opens the email link, sets a password (typed twice) and is signed in; a used or expired link says so. Any `GARAGE_LOCKED` answer replaces the app with a lock screen for the reason (suspended, expired, trial ended) with "Try again" and "Sign out". The owner manages branches (add, edit, deactivate; not the main branch) and staff (invite with role, branch and email language, edit, resend invite, password reset, deactivate with confirmation). Other roles see a welcome page until Phase 2. The app forwards `/v1/*` to the API and refreshes an expired session once.
+
+**Decision (user, 2026-10-21): English is the default language, not Arabic.** The browser's language is ignored. Choosing Arabic with the language switch is remembered on that device for a year (cookie `gv_locale`), so links without `/en` or `/ar` (invite emails, bookmarks) open in the chosen language.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/package.json`, `next.config.ts` | `next-intl`, TanStack Query, react-hook-form, `@hookform/resolvers` 5.9, `zod`, `@gearva/contracts`, `@gearva/ui`; forwards `/v1/*` to `API_URL` |
+| `apps/garage-web/proxy.ts`, `i18n/*` | `/en` and `/ar` routing, English default, remembered choice, Asia/Beirut time zone |
+| `apps/garage-web/messages/en.json`, `ar.json` | Every visible string |
+| `apps/garage-web/lib/api.ts` | Fetch wrapper, one refresh, `GARAGE_LOCKED` from a refused refresh passed on (lock screen, not login) |
+| `apps/garage-web/components/*` | Providers (lock screen on any `GARAGE_LOCKED`), app shell, owner-only guard, error alert, language switch |
+| `apps/garage-web/features/auth/*` | Login, set password, lock screen, `useStaff` |
+| `apps/garage-web/features/branches/*`, `features/staff/*`, `features/home/*` | Branch settings, staff settings, home page |
+| `apps/garage-web/app/[locale]/**` | Pages: login, set-password, home, settings/branches, settings/staff (Phase 0 `app/layout.tsx`, `app/page.tsx` removed) |
+| `packages/ui/*` (new) | `Button`, `Input`, `Select`, `Textarea`, `Field`, `Card`, `Alert` moved from `apps/admin/components/ui.tsx`; shipped as source |
+| `apps/admin/**` | Imports `@gearva/ui`; `transpilePackages`; Tailwind `@source` for the shared package |
+| `apps/api/src/auth/staff-auth.controller.ts` | A refresh refused with `GARAGE_LOCKED` no longer clears the cookies |
+| `apps/api/test/staff-auth.spec.ts` | Locked refresh keeps cookies; the same refresh token works after reactivation |
+
+**Doc changes**
+- README 3: `packages/ui` in the structure; the rule now says when it was created and what may go in it.
+- flow.md 2.2: garage web app (English default and remembered choice, pages, no self-service password reset, lock screen).
+- flow.md 2.5: a locked refresh keeps the session cookies.
+
+**Problems hit and fixed:** one real bug found while building the lock screen: `/v1/auth/refresh` cleared the cookies when the garage was locked, so staff were signed out ~15 minutes into a lock, against flow.md 2.5 ("sessions stay valid") → cookies are kept on `GARAGE_LOCKED`. README 3 required `packages/ui` once a component was copied between the apps → created it instead of copying `ui.tsx`.
+
+**Verified:** `npm run format`, `npm run typecheck`, `npm run lint`, `npm test` (7 database + 56 API tests) — run by the user. Manual browser check by the user: language default and remembered choice, login, branches, staff invite → set password from the console email → mechanic has no settings, link reuse refused, deactivation signs out, suspend → lock screen → reactivate → "Try again".
+**Commit:** pending — `Phase 1.6b: garage-web screens, packages/ui, keep cookies on locked refresh`
 
 ---

@@ -92,6 +92,7 @@ gearva/
 ├── packages/
 │   ├── database/                 # Prisma schema, migrations, seed, RLS SQL, client factory
 │   ├── contracts/                # Zod schemas, DTO types, enums, constants, km/miles helpers
+│   ├── ui/                       # small Tailwind components shared by garage-web and admin
 │   └── config/                   # shared tsconfig, eslint, prettier
 ├── docs/                         # flow.md, database.md
 ├── docker-compose.yml            # Postgres + Redis for local development
@@ -102,7 +103,7 @@ gearva/
 └── README.md
 ```
 
-Do **not** create `packages/ui` or `packages/utils` until real duplication exists. Create `packages/ui` only when a component is copied between `garage-web` and `admin`. Business workflows never go in shared packages.
+Do **not** create `packages/utils` until real duplication exists. `packages/ui` was created in step 1.6b, when `garage-web` needed the same form controls as `admin`. It ships TypeScript source (each app lists it in `transpilePackages` and scans it with Tailwind `@source`) and holds only pieces with no app-specific imports: anything that uses an app's translations or API client stays in that app. Business workflows never go in shared packages.
 
 ### Naming rules
 

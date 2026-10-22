@@ -1,0 +1,151 @@
+{
+  "meta": {
+    "title": "Gearva"
+  },
+  "common": {
+    "loading": "Loading…",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}",
+    "save": "Save",
+    "cancel": "Cancel",
+    "ownerOnly": "Only the garage owner can open this page."
+  },
+  "errors": {
+    "BAD_REQUEST": "The request was not valid.",
+    "VALIDATION_FAILED": "Some fields are not valid. Check the form and try again.",
+    "UNAUTHORIZED": "Your session has ended. Sign in again.",
+    "INVALID_CREDENTIALS": "Wrong email or password.",
+    "FORBIDDEN": "You are not allowed to do this.",
+    "NOT_FOUND": "Not found. Refresh the page and try again.",
+    "RATE_LIMITED": "Too many attempts. Wait a few minutes and try again.",
+    "INTERNAL_ERROR": "Something went wrong. Try again.",
+    "NETWORK_ERROR": "Cannot reach the server. Check your connection.",
+    "EMAIL_ALREADY_USED": "This email is already used by another account.",
+    "GARAGE_LOCKED": "This garage is locked.",
+    "INVALID_LINK": "This link is not valid any more: it was already used or has expired. Ask for a new one.",
+    "USER_ALREADY_ACTIVE": "This person already set a password. Send a password reset instead.",
+    "USER_NOT_ACTIVATED": "This person has not set a password yet. Resend the invite instead.",
+    "CANNOT_MODIFY_OWNER": "The owner account is managed by Gearva support.",
+    "MAIN_BRANCH_REQUIRED": "The main branch cannot be deactivated."
+  },
+  "nav": {
+    "branches": "Branches",
+    "staff": "Staff",
+    "signOut": "Sign out",
+    "switchLanguage": "العربية"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Gearva for garages",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "emailInvalid": "Enter a valid email.",
+    "passwordRequired": "Enter your password.",
+    "forgot": "Forgot your password? Ask the garage owner to send you a reset link."
+  },
+  "setPassword": {
+    "title": "Set your password",
+    "intro": "Choose the password you will use to sign in to Gearva.",
+    "password": "New password",
+    "passwordHint": "At least {min} characters.",
+    "passwordInvalid": "Use at least {min} characters.",
+    "confirm": "Repeat the password",
+    "confirmMismatch": "The two passwords are not the same.",
+    "submit": "Save and sign in",
+    "noToken": "This page needs the link from your email. Open the link again, or ask for a new one."
+  },
+  "lock": {
+    "title": {
+      "suspended": "Account suspended",
+      "expired": "Subscription ended",
+      "trial_ended": "Free trial ended"
+    },
+    "body": {
+      "suspended": "This garage's account is suspended. Contact Gearva to restore access.",
+      "expired": "This garage's subscription has ended. Contact Gearva to renew it.",
+      "trial_ended": "This garage's free trial has ended. Contact Gearva to subscribe."
+    },
+    "dataSafe": "Nothing was deleted: all your data will be here as soon as access is restored.",
+    "retry": "Try again",
+    "signOut": "Sign out"
+  },
+  "home": {
+    "welcome": "Welcome, {name}",
+    "signedInAs": "{role} at {garage}",
+    "setupTitle": "Set up your garage",
+    "setupBody": "Add your branches, then invite your team. Each person gets an email to set their password.",
+    "manageBranches": "Branches",
+    "manageStaff": "Staff"
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "MANAGER": "Manager",
+    "MECHANIC": "Mechanic",
+    "RECEPTIONIST": "Receptionist"
+  },
+  "locales": {
+    "ar": "Arabic",
+    "en": "English"
+  },
+  "branches": {
+    "title": "Branches",
+    "add": "Add a branch",
+    "addSubmit": "Add branch",
+    "created": "Branch {name} ({code}) was added.",
+    "name": "Name",
+    "address": "Address (optional)",
+    "phone": "Phone (optional)",
+    "invalid": {
+      "name": "Enter a name (2 to 120 characters).",
+      "address": "Use at most 200 characters.",
+      "phone": "Use at most 30 characters."
+    },
+    "save": "Save",
+    "saved": "The branch was saved.",
+    "main": "Main",
+    "inactive": "Inactive",
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "deactivated": "The branch was deactivated.",
+    "activated": "The branch was activated."
+  },
+  "staff": {
+    "title": "Staff",
+    "invite": "Invite someone",
+    "inviteSubmit": "Send invite",
+    "invited": "An invite was sent to {email}.",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "branch": "Branch",
+    "branchHint": "Mechanics and receptionists work in one branch. A manager can have all branches.",
+    "allBranches": "All branches",
+    "language": "Email language",
+    "languageHint": "The invite and later emails are sent in this language.",
+    "invalid": {
+      "name": "Enter a name (2 to 120 characters).",
+      "email": "Enter a valid email.",
+      "branchId": "Choose a branch for mechanics and receptionists."
+    },
+    "total": "{count, plural, one {# person} other {# people}}",
+    "inactive": "Deactivated",
+    "invitePending": "Invite not accepted yet",
+    "lastLogin": "Last sign-in {date}",
+    "neverSignedIn": "Never signed in",
+    "ownerNote": "The owner account is managed by Gearva support.",
+    "edit": "Edit",
+    "saved": "The changes were saved.",
+    "resendInvite": "Resend invite",
+    "inviteSent": "A new invite was sent to {email}.",
+    "sendReset": "Send password reset",
+    "resetSent": "A password reset link was sent to {email}.",
+    "deactivate": "Deactivate",
+    "confirmDeactivate": "Deactivate {name}? They are signed out at once and cannot sign in until you activate them again.",
+    "deactivated": "{name} was deactivated and signed out.",
+    "activate": "Activate",
+    "activated": "{name} can sign in again."
+  }
+}

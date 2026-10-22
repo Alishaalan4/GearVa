@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { Button } from '@/components/ui';
+import { Button } from '@gearva/ui';
 
 /** Shown once, right after 2FA is turned on (flow.md 2.3). */
 export function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {

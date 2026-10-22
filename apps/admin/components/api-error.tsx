@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/api';
-import { Alert } from './ui';
+import { Alert } from '@gearva/ui';
 
 /** Shows an API error in the user's language, by its error code (never the raw message). */
 export function ApiErrorAlert({ error }: { error: unknown }) {

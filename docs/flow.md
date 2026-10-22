@@ -62,6 +62,12 @@ Details (Phase 1, step 1.6):
 - Other endpoints: `POST /v1/auth/refresh` (rotation, as for admins; refused with `GARAGE_LOCKED` when locked), `POST /v1/auth/logout`, `GET /v1/auth/me` (the user and their garage). Login and set-password update `users.lastLoginAt` and `garages.lastLoginAt`, and write a `user.login` / `user.set_password` audit row.
 - Staff have no 2FA. The per-email lockout (10 failures, 15 minutes) is separate from the admin one.
 
+Garage web app (step 1.6b):
+- English is the default language (decision 2026-10-21) and the browser's language is ignored. Every screen has a switch to Arabic (right-to-left) and back. The choice is remembered on that device for a year (cookie `gv_locale`), so a link without `/en` or `/ar` (such as the invite link `/set-password?token=...` or a bookmark) opens in the language the person last chose, and in English if they never chose.
+- Pages: `/login`, `/set-password?token=...` (password typed twice; signs the person in), the signed-in home page, and for the OWNER only `/settings/branches` and `/settings/staff`. Other roles see only the home page until Phase 2.
+- There is no "forgot password" self-service: staff ask the owner for a reset link; the owner asks Gearva (admin, section 2.1).
+- Any answer `GARAGE_LOCKED` (at login, set-password, refresh or mid-session) replaces the app with the lock screen for `details.reason`, with "Try again" and "Sign out".
+
 ### 2.3 Admin login
 Same as above. **Two-factor authentication (TOTP) is optional per admin** (decision 2026-10-21): an admin without it signs in with the password alone; an admin who turned it on also needs a code (or a recovery code), and the session is only issued after both. It is recommended for every admin, because the admin account can create, suspend and reset every garage. Admin cookies are scoped to `admin.gearva.online` only.
 
@@ -91,7 +97,7 @@ if garage.status == TRIAL and trialEndsAt < now and not paid -> 403 GARAGE_LOCKE
 else continue
 ```
 
-Implementation (step 1.6): the rule is one function (`apps/api/src/common/garage-lock.ts`), used by staff login, set-password, refresh and `StaffGuard`. `StaffGuard` is a **global** guard for every `/v1/*` route: it checks the staff session, then this lock, then the role from `@Roles(...)` (section 1), then sets the tenant context (section 2.6). Only login, set-password, refresh and logout are marked `@Public()`, so a new endpoint cannot skip the lock or the tenant context by accident. The reason is sent as `details.reason`, so the web app can show the right lock screen. A lock never deletes anything; sessions stay valid and work again as soon as the garage is unlocked.
+Implementation (step 1.6): the rule is one function (`apps/api/src/common/garage-lock.ts`), used by staff login, set-password, refresh and `StaffGuard`. `StaffGuard` is a **global** guard for every `/v1/*` route: it checks the staff session, then this lock, then the role from `@Roles(...)` (section 1), then sets the tenant context (section 2.6). Only login, set-password, refresh and logout are marked `@Public()`, so a new endpoint cannot skip the lock or the tenant context by accident. The reason is sent as `details.reason`, so the web app can show the right lock screen. A lock never deletes anything; sessions stay valid and work again as soon as the garage is unlocked. A refresh refused with `GARAGE_LOCKED` therefore keeps the session cookies (every other refused refresh clears them).
 
 An `ACTIVE` garage always has an `expiresAt` (set at creation in Phase 1, by subscription payments from Phase 5), so it can never stay unlocked forever. A daily job also sets `status = EXPIRED` for garages whose `expiresAt` passed, so lists in V2 are accurate. When the admin records a payment (section 11), the status returns to `ACTIVE` and the garage works again immediately.
 

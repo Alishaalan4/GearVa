@@ -158,6 +158,8 @@ describe('Staff auth and garage lock', () => {
       .set('Cookie', `gv_rt=${refreshToken}`)
       .expect(403);
     expect(refresh.body.code).toBe('GARAGE_LOCKED');
+    // The browser keeps its cookies while locked (garage-web shows the lock screen).
+    expect(cookiesOf(refresh)).toEqual({});
 
     await http()
       .post(`/admin/v1/garages/${g.garageId}/reactivate`)
@@ -165,6 +167,8 @@ describe('Staff auth and garage lock', () => {
       .expect(200);
     // The access token from before the suspension works again; nothing was lost.
     await http().get('/v1/auth/me').set('Cookie', cookie).expect(200);
+    // So does the refresh token that was refused while locked.
+    await http().post('/v1/auth/refresh').set('Cookie', `gv_rt=${refreshToken}`).expect(200);
   });
 
   it('a garage whose paid period or trial ended is locked without any job running', async () => {

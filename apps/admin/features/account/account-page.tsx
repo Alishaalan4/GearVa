@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Card } from '@/components/ui';
+import { Card } from '@gearva/ui';
 import { useAdmin } from '@/features/auth/use-admin';
 import { TwoFactorCard } from './two-factor-card';
 

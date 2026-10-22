@@ -11,7 +11,7 @@ import { useTranslations } from 'next-intl';
 import { QRCodeSVG } from 'qrcode.react';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Alert, Button, Card } from '@/components/ui';
+import { Alert, Button, Card } from '@gearva/ui';
 import { RecoveryCodes } from '@/features/auth/recovery-codes';
 import { SecondFactorForm } from '@/features/auth/second-factor-form';
 import { ADMIN_QUERY_KEY } from '@/features/auth/use-admin';

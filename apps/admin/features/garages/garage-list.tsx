@@ -10,7 +10,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Button, Input, Select } from '@/components/ui';
+import { Button, Input, Select } from '@gearva/ui';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api } from '@/lib/api';
 import { StatusBadge } from './status-badge';

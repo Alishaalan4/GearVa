@@ -13,7 +13,7 @@ import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Button, Card, Field, Input, Select } from '@/components/ui';
+import { Button, Card, Field, Input, Select } from '@gearva/ui';
 import { useRouter } from '@/i18n/navigation';
 import { ApiError, apiPost } from '@/lib/api';
 

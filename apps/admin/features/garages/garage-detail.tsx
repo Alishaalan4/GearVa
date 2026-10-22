@@ -12,7 +12,7 @@ import { type ReactNode, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Alert, Button, Card, Field, Textarea } from '@/components/ui';
+import { Alert, Button, Card, Field, Textarea } from '@gearva/ui';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPost } from '@/lib/api';
 import { StatusBadge } from './status-badge';

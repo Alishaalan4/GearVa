@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Button, Field, Input } from '@/components/ui';
+import { Button, Field, Input } from '@gearva/ui';
 import { useRouter } from '@/i18n/navigation';
 import { apiPost } from '@/lib/api';
 import { AuthLayout } from './auth-layout';

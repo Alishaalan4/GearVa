@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Button, Field, Input } from '@/components/ui';
+import { Button, Field, Input } from '@gearva/ui';
 
 /**
  * The 6-digit code (or, once 2FA is on, a recovery code), validated with the same

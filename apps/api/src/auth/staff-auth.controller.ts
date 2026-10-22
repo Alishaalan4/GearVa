@@ -96,7 +96,10 @@ export class StaffAuthController {
       setStaffSessionCookies(res, this.secureCookies, result.tokens);
       return result.profile;
     } catch (error) {
-      clearStaffSessionCookies(res, this.secureCookies);
+      // A lock keeps the session (flow.md 2.5): the cookies stay, so the same session
+      // works again once the garage is unlocked. Any other failure signs the browser out.
+      const locked = error instanceof AppException && error.code === ERROR_CODES.GARAGE_LOCKED;
+      if (!locked) clearStaffSessionCookies(res, this.secureCookies);
       throw error;
     }
   }

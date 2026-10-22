@@ -1,5 +1,8 @@
-// Small UI building blocks (Tailwind only). Logical spacing (ms/me/ps/pe) keeps them
-// correct in Arabic (RTL). Bigger pieces (dialogs, menus) come with shadcn/ui when needed.
+// Small UI building blocks (Tailwind only), shared by garage-web and admin (README 3).
+// Logical spacing (ms/me/ps/pe) keeps them correct in Arabic (RTL). Bigger pieces (dialogs,
+// menus) come with shadcn/ui when needed. Shipped as source: each app lists @gearva/ui in
+// transpilePackages and scans it with @source in app/globals.css. Nothing app-specific
+// (i18n, API client) belongs here.
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,

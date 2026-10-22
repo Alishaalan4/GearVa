@@ -3,7 +3,7 @@
 import type { AdminProfile, AdminTotpVerifyInput } from '@gearva/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Alert } from '@/components/ui';
+import { Alert } from '@gearva/ui';
 import { Link, useRouter } from '@/i18n/navigation';
 import { ApiError, apiPost } from '@/lib/api';
 import { AuthLayout } from './auth-layout';

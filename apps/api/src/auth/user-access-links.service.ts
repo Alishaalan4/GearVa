@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Notification, Prisma } from '@gearva/database';
 import { ENV, type Env } from '../config/env';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -20,6 +20,8 @@ export interface LinkUser {
  */
 @Injectable()
 export class UserAccessLinksService {
+  private readonly logger = new Logger(UserAccessLinksService.name);
+
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly notifications: NotificationsService,
@@ -57,7 +59,20 @@ export class UserAccessLinksService {
     return notification;
   }
 
-  dispatch(notification: Notification): Promise<void> {
-    return this.notifications.dispatch(notification);
+  /**
+   * Queues the email after commit. The user and link are already saved, so a Redis
+   * failure here must not turn the request into an error (the admin or owner would
+   * retry and hit EMAIL_ALREADY_USED). The row stays QUEUED; a resend issues a new link,
+   * and Phase 4's retry job re-queues old QUEUED rows.
+   */
+  async dispatch(notification: Notification): Promise<void> {
+    try {
+      await this.notifications.dispatch(notification);
+    } catch (error) {
+      this.logger.error(
+        `Could not queue notification ${notification.id}; it stays QUEUED`,
+        error as Error,
+      );
+    }
   }
 }

@@ -17,7 +17,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.5b Admin garage management — admin web screens (+ optional 2FA) | ✅ Done | 2026-10-21 11:43 |
 | 1 | 1.6a Staff side — API (login, roles, branches, staff, lock) | ✅ Done | 2026-10-21 12:31 |
 | 1 | 1.6b Staff side — garage-web screens | ✅ Done | 2026-10-22 ~12:30 |
-| 1 | 1.7 Tenancy suite and CI | ✅ Done locally (CI: first run pending) | 2026-10-23 |
+| 1 | 1.7 Tenancy suite and CI | ✅ Done | 2026-10-23 |
+| 1 | 1.8 Review fixes (guard, phones, branch rule, CI) | ✅ Done | 2026-10-23 |
+| 2 | Customers, vehicles, maintenance | ⏳ Next | |
 
 ---
 
@@ -390,7 +392,51 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Problems hit and fixed:** none. The local migrator already had `CREATEDB` (docker-init.sh); CI grants it explicitly.
 
-**Verified:** `npm run format`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` — run by the user, all passing; development data unchanged (old `[test]` garages kept by choice). First CI run: pending (after push).
-**Commit:** pending — `Phase 1.7: own test database, tenancy suite with route coverage, CI`
+**Verified:** `npm run format`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` — run by the user, all passing; development data unchanged (old `[test]` garages kept by choice). First CI run on GitHub Actions for `1d17b77`: green (lint, typecheck, test, test:tenancy).
+**Commit:** `1d17b77` — `Phase 1.7: own test database, tenancy suite with route coverage, CI`
+
+**Phase 1 complete:** admin creates a garage, the owner logs in, `test:tenancy` proves isolation (locally and in CI), and a suspended garage is locked.
+
+---
+
+## Phase 1 · Step 1.8 — Project review and fixes
+**When:** 2026-10-23 (review ~40 min, fixes ~40 min)
+
+**Why:** before Phase 2 the user asked for a scan of the whole project for bugs and future risks. The review read the API, database, both web apps, tests and CI, and confirmed one bug by running it. Findings were ranked: fix now, fix before the first deployment, later.
+
+**Decisions (user, 2026-10-23):** add a phone-number library (`libphonenumber-js`); a branch with active staff is **blocked** from being deactivated until they are moved.
+
+**Fixed in this step**
+1. **Staff guard could be skipped with capital letters (high, confirmed).** Routing ignores case, but `StaffGuard` chose routes by `req.path.startsWith('/v1/')`, so `/V1/branches` reached the controller with no session, lock or role check (it only failed with 500 because `TenantDb` refuses to run without a garage, so no data leaked). The guard now decides by the controller's declared path.
+2. **Phones were not normalized (docs ≠ code).** database.md requires E.164; the code accepted any text. New `phoneSchema` / `optionalPhoneSchema` / `normalizePhone` in contracts (default country Lebanon), used for garage and branch phones; Phase 2 reuses it for owners, whose phone is their login.
+3. **Deactivating a branch left its staff in it.** Now `BRANCH_HAS_STAFF` while active staff are assigned; nobody can be moved or reactivated into an inactive branch (`BRANCH_INACTIVE`).
+4. Turbo cached test results (a run could replay "passed" without touching the fresh test database) → `cache: false` for `test` and `test:tenancy`.
+5. CI did not check formatting → `npm run format:check` step.
+6. A Redis failure right after an invite was saved turned the request into a 500 (the admin would retry and hit `EMAIL_ALREADY_USED`) → the failure is logged and the row stays `QUEUED`.
+
+**Recorded for the first deployment (README 9 checklist):** real client IPs behind the web apps' forwarding (otherwise all users share one rate limit), production settings and security headers, emails stuck in `QUEUED`.
+
+**Noted for later:** sessions table cleanup job (Phase 4); set-password link consumed non-atomically (two simultaneous clicks both succeed); admin TOTP code reusable within its ~90 s window; no audit row when a password is set while the garage is locked; one email = one staff account across all garages (product constraint to confirm); every new table needs its own `GRANT` (no default privileges).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/auth/staff.guard.ts` | Staff routes chosen by controller path metadata |
+| `packages/contracts/src/phone.ts` (new), `index.ts`, `garages.ts`, `staff.ts`, `package.json` | Phone rule with `libphonenumber-js` ^1.13.15 |
+| `packages/contracts/src/errors.ts` | `BRANCH_HAS_STAFF`, `BRANCH_INACTIVE` |
+| `apps/api/src/branches/branches.service.ts`, `users/users.service.ts` | Branch deactivation and placement rules |
+| `apps/api/src/auth/user-access-links.service.ts` | Queue failure after commit is logged, not thrown |
+| `apps/api/test/staff-auth.spec.ts`, `staff-management.spec.ts`, `admin-garages.spec.ts` | Case-variant URLs get 401; phone normalization and rejection; branch rules |
+| `apps/*/messages/*.json` | New error messages and phone hints (en, ar) |
+| `packages/database/src/seed.ts` | Demo phone in E.164 |
+| `turbo.json`, `packages/database/turbo.json`, `.github/workflows/ci.yml` | No test caching; `format:check` in CI |
+
+**Doc changes**
+- database.md 1: how phones are normalized. database.md 4.2: branch deactivation and placement rules.
+- flow.md 2.5: how `StaffGuard` picks its routes.
+- README 9: three new deploy checks.
+
+**Verified:** `npm install`, `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` — run by the user, all passing; browser check by the user (invalid and local phone numbers in admin and garage-web, branch with a mechanic blocked until the mechanic was moved).
+**Commit:** pending — `Phase 1.8: project review fixes (guard by controller path, E.164 phones, branch staff rule, CI format check)`
 
 ---

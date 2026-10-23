@@ -77,6 +77,8 @@ describe('Admin garages', () => {
       branchCount: 1,
       defaultLocale: 'ar',
       timezone: 'Asia/Beirut',
+      // Stored in E.164 (database.md 1), whatever spacing was typed.
+      phone: '+9613000000',
     });
     const trialDays = (Date.parse(garage.trialEndsAt) - Date.now()) / DAY;
     expect(trialDays).toBeGreaterThan(29.9);
@@ -121,6 +123,17 @@ describe('Admin garages', () => {
       .expect(400);
     expect(past.body.code).toBe('VALIDATION_FAILED');
     await asAdmin.post('/admin/v1/garages', newGarage({ plan: 'PAID' })).expect(400);
+  });
+
+  it('rejects a phone number that is not a real number', async () => {
+    for (const phone of ['12345', '+961 0 000 000', 'not a phone']) {
+      const res = await asAdmin.post('/admin/v1/garages', newGarage({ phone })).expect(400);
+      expect(res.body.code).toBe('VALIDATION_FAILED');
+    }
+    // A local number without the country code is read as Lebanese.
+    const local = await asAdmin.post('/admin/v1/garages', newGarage({ phone: '03 123 456' }));
+    expect(local.status).toBe(201);
+    expect(local.body.phone).toBe('+9613123456');
   });
 
   it('an email that is already a login is refused, and nothing is half-created', async () => {

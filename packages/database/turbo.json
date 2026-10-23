@@ -3,13 +3,15 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "cache": false
     },
     "typecheck": {
       "dependsOn": ["build"]
     },
     "test:tenancy": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "cache": false
     }
   }
 }

@@ -59,7 +59,17 @@ describe('Branches and staff', () => {
       const res = await as(ownerA)
         .post('/v1/branches', { name: 'Jounieh', phone: '+961 9 000 000', address: '' })
         .expect(201);
-      expect(res.body).toMatchObject({ code: 'BR2', isMain: false, isActive: true, address: null });
+      expect(res.body).toMatchObject({
+        code: 'BR2',
+        isMain: false,
+        isActive: true,
+        address: null,
+        phone: '+9619000000',
+      });
+      const badPhone = await as(ownerA)
+        .post('/v1/branches', { name: 'X', phone: '123' })
+        .expect(400);
+      expect(badPhone.body.code).toBe('VALIDATION_FAILED');
 
       const list = await as(ownerA).get('/v1/branches').expect(200);
       expect(list.body.items.map((x: { code: string }) => x.code)).toEqual(['BR1', 'BR2']);
@@ -81,6 +91,40 @@ describe('Branches and staff', () => {
         .patch(`/v1/branches/${a.branchId}`, { isActive: false })
         .expect(409);
       expect(main.body.code).toBe('MAIN_BRANCH_REQUIRED');
+    });
+
+    it('a branch with active staff cannot be deactivated until they are moved', async () => {
+      const branch = (await as(ownerA).post('/v1/branches', { name: 'Busy' }).expect(201)).body;
+      const { member } = await inviteAndActivate('MECHANIC', branch.id);
+
+      const blocked = await as(ownerA)
+        .patch(`/v1/branches/${branch.id}`, { isActive: false })
+        .expect(409);
+      expect(blocked.body).toMatchObject({ code: 'BRANCH_HAS_STAFF', details: { activeStaff: 1 } });
+
+      // Moved to the main branch: now the branch can be switched off.
+      await as(ownerA).patch(`/v1/users/${member.id}`, { branchId: a.branchId }).expect(200);
+      await as(ownerA).patch(`/v1/branches/${branch.id}`, { isActive: false }).expect(200);
+
+      // Nobody can be placed in it while it is off.
+      const moveBack = await as(ownerA)
+        .patch(`/v1/users/${member.id}`, { branchId: branch.id })
+        .expect(409);
+      expect(moveBack.body.code).toBe('BRANCH_INACTIVE');
+    });
+
+    it('a deactivated member cannot be reactivated into a branch that was switched off', async () => {
+      const branch = (await as(ownerA).post('/v1/branches', { name: 'Closing' }).expect(201)).body;
+      const { member } = await inviteAndActivate('RECEPTIONIST', branch.id);
+      await as(ownerA).patch(`/v1/users/${member.id}`, { isActive: false }).expect(200);
+      await as(ownerA).patch(`/v1/branches/${branch.id}`, { isActive: false }).expect(200);
+
+      const res = await as(ownerA).patch(`/v1/users/${member.id}`, { isActive: true }).expect(409);
+      expect(res.body.code).toBe('BRANCH_INACTIVE');
+      // Reactivating together with a move to an active branch works.
+      await as(ownerA)
+        .patch(`/v1/users/${member.id}`, { isActive: true, branchId: a.branchId })
+        .expect(200);
     });
   });
 

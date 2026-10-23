@@ -104,11 +104,18 @@ export class UsersService {
     const garageId = this.db.garageId;
     const user = await this.db.run(async (tx) => {
       const current = await this.staffMember(tx, garageId, userId);
-      if (input.branchId) await assertBranch(tx, garageId, input.branchId);
 
-      // The branch rule on the result, not only on the fields that were sent.
+      // The rules apply to the result, not only to the fields that were sent.
       const role = input.role ?? current.role;
       const branchId = input.branchId === undefined ? current.branchId : input.branchId;
+      const isActive = input.isActive ?? current.isActive;
+      // A new branch must exist in this garage and be active. An active member also may
+      // not stay in (or be reactivated into) a branch that was switched off.
+      const branchChanged = input.branchId !== undefined && input.branchId !== current.branchId;
+      const reactivated = input.isActive === true && !current.isActive;
+      if (branchId && (branchChanged || (isActive && reactivated))) {
+        await assertBranch(tx, garageId, branchId);
+      }
       if (BRANCH_BOUND_ROLES.includes(role) && !branchId) {
         throw new AppException(
           HttpStatus.BAD_REQUEST,
@@ -183,9 +190,17 @@ export class UsersService {
   }
 }
 
+/** The branch exists in this garage (else 404, as for any other garage's id) and is active. */
 async function assertBranch(tx: TenantTx, garageId: string, branchId: string): Promise<void> {
-  const branch = await tx.branch.findFirst({ where: { id: branchId, garageId, isActive: true } });
+  const branch = await tx.branch.findFirst({ where: { id: branchId, garageId } });
   if (!branch) {
     throw new AppException(HttpStatus.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Branch not found');
+  }
+  if (!branch.isActive) {
+    throw new AppException(
+      HttpStatus.CONFLICT,
+      ERROR_CODES.BRANCH_INACTIVE,
+      'This branch is deactivated. Choose an active branch.',
+    );
   }
 }

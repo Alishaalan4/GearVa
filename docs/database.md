@@ -13,7 +13,7 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 | Timestamps | `createdAt`, `updatedAt` on every table, `timestamptz`, stored in UTC |
 | Money | Integer **cents** (`Int`), currency USD. Column suffix `Cents`. Never `Float`/`Decimal` for money |
 | Distance | Integer **km** (`Int`), column suffix `Km`. Miles only at the display edge (1 mi = 1.609344 km) |
-| Phone numbers | E.164 string (`+9613123456`), normalized before save |
+| Phone numbers | E.164 string (`+9613123456`), normalized before save with `phoneSchema` / `normalizePhone` from `packages/contracts` (libphonenumber-js; a number without a country code is read as Lebanese). Invalid numbers are refused |
 | Plates | Store `plate` (as typed) and `plateNormalized` (uppercase, no spaces or dashes) for search and uniqueness |
 | Enums | Prisma enums, listed in section 5 |
 | Deletion | Invoices, payments, service records and audit rows are **never deleted**. Garages, customers and vehicles use soft delete (`deletedAt`) |
@@ -158,6 +158,8 @@ The branch count is derived from active `branches` rows (extra branches are bill
 
 #### `branches`
 `id`, `garageId`, `name`, `code` (e.g. `BR1`, **U** per garage), `address?`, `phone?`, `isMain` bool, `isActive` bool.
+
+A branch with active staff cannot be deactivated (`BRANCH_HAS_STAFF`): the owner moves or deactivates them first, because work is recorded per branch. An active staff member can never be placed in, or reactivated into, an inactive branch (`BRANCH_INACTIVE`). The main branch is never deactivated (`MAIN_BRANCH_REQUIRED`).
 
 #### `users` (garage staff)
 | Column | Type | Notes |

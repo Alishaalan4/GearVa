@@ -66,7 +66,7 @@ async function seedDemoGarage(db: PrismaClient, adminId: string): Promise<void> 
       data: {
         name: 'Demo Garage',
         email,
-        phone: '+961 1 000 000',
+        phone: '+9611000000',
         locationText: 'Beirut',
         defaultLocale: 'ar',
         status: 'ACTIVE',

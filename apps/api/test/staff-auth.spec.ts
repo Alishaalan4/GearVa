@@ -131,6 +131,11 @@ describe('Staff auth and garage lock', () => {
     const res = await http().get('/v1/auth/me').expect(401);
     expect(res.body.code).toBe('UNAUTHORIZED');
     await http().get('/v1/branches').expect(401);
+    // Routing ignores case, so the guard must too (it once checked only the URL text).
+    for (const path of ['/V1/branches', '/v1/BRANCHES', '/V1/AUTH/ME', '/V1/users']) {
+      const other = await http().get(path).expect(401);
+      expect(other.body.code).toBe('UNAUTHORIZED');
+    }
     // An admin session is not a staff session.
     await http().get('/v1/auth/me').set('Cookie', adminCookie).expect(401);
   });

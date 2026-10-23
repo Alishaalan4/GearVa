@@ -27,7 +27,9 @@
     "USER_ALREADY_ACTIVE": "This person already set a password. Send a password reset instead.",
     "USER_NOT_ACTIVATED": "This person has not set a password yet. Resend the invite instead.",
     "CANNOT_MODIFY_OWNER": "The owner account is managed by Gearva support.",
-    "MAIN_BRANCH_REQUIRED": "The main branch cannot be deactivated."
+    "MAIN_BRANCH_REQUIRED": "The main branch cannot be deactivated.",
+    "BRANCH_HAS_STAFF": "This branch still has active staff. Move them to another branch (or deactivate them) first.",
+    "BRANCH_INACTIVE": "That branch is deactivated. Choose an active branch."
   },
   "nav": {
     "branches": "Branches",
@@ -100,7 +102,7 @@
     "invalid": {
       "name": "Enter a name (2 to 120 characters).",
       "address": "Use at most 200 characters.",
-      "phone": "Use at most 30 characters."
+      "phone": "Enter a valid phone number, for example 01 123 456 or +961 1 123 456."
     },
     "save": "Save",
     "saved": "The branch was saved.",

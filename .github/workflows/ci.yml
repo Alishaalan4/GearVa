@@ -66,6 +66,7 @@ jobs:
           psql -h localhost -U postgres -d gearva -v ON_ERROR_STOP=1 \
             -c "ALTER ROLE gearva_migrator CREATEDB;"
 
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { paginationQuerySchema } from './pagination';
+import { phoneSchema } from './phone';
 
 // Admin garage management (flow.md 2.1, 11.1). Shared by the API and the admin web app.
 
@@ -18,7 +19,7 @@ const garageFields = {
   name: z.string().trim().min(2).max(120),
   /** Also the owner's login email and where the invite goes. */
   email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
-  phone: z.string().trim().min(6).max(30),
+  phone: phoneSchema,
   locationText: z.string().trim().min(2).max(200),
   timezone: z
     .string()

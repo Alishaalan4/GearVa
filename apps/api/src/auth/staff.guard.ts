@@ -1,4 +1,5 @@
 import { type CanActivate, type ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
+import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import { ERROR_CODES, type StaffRole } from '@gearva/contracts';
 import type { Request } from 'express';
@@ -17,7 +18,7 @@ import { PUBLIC_KEY, ROLES_KEY } from './staff-access.decorators';
  *   3. the role check from @Roles (flow.md 1)
  * Then it sets the tenant context (README 5.1, flow.md 2.6): garage, user, role, branch,
  * all from the server-side session, never from the request.
- * Routes outside /v1 (admin, health) and @Public routes are left to their own guards.
+ * Controllers outside v1/ (admin, health) and @Public routes are left to their own guards.
  */
 @Injectable()
 export class StaffGuard implements CanActivate {
@@ -30,8 +31,10 @@ export class StaffGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     if (ctx.getType() !== 'http') return true;
+    // Decided by the controller's declared path, never by the URL text: routing ignores
+    // case, so /V1/branches reaches the same handler as /v1/branches.
+    if (!isStaffController(ctx.getClass())) return true;
     const req = ctx.switchToHttp().getRequest<Request>();
-    if (!req.path.startsWith('/v1/')) return true;
     const targets = [ctx.getHandler(), ctx.getClass()];
     if (this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, targets)) return true;
 
@@ -68,6 +71,13 @@ export class StaffGuard implements CanActivate {
     });
     return true;
   }
+}
+
+/** A controller declared as @Controller('v1/...'): the garage staff API (README 3). */
+function isStaffController(controller: object): boolean {
+  const path: unknown = Reflect.getMetadata(PATH_METADATA, controller);
+  const paths = Array.isArray(path) ? path : [path];
+  return paths.some((p) => /^\/?v1(\/|$)/.test(String(p ?? '')));
 }
 
 function notSignedIn(): AppException {

@@ -22,10 +22,12 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "cache": false
     },
     "test:tenancy": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "cache": false
     }
   }
 }

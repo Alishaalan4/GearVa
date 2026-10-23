@@ -23,6 +23,10 @@ export const ERROR_CODES = {
   USER_NOT_ACTIVATED: 'USER_NOT_ACTIVATED',
   CANNOT_MODIFY_OWNER: 'CANNOT_MODIFY_OWNER',
   MAIN_BRANCH_REQUIRED: 'MAIN_BRANCH_REQUIRED',
+  /** A branch with active staff cannot be deactivated; move or deactivate them first. */
+  BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
+  /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */
+  BRANCH_INACTIVE: 'BRANCH_INACTIVE',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;

@@ -92,6 +92,21 @@ export class BranchesService {
           'The main branch cannot be deactivated',
         );
       }
+      // Work is recorded per branch (visits, invoices), so nobody active may stay in a
+      // branch that is switched off: the owner moves or deactivates them first.
+      if (input.isActive === false && current.isActive) {
+        const activeStaff = await tx.user.count({
+          where: { garageId, branchId: current.id, isActive: true },
+        });
+        if (activeStaff > 0) {
+          throw new AppException(
+            HttpStatus.CONFLICT,
+            ERROR_CODES.BRANCH_HAS_STAFF,
+            'Move or deactivate the active staff of this branch first',
+            { activeStaff },
+          );
+        }
+      }
       return tx.branch.update({
         where: { id: current.id },
         data: {

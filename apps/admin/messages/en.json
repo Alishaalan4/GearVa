@@ -135,7 +135,7 @@
     "invalid": {
       "name": "Enter the business name (2 to 120 characters).",
       "email": "Enter a valid email.",
-      "phone": "Enter a phone number.",
+      "phone": "Enter a valid phone number, for example 03 123 456 or +961 3 123 456.",
       "locationText": "Enter the location.",
       "timezone": "Enter a valid time zone, for example Asia/Beirut.",
       "defaultLocale": "Choose a language.",

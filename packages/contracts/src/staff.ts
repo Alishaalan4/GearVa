@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { GarageStatus, Locale } from './garages';
 import { LOCALES } from './garages';
+import { optionalPhoneSchema } from './phone';
 
 // Garage staff (V1): set password, login, branches and staff management.
 // flow.md 1 (permission matrix), 2.1, 2.2, 2.5. Shared by the API and garage-web.
@@ -65,7 +66,7 @@ const optionalText = (max: number) =>
 export const createBranchSchema = z.object({
   name: z.string().trim().min(2).max(120),
   address: optionalText(200),
-  phone: optionalText(30),
+  phone: optionalPhoneSchema,
 });
 export type CreateBranchInput = z.infer<typeof createBranchSchema>;
 

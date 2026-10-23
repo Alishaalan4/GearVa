@@ -23,6 +23,9 @@
     },
     "test": {
       "dependsOn": ["^build"]
+    },
+    "test:tenancy": {
+      "dependsOn": ["^build"]
     }
   }
 }

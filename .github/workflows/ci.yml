@@ -1,0 +1,72 @@
+# Lint, typecheck, tests and the tenant-isolation suite on every push to main and every
+# pull request (README section 8). Postgres and Redis run as service containers.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gearva
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gearva"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The same environment as local development (.env.example), with a fresh 2FA key.
+      - name: Create .env
+        run: |
+          cp .env.example .env
+          sed -i "s|^TOTP_ENCRYPTION_KEY=.*|TOTP_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
+
+      # The three roles (database.md 6.1), as docker-init.sh does locally. CREATEDB lets
+      # the migrator recreate the test database before each test run.
+      - name: Create database roles
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d gearva \
+            -v migrator_password=gearva_migrator \
+            -v app_password=gearva_app \
+            -v platform_password=gearva_platform \
+            -f packages/database/sql/bootstrap-roles.sql
+          psql -h localhost -U postgres -d gearva -v ON_ERROR_STOP=1 \
+            -c "ALTER ROLE gearva_migrator CREATEDB;"
+
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:tenancy

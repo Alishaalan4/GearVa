@@ -17,7 +17,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.5b Admin garage management — admin web screens (+ optional 2FA) | ✅ Done | 2026-10-21 11:43 |
 | 1 | 1.6a Staff side — API (login, roles, branches, staff, lock) | ✅ Done | 2026-10-21 12:31 |
 | 1 | 1.6b Staff side — garage-web screens | ✅ Done | 2026-10-22 ~12:30 |
-| 1 | 1.7 Tenancy suite and CI | ⏳ Next | |
+| 1 | 1.7 Tenancy suite and CI | ✅ Done locally (CI: first run pending) | 2026-10-23 |
 
 ---
 
@@ -360,6 +360,37 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Problems hit and fixed:** one real bug found while building the lock screen: `/v1/auth/refresh` cleared the cookies when the garage was locked, so staff were signed out ~15 minutes into a lock, against flow.md 2.5 ("sessions stay valid") → cookies are kept on `GARAGE_LOCKED`. README 3 required `packages/ui` once a component was copied between the apps → created it instead of copying `ui.tsx`.
 
 **Verified:** `npm run format`, `npm run typecheck`, `npm run lint`, `npm test` (7 database + 56 API tests) — run by the user. Manual browser check by the user: language default and remembered choice, login, branches, staff invite → set password from the console email → mechanic has no settings, link reuse refused, deactivation signs out, suspend → lock screen → reactivate → "Try again".
-**Commit:** pending — `Phase 1.6b: garage-web screens, packages/ui, keep cookies on locked refresh`
+**Commit:** `f9335ac` — `Phase 1.6b: garage-web screens, packages/ui, keep cookies on locked refresh`
+
+---
+
+## Phase 1 · Step 1.7 — Own test database, tenancy suite, CI
+**When:** 2026-10-23 (~45 min)
+
+**Implements:** README 5.1.6 (`test:tenancy` proves isolation through every endpoint), README 8 (tests on a real Postgres, mandatory `test:tenancy` in CI). Completes Phase 1's "Done when" once the first CI run is green.
+
+**Summary:** Tests now run on their own database. `npm test` and `npm run test:tenancy` first drop and recreate `gearva_test` with every migration applied; the test setup points the three connection URLs at it and Redis at database 1, so development data is never touched and a running `npm run dev` never picks up test jobs. `npm run test:tenancy` runs the RLS guard rails and a new endpoint suite: two garages, and for every `/v1` endpoint garage A's owner tries to read, change or use garage B's branches and staff and must fail while B's rows stay identical (also a `garageId` sent in the body is ignored). The suite lists every `/v1` route the API really serves (from Nest's metadata) and fails when one has no isolation case or stated reason, so a new endpoint cannot ship without one. GitHub Actions runs lint, typecheck, test and test:tenancy on every push to `main` and every pull request.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/src/test-environment.ts` (new), `package.json` | `toTestDatabaseUrl`, `useTestEnvironment` (subpath export `@gearva/database/test-environment`); scripts `test:prepare`, `test:tenancy` |
+| `packages/database/src/scripts/prepare-test-db.ts` (new) | Drops/creates `<name>_test` as the migrator, grants schema usage, runs `prisma migrate deploy` on it; refuses any name not ending in `_test` |
+| `packages/database/test/setup.ts`, `turbo.json` | Vitest uses the test database; `test:tenancy` task |
+| `apps/api/test/setup.ts` (new), `apps/api/package.json` | Jest `setupFiles` switches to the test database; `test:tenancy` script |
+| `apps/api/test/tenancy.spec.ts` (new) | 9 endpoint cases + the route-coverage check |
+| `apps/api/test/staff-management.spec.ts`, `helpers/garages.ts` | Isolation tests moved to the tenancy suite; comment |
+| `package.json`, `turbo.json` | Root `test` and `test:tenancy` prepare the test database first; `test:tenancy` task |
+| `.github/workflows/ci.yml` (new) | Postgres 17 + Redis 8 services, roles from `bootstrap-roles.sql` + `CREATEDB`, `.env` from `.env.example` with a random TOTP key, then lint, typecheck, test, test:tenancy |
+
+**Doc changes**
+- README 3: `.github/workflows/ci.yml` in the structure.
+- README 5.1.6: where the isolation test goes, and that the suite fails without it.
+- README 8: what `npm test` and `test:tenancy` run, the test database and Redis database, CI.
+
+**Problems hit and fixed:** none. The local migrator already had `CREATEDB` (docker-init.sh); CI grants it explicitly.
+
+**Verified:** `npm run format`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` — run by the user, all passing; development data unchanged (old `[test]` garages kept by choice). First CI run: pending (after push).
+**Commit:** pending — `Phase 1.7: own test database, tenancy suite with route coverage, CI`
 
 ---

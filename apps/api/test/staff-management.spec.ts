@@ -1,6 +1,5 @@
-// Step 1.6a: branches and staff (flow.md 1 permission matrix), including tenant
-// isolation for every new endpoint (README 5.1.6): garage B can never read or change
-// garage A's branches or staff.
+// Step 1.6a: branches and staff (flow.md 1 permission matrix). Tenant isolation for these
+// endpoints lives in tenancy.spec.ts (README 5.1.6).
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import type { PrismaClient } from '@gearva/database';
@@ -18,9 +17,7 @@ describe('Branches and staff', () => {
   let app: INestApplication;
   let platform: PrismaClient;
   let a: TestStaffGarage;
-  let b: TestStaffGarage;
   let ownerA: string;
-  let ownerB: string;
 
   const http = () => request(app.getHttpServer());
   const as = (cookie: string) => ({
@@ -50,9 +47,7 @@ describe('Branches and staff', () => {
     app = await createTestApp();
     platform = app.get(PlatformDb).client;
     a = await createGarageWithOwner(app);
-    b = await createGarageWithOwner(app);
     ({ cookie: ownerA } = await staffLogin(app, a.ownerEmail, a.password));
-    ({ cookie: ownerB } = await staffLogin(app, b.ownerEmail, b.password));
   });
 
   afterAll(async () => {
@@ -160,51 +155,6 @@ describe('Branches and staff', () => {
     it('the owner account cannot be changed from the staff screen', async () => {
       const res = await as(ownerA).patch(`/v1/users/${a.ownerId}`, { isActive: false }).expect(403);
       expect(res.body.code).toBe('CANNOT_MODIFY_OWNER');
-    });
-  });
-
-  describe('tenant isolation (README 5.1)', () => {
-    it("garage B's lists never contain garage A's rows", async () => {
-      const branches = await as(ownerB).get('/v1/branches?pageSize=50').expect(200);
-      expect(branches.body.items.length).toBeGreaterThan(0);
-      for (const branch of branches.body.items) expect(branch.id).not.toBe(a.branchId);
-
-      const users = await as(ownerB).get('/v1/users?pageSize=50').expect(200);
-      expect(users.body.items.map((u: { id: string }) => u.id)).toEqual([b.ownerId]);
-    });
-
-    it("garage B gets 404 for garage A's ids, and nothing changes", async () => {
-      const member = (
-        await as(ownerA)
-          .post('/v1/users', {
-            name: 'Target',
-            email: `target-${randomUUID().slice(0, 8)}@test.local`,
-            role: 'MANAGER',
-            branchId: null,
-            locale: 'en',
-          })
-          .expect(201)
-      ).body;
-
-      await as(ownerB).patch(`/v1/branches/${a.branchId}`, { name: 'Hacked' }).expect(404);
-      await as(ownerB).patch(`/v1/users/${member.id}`, { name: 'Hacked' }).expect(404);
-      await as(ownerB).post(`/v1/users/${member.id}/invite`).expect(404);
-      await as(ownerB).post(`/v1/users/${member.id}/password-reset`).expect(404);
-      // Garage A's branch id cannot be used to place a garage B member.
-      await as(ownerB)
-        .post('/v1/users', {
-          name: 'Sneaky',
-          email: `sneaky-${randomUUID().slice(0, 8)}@test.local`,
-          role: 'MECHANIC',
-          branchId: a.branchId,
-          locale: 'en',
-        })
-        .expect(404);
-
-      const branch = await platform.branch.findUniqueOrThrow({ where: { id: a.branchId } });
-      expect(branch.name).toBe('Main');
-      const target = await platform.user.findUniqueOrThrow({ where: { id: member.id } });
-      expect(target.name).toBe('Target');
     });
   });
 });

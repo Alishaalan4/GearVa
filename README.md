@@ -95,6 +95,7 @@ gearva/
 │   ├── ui/                       # small Tailwind components shared by garage-web and admin
 │   └── config/                   # shared tsconfig, eslint, prettier
 ├── docs/                         # flow.md, database.md
+├── .github/workflows/ci.yml      # CI: lint, typecheck, test, test:tenancy (section 8)
 ├── docker-compose.yml            # Postgres + Redis for local development
 ├── turbo.json
 ├── package.json                  # npm workspaces
@@ -198,7 +199,7 @@ Anyone writing code here (human or AI) must follow these.
 3. The Prisma client used at runtime is wrapped so every query runs in a transaction that first executes `SELECT set_config('app.garage_id', '<id>', true)`. Postgres RLS policies then filter by it. This is the **second** line of defense.
 4. The **first** line is code: services always filter by `garageId` from context, never from the request body or URL.
 5. Never accept `garageId` from the client for garage endpoints.
-6. The suite `npm run test:tenancy` creates two garages and proves garage A can never read, update or delete garage B data through every endpoint. **Add the new endpoint to this suite in the same commit as the endpoint.**
+6. The suite `npm run test:tenancy` creates two garages and proves garage A can never read, update or delete garage B data through every endpoint. **Add the new endpoint to this suite in the same commit as the endpoint** (`apps/api/test/tenancy.spec.ts`; the suite fails when a `/v1` route has no case).
 
 ### 5.2 Auth and roles
 - Garage staff roles: `OWNER`, `MANAGER`, `MECHANIC`, `RECEPTIONIST`. Permission matrix in `flow.md`.
@@ -315,8 +316,10 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 
 ## 8. Testing
 
-- `npm test` runs unit tests everywhere.
-- `npm run test:tenancy` is mandatory in CI and must never be skipped.
+- `npm test` runs every test (unit tests and API tests against a real database).
+- `npm run test:tenancy` is mandatory in CI and must never be skipped. It runs the RLS guard rails (`packages/database/test/rls.test.ts`) and the endpoint suite (`apps/api/test/tenancy.spec.ts`). The endpoint suite lists every `/v1` route the API serves and fails if one has no isolation case, so a new endpoint cannot ship without one.
+- Tests never use the development database. Both commands first recreate `<database>_test` (for example `gearva_test`) with every migration applied (`npm run test:prepare -w @gearva/database`), and the test setup points all three connection URLs at it and Redis at database 1. The migrator role needs `CREATEDB` for this (set by `docker-init.sh` locally and by CI).
+- CI (`.github/workflows/ci.yml`) runs `lint`, `typecheck`, `test` and `test:tenancy` on every push to `main` and every pull request, with Postgres and Redis as service containers.
 - Pure logic with edge cases must have unit tests: next-change calculation, estimated km, km/miles conversion, invoice number allocation (including concurrent requests), reminder dedupe.
 - Run migrations against a real Postgres in tests (no SQLite, no mocks for the database).
 

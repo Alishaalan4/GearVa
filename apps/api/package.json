@@ -8,7 +8,8 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.spec.json --noEmit",
-    "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js"
+    "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js",
+    "test:tenancy": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ../../node_modules/jest/bin/jest.js test/tenancy"
   },
   "dependencies": {
     "@gearva/contracts": "*",
@@ -49,6 +50,9 @@
     "testEnvironment": "node",
     "rootDir": ".",
     "testRegex": "test/.*\\.spec\\.ts$",
+    "setupFiles": [
+      "<rootDir>/test/setup.ts"
+    ],
     "testTimeout": 30000,
     "transform": {
       "^.+\\.ts$": [

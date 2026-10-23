@@ -9,8 +9,8 @@ export interface TestGarages {
 
 /**
  * Two garages with one branch each, created through the platform role like the admin
- * module does. Names start with "[test]". Audit rows are append-only, so garages that
- * got one cannot be deleted; step 1.7 moves tests to their own database.
+ * module does. Names start with "[test]". Tests run on their own database (test/setup.ts),
+ * recreated before every run, so nothing needs cleaning up.
  */
 export async function createTestGarages(platform: PrismaClient): Promise<TestGarages> {
   const adminId = randomUUID();

@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./test-environment": {
+      "types": "./dist/test-environment.d.ts",
+      "default": "./dist/test-environment.js"
     }
   },
   "scripts": {
@@ -21,7 +25,9 @@
     "rls:sql": "tsc -p tsconfig.build.json && node dist/scripts/print-rls-sql.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:prepare": "npm run build && node dist/scripts/prepare-test-db.js",
+    "test:tenancy": "vitest run test/rls.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "~7.10.1",

@@ -161,7 +161,7 @@ flowchart LR
   B --> C[Tap a service type]
   C --> D[Pre-filled form: km, price, brand/grade from last time]
   D --> E{Confirm}
-  E -->|Confirm and finish| F[Visit + record + invoice created]
+  E -->|Confirm and finish| F[Visit and records saved, visit closed]
   E -->|Confirm and add another| C
 ```
 
@@ -173,12 +173,13 @@ flowchart LR
    - odometer = estimated current km (section 5) as a suggestion the mechanic corrects
    - brand, grade, filter brand etc. = the values from the last record of the same service type on this car ("last used for this car")
    - next change = default interval for the service type (section 6)
-4. Staff fixes the odometer, enters price and quantity, then taps **Confirm and finish** (one visit with that service, invoice issued) or **Confirm and add another** (keeps the visit open).
+4. Staff fixes the odometer, enters price and quantity, then taps **Confirm and finish** (one visit with that service, closed as `DONE`; from Phase 3 this also issues the invoice) or **Confirm and add another** (keeps the visit open).
 5. "More details" (collapsed): labor and parts split, warranty, photos, status, recommended next service, notes.
 
 ### 4.2 API behavior
-- `POST /v1/visits/quick` accepts `{ vehicleId, odometer, odometerUnit, services: [...], finish: boolean }` and creates visit, records, reminders and (if `finish`) the invoice in **one transaction**.
+- `POST /v1/visits/quick` accepts `{ vehicleId, odometer, odometerUnit, services: [...], finish: boolean }` and creates visit, records and reminders in **one transaction**; with `finish` the visit is also closed (`DONE`, `finishedAt` set). From Phase 3, `finish` also creates the invoice (section 7.1) in that same transaction.
 - For longer jobs: `POST /v1/visits` (opens `IN_PROGRESS`), `POST /v1/visits/:id/records`, `PATCH /v1/visits/:id` (status), `POST /v1/visits/:id/finish`.
+- **Phase split (decision 2026-10-23):** invoices are Phase 3, so in Phase 2 "finish" (quick entry or `POST /v1/visits/:id/finish`) only closes the visit. Phase 3 adds the invoice to the same action; visits finished during Phase 2 development simply have no invoice.
 
 ### 4.3 Smart suggestions
 - When a field with a suggestion list gets focus or typing, the web app calls `GET /v1/suggestions?field=OIL_BRAND&q=cas`. The API returns matches on `valueNormalized` prefix, ordered by `useCount DESC`.
@@ -187,7 +188,7 @@ flowchart LR
 - Lists are per garage and never shared.
 
 ### 4.4 Visit status
-`IN_PROGRESS` and `WAITING_FOR_PARTS` keep the visit open (no invoice yet). `DONE` plus "Finish visit" issues the invoice. Moving a visit to `DONE` queues a `CAR_READY` notification to the owner (email or in-app now).
+`IN_PROGRESS` and `WAITING_FOR_PARTS` keep the visit open (no invoice yet). `DONE` plus "Finish visit" closes it (and, from Phase 3, issues the invoice). Moving a visit to `DONE` queues a `CAR_READY` notification to the owner (email or in-app now).
 
 ---
 

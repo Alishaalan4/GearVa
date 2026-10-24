@@ -14,20 +14,44 @@ export const TENANT_TABLES = [
   'users',
   'notifications',
   'audit_logs',
+  // Phase 2
+  'garage_customers',
+  'vehicles',
+  'service_types',
+  'suggestions',
+  'visits',
+  'service_records',
+  'reminders',
 ] as const;
 
 export type TenantTable = (typeof TENANT_TABLES)[number];
+
+/**
+ * Tenant tables whose rows with `garage_id IS NULL` are global defaults that every garage
+ * may read (database.md 4.4, `service_types`). Writes stay limited to the garage's own
+ * rows; global rows are managed by the platform role (admin, seed).
+ */
+export const GLOBAL_DEFAULT_TABLES: readonly TenantTable[] = ['service_types'];
 
 const CURRENT_GARAGE = "NULLIF(current_setting('app.garage_id', true), '')::uuid";
 
 /** RLS SQL for one tenant table (section 6.2). With no context set, it matches nothing. */
 export function tenantPolicySql(table: string): string {
   const column = table === TENANT_ROOT_TABLE ? 'id' : 'garage_id';
-  return [
+  const lines = [
     `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY;`,
     `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY;`,
     `CREATE POLICY tenant_isolation ON "${table}"`,
     `  USING (${column} = ${CURRENT_GARAGE})`,
     `  WITH CHECK (${column} = ${CURRENT_GARAGE});`,
-  ].join('\n');
+  ];
+  if ((GLOBAL_DEFAULT_TABLES as readonly string[]).includes(table)) {
+    // Permissive policies are OR-ed for SELECT only: global rows become readable, while
+    // INSERT/UPDATE/DELETE still need tenant_isolation (the garage's own rows).
+    lines.push(
+      `CREATE POLICY global_defaults_read ON "${table}" FOR SELECT`,
+      `  USING (garage_id IS NULL);`,
+    );
+  }
+  return lines.join('\n');
 }

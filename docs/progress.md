@@ -19,7 +19,13 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.6b Staff side — garage-web screens | ✅ Done | 2026-10-22 ~12:30 |
 | 1 | 1.7 Tenancy suite and CI | ✅ Done | 2026-10-23 |
 | 1 | 1.8 Review fixes (guard, phones, branch rule, CI) | ✅ Done | 2026-10-23 |
-| 2 | Customers, vehicles, maintenance | ⏳ Next | |
+| 2 | 2.0 Doc fixes before Phase 2 | ✅ Done | 2026-10-23 |
+| 2 | 2.1 Database: customers, vehicles, services, visits, reminders | ✅ Done | 2026-10-24 |
+| 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ⏳ Next | |
+| 2 | 2.3 API: customers, vehicles, search, suggestions | | |
+| 2 | 2.4 API: quick entry, visits, history | | |
+| 2 | 2.5 garage-web: search, customers, cars | | |
+| 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | | |
 
 ---
 
@@ -437,6 +443,59 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - README 9: three new deploy checks.
 
 **Verified:** `npm install`, `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` — run by the user, all passing; browser check by the user (invalid and local phone numbers in admin and garage-web, branch with a mechanic blocked until the mechanic was moved).
-**Commit:** pending — `Phase 1.8: project review fixes (guard by controller path, E.164 phones, branch staff rule, CI format check)`
+**Commit:** `9569b7b` — `Phase 1.8: project review fixes (guard by controller path, E.164 phones, branch staff rule, CI format check)` (CI green)
+
+---
+
+## Phase 2 · Step 2.0 — Doc fixes before Phase 2
+**When:** 2026-10-23 (~10 min)
+
+**Summary:** Fixed the two inconsistencies the first docs review deferred to Phase 2, and recorded the two confirmations Phase 2 needs. Phase 2 is split into steps 2.1–2.6 (status table).
+
+**Decisions (user, 2026-10-23):**
+- In Phase 2, "Confirm and finish" saves the visit and closes it (`DONE`, `finishedAt`); Phase 3 adds the invoice to the same action (first-review item 8: the docs had Phase 2 quick entry creating invoices, which are Phase 3).
+- The default service intervals in database.md 4.4 are confirmed as seed values (garages can override).
+- 35 km/day for a car with no history is confirmed: a constant in `contracts` until `system_settings` exists (Phase 5), overridable per garage with `garage_settings.defaultDailyKm`.
+
+**Doc changes**
+- flow.md 4.1 (diagram, step 4), 4.2 (quick entry without invoice; phase split note), 4.4.
+- database.md 4.4: `visits.finishedAt` note; `service_records.nextDueKm/nextDueDate` now points to flow.md section 6 (was "section 4", first-review item 11); seed intervals confirmed.
+- README 7: daily-km decision confirmed.
+
+**Verified:** docs only (read through).
+**Commit:** pending — committed together with step 2.1 (both change database.md)
+
+---
+
+## Phase 2 · Step 2.1 — Database: customers, vehicles, services, visits, reminders
+**When:** 2026-10-23 ~12:00 → 2026-10-24 (about 1 h of work; verified the next day)
+
+**Implements:** database.md 4.1 (`owners`), 4.3, 4.4, 5 (enums), 6.2, 7, 9 (seed item 2), 10 (forward reference `notifications.ownerId`); README 5.1, 5.4.
+
+**Summary:** One migration adds the eight Phase 2 tables (`owners`, `garage_customers`, `vehicles`, `service_types`, `suggestions`, `visits`, `service_records`, `reminders`) and five enums. Every tenant table has the standard RLS policy; `service_types` also lets every garage read the global defaults (`garage_id IS NULL`) while writes stay limited to its own overrides. The seed adds the 11 global service types with the confirmed intervals. No API or screens yet.
+
+**Decisions**
+- **Owners: linked-only access** (the user left the choice to me, 2026-10-23). The docs called `owners` a platform table, but adding a customer is garage code. Now `gearva_app` may read an owner only when its own garage has them as a customer (policy `owners_linked_read`), and gets an owner's id only through `find_or_create_owner(phone, name, locale)`, a `SECURITY DEFINER` function that returns just the id. A garage can never browse all owners, and adding a customer stays one transaction. New database.md 6.6.
+- **Garage-scoped foreign keys** (beyond the docs, for isolation): links between tenant tables include the garage (`(garage_id, x_id)` → `(garage_id, id)`), so the database refuses a row of garage A pointing into garage B even through the platform role.
+- **Grants follow "never deleted":** no `DELETE` for the runtime roles on customers, vehicles, visits, service records, reminders and service types; only suggestions can be deleted.
+- **Suggestions prefix index dropped:** Prisma cannot describe a `text_pattern_ops` index, so every later migration would try to remove it; the unique `(garageId, field, valueNormalized)` index narrows to a few dozen rows, which is enough.
+- `service_types.detailKey` is nullable (`ENGINE`, `OTHER` have no extra fields); fluid changes use the `oil` details.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma` | 8 models, 5 enums, `@@unique([garageId, id])` on parents (incl. `branches`, `users`), `notifications.owner` relation |
+| `packages/database/prisma/migrations/20261023120822_phase2_customers_vehicles_visits/migration.sql` (new) | Prisma's tables plus hand-written partial unique indexes (plates, service type codes), CHECKs, grants, owners RLS policy, `gearva_uuid_v7()`, `find_or_create_owner()`, RLS for the 7 tenant tables |
+| `packages/database/src/tenant-tables.ts` | Phase 2 tenant tables; `GLOBAL_DEFAULT_TABLES` adds the `global_defaults_read` policy |
+| `packages/database/src/seed.ts` | Global service types (created only when missing, every environment) |
+| `packages/database/test/rls.test.ts` | 10 new tests: owner function (one id per phone, UUID v7, input checks, needs a tenant), linked-only owner reads, no direct owner writes, global + own service types only, no writes to global rows, unique global codes, cross-garage link refused, plate unique among cars not deleted, negative km refused, no DELETE on never-deleted tables |
+
+**Doc changes**
+- database.md 2, 4.1: `owners` exception. 4.4: `detailKey`, suggestions index note. 6.1: `gearva_app` rights, managed-Postgres note covers `owners`. New 6.6. 7: new unique keys and CHECKs. 9, 10: seed and forward reference done.
+
+**Problems hit and fixed:** the first schema check (migration applied to a scratch database, then `prisma migrate diff` against the schema) showed Prisma would drop the suggestions prefix index → index removed, check re-run: empty diff. The scratch database was deleted afterwards.
+
+**Verified:** by me: 17 database tests on the test database, typecheck and lint of the database package and API, empty schema diff. By the user: `prisma migrate dev`, `npm run db:seed` (11 service types), `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy`.
+**Commit:** pending — `Phase 2.0 + 2.1: doc fixes, Phase 2 database (owners, customers, vehicles, service types, visits, records, reminders)`
 
 ---

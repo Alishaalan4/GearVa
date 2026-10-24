@@ -306,7 +306,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Staff login identifier | email + password | Phase 1 |
 | Subscription price | about $200/year, +$100 per extra branch (set in admin, not hardcoded) | Phase 5 |
 | Reminder lead time | 500 km or 7 days before due (garage-editable) | Phase 4 |
-| Default daily km for a car with no history | 35 km/day (system setting) | Phase 2 |
+| Default daily km for a car with no history | **Confirmed 2026-10-23:** 35 km/day, a constant in `contracts` until `system_settings` exists (Phase 5); a garage can override it with `garage_settings.defaultDailyKm` | Phase 2 |
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |
 | Fair-use message cap per garage | set later, from real cost data | Phase 5 |
 | VAT on invoices | off by default, toggle only after accountant confirms | Phase 3 |

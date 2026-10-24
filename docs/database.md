@@ -30,7 +30,7 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 | Tenant root | `garages` | It is the tenant (`id`) | Yes, `id = app.garage_id` |
 | Tenant data | `garage_settings`, `branches`, `users`, `garage_customers`, `vehicles`, `service_types`*, `suggestions`, `visits`, `service_records`, `reminders`, `invoices`, `invoice_items`, `invoice_counters`, `payments`, `offers`, `notifications`, `files`, `audit_logs` | Yes | Yes |
 
-\* `service_types` holds global defaults (`garage_id IS NULL`, readable by everyone, managed by admin) and garage overrides (`garage_id` set). See its special policy below.
+\* `service_types` holds global defaults (`garage_id IS NULL`, readable by everyone, managed by admin) and garage overrides (`garage_id` set). See its special policy below. `owners` is a platform table with one exception: garage code reads the owners of its own customers (section 6.6).
 
 ---
 
@@ -94,6 +94,8 @@ Legend: **PK** primary key, **FK** foreign key, **U** unique, `?` nullable. All 
 | revokedAt | timestamptz? | |
 
 #### `owners` (global car-owner accounts)
+Not a tenant table, but garage code may read the owners linked to its own customers and create them only through `find_or_create_owner()` (section 6.6).
+
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
@@ -225,14 +227,14 @@ The phone number lives on `owners`. Searching a garage's customers by phone join
 | defaultIntervalKm | int? | null = time-based only |
 | defaultIntervalMi | int? | editable separately from km, per the spec |
 | defaultIntervalMonths | int? | time fallback |
-| detailKey | text | which Zod schema validates `ServiceRecord.details` (e.g. `wheels`, `oil`, `battery`, `brakes`, `ac`) |
+| detailKey | text? | which Zod schema validates `ServiceRecord.details` (`oil`, `wheels`, `battery`, `brakes`, `ac`); null = no extra fields (`ENGINE`, `OTHER`). The fluid changes (steering, transmission, differential, gear oil) use `oil` |
 | sortOrder | int | |
 | isActive | bool | |
 | **U** | (garageId, code) with global rows treated as distinct (use two partial unique indexes) | |
 
 Special RLS: `SELECT` allowed when `garage_id IS NULL OR garage_id = app.garage_id`; `INSERT/UPDATE/DELETE` only for `garage_id = app.garage_id`. When a garage edits a default, an override row is created. Lookup order: garage override, then global default.
 
-**Starting values for the seed (confirm before launch; garages can override):**
+**Starting values for the seed (confirmed by the user 2026-10-23; garages can override):**
 
 | Code | km | miles | months |
 |---|---|---|---|
@@ -260,7 +262,7 @@ Special RLS: `SELECT` allowed when `garage_id IS NULL OR garage_id = app.garage_
 | lastUsedAt | timestamptz | |
 | **U** | (garageId, field, valueNormalized) | prevents "Castrol" vs "castrol" duplicates |
 
-Index for prefix search: `(garageId, field, valueNormalized text_pattern_ops)`.
+Prefix search uses the unique index: it narrows to one garage and field (a few dozen values), and the prefix filter runs on those. A separate `text_pattern_ops` index was dropped in step 2.1: Prisma cannot describe it, so every later migration would try to remove it.
 
 #### `visits`
 | Column | Type | Notes |
@@ -274,7 +276,7 @@ Index for prefix search: `(garageId, field, valueNormalized text_pattern_ops)`.
 | status | VisitStatus | `IN_PROGRESS`, `WAITING_FOR_PARTS`, `DONE` |
 | odometerKm | int | in km |
 | openedAt | timestamptz | |
-| finishedAt | timestamptz? | set by "Finish visit", which also creates the invoice |
+| finishedAt | timestamptz? | set by "Finish visit" (from Phase 3 it also creates the invoice, flow.md 4.2) |
 | notes | text? | |
 
 A finished visit is locked: its records can only change through the invoice edit rules in flow.md.
@@ -301,7 +303,7 @@ A finished visit is locked: its records can only change through the invoice edit
 | warrantyUntil | date? | |
 | recommendedNote | text? | e.g. "brake pads at 30%, check in 3 months" |
 | recommendedAfterMonths | int? | can become a reminder |
-| nextDueKm / nextDueDate | int? / date? | computed on save (flow.md section 4) |
+| nextDueKm / nextDueDate | int? / date? | computed on save (flow.md section 6) |
 
 `details` shapes (all optional fields unless stated):
 - `oil`: `{ brand, grade, filterBrand, liters, filterChanged }`
@@ -467,7 +469,7 @@ Enum values are mirrored in `packages/contracts` so the API, web and mobile apps
 | Role | Used by | Rights |
 |---|---|---|
 | `gearva_migrator` | `prisma migrate` only | Owns the schema, runs DDL |
-| `gearva_app` | The API at runtime (`DATABASE_URL`) | `NOSUPERUSER NOBYPASSRLS`. CRUD on tables, except **INSERT + SELECT only** on `audit_logs` and `payments` (no UPDATE or DELETE) |
+| `gearva_app` | The API at runtime (`DATABASE_URL`) | `NOSUPERUSER NOBYPASSRLS`. CRUD on tables, except **INSERT + SELECT only** on `audit_logs` and `payments` (no UPDATE or DELETE), **no DELETE** on tables whose rows are never deleted (`garage_customers`, `vehicles`, `visits`, `service_records`, `reminders`, `service_types`; soft delete or a status instead), and **SELECT only** on `owners` (section 6.6) |
 | `gearva_platform` | Admin module and auth credential lookups (`PLATFORM_DATABASE_URL`) | `BYPASSRLS`. Used only for: admin usage counts, login lookups, daily jobs that iterate garages. Any use that reads garage records must write an `admin_access_logs` row |
 
 **Creating the roles.** Roles are cluster-level and need a superuser (or `CREATEROLE`), which `gearva_migrator` must not have, so they are **not** created in a Prisma migration. Instead:
@@ -480,7 +482,7 @@ Enum values are mirrored in `packages/contracts` so the API, web and mobile apps
 CREATE POLICY platform_access ON vehicles TO gearva_platform USING (true) WITH CHECK (true);
 ```
 
-The isolation guarantees stay the same, because `gearva_app` still only matches its own `garage_id`. Also confirm early (Phase 1) that the hosting plan lets you create the three roles. If it only gives one database user, tell me and we will adjust the role design.
+The isolation guarantees stay the same, because `gearva_app` still only matches its own `garage_id`. `owners` has RLS enabled too (section 6.6), so it needs the same `platform_access` policy. Also confirm early (Phase 1) that the hosting plan lets you create the three roles. If it only gives one database user, tell me and we will adjust the role design.
 
 ### 6.2 Policy pattern
 
@@ -525,6 +527,18 @@ CREATE POLICY owner_read ON invoices FOR SELECT
 - The tenancy suite (`npm run test:tenancy`) runs through the HTTP API with two garages.
 - Migrations that add a tenant table must add its policy in the same migration. Keep the list of tenant tables in one place (`packages/database/src/tenant-tables.ts`) and generate the policy SQL from it (`npm run rls:sql -w @gearva/database -- <table>`).
 
+### 6.6 Owners from garage code, and garage-scoped foreign keys
+
+Decided in step 2.1 (2026-10-23); the earlier text called `owners` a platform table that only admin and auth code reach, but adding a customer (flow.md 3.1) is garage code.
+
+**Owners: linked-only access.** `owners` has no `garage_id`, yet garage code needs a customer's phone, name, email and locale. So:
+- `owners` has RLS enabled (not forced) with one policy, `owners_linked_read`: `gearva_app` may `SELECT` an owner only when a `garage_customers` row of the current garage points to it. A garage can never list or search all owners, even with a buggy query.
+- `gearva_app` has no `INSERT`/`UPDATE` on `owners`. It gets an owner's id with `SELECT find_or_create_owner(phone, name, locale)`: a `SECURITY DEFINER` function that checks the phone is E.164 and a tenant context is set, inserts the owner if the phone is new (`ON CONFLICT DO NOTHING`), and returns **only the id**. Adding a customer is then one tenant transaction: `find_or_create_owner`, then insert the `garage_customers` link.
+- `gearva_platform` (admin, owner login in Phase 6) reads and writes `owners` normally.
+- Rows created in SQL get UUID v7 ids from `gearva_uuid_v7()` (Postgres 18 has `uuidv7()` built in).
+
+**Garage-scoped foreign keys.** Every link between two tenant tables includes the garage: for example `vehicles(garage_id, garage_customer_id)` references `garage_customers(garage_id, id)`, which is unique. Postgres checks foreign keys without RLS, so a plain `garage_customer_id` FK would accept a car of garage A pointing to a customer of garage B if code ever passed the wrong id. With the garage in the key, the database refuses it. Used for links to `branches`, `users`, `garage_customers`, `vehicles`, `visits` and `service_records`. Links to `owners` and `service_types` stay single-column (owners are global; service types may be global rows).
+
 ---
 
 ## 7. Indexes and constraints (minimum set)
@@ -538,7 +552,10 @@ owners             U(phone)
 vehicles           U(garageId, plateNormalized) WHERE deletedAt IS NULL; (garageId, garageCustomerId); (ownerId)
 visits             (garageId, branchId, openedAt DESC); (vehicleId, openedAt DESC)
 service_records    (vehicleId, serviceTypeId, performedAt DESC); (garageId, performedAt DESC); (visitId)
-suggestions        U(garageId, field, valueNormalized); prefix index (see 4.4)
+suggestions        U(garageId, field, valueNormalized) (also serves prefix search, see 4.4)
+service_types      U(code) WHERE garageId IS NULL; U(garageId, code) WHERE garageId IS NOT NULL
+branches, users, garage_customers, vehicles, visits, service_records
+                   U(garageId, id): targets of the garage-scoped foreign keys (section 6.6)
 reminders          (garageId, status, nextDueDate); (vehicleId, serviceTypeId, status)
 invoices           U(garageId, number); U(visitId) WHERE status <> 'CANCELLED'; (garageId, status); (garageCustomerId); (garageId, issuedAt DESC)
 invoice_items      (invoiceId)
@@ -553,6 +570,7 @@ CHECK constraints:
 - `invoices.paidCents >= 0 AND invoices.paidCents <= invoices.totalCents`
 - `invoices.remainingCents = invoices.totalCents - invoices.paidCents`
 - `vehicles.currentKm >= 0`, `service_records.odometerKm >= 0`
+- `vehicles.avgDailyKm >= 0`, `visits.odometerKm >= 0`; `service_records.quantity > 0`; money columns of `service_records` `>= 0`; `service_types` intervals `> 0` when set (step 2.1)
 - `invoices.status = 'CANCELLED'` requires `cancelReason IS NOT NULL`
 
 ---
@@ -575,7 +593,7 @@ CHECK constraints:
 ## 9. Seed data (`npm run db:seed`)
 
 1. One `SUPER_ADMIN` (email and password from env; 2FA is optional and can be turned on from the Account page). Added in Phase 1 step 1.4.
-2. Global `service_types` with the starting values from section 4.4. Added in Phase 2.
+2. Global `service_types` with the starting values from section 4.4 (confirmed 2026-10-23). Added in step 2.1.
 3. `system_settings` defaults. Added with the phases that read them.
 4. Development only: a demo garage with owner login, two branches, a few customers, vehicles and visits. Added in step 1.6: "Demo Garage" (ACTIVE, paid for a year, branches BR1 and BR2) with an OWNER whose login is `SEED_DEMO_OWNER_EMAIL` / `SEED_DEMO_OWNER_PASSWORD`; skipped in production or when those are empty. Customers, vehicles and visits are added in Phase 2.
 
@@ -588,5 +606,5 @@ The seed is `packages/database/src/seed.ts`, compiled with the package. It only 
 - Change `schema.prisma`, then from `packages/database` run `npx prisma migrate dev --create-only --name <what_changed>`, add the hand-written SQL (grants, RLS, partial indexes, CHECKs) to the generated file, then `npx prisma migrate dev` to apply it. Run Prisma directly like this rather than `npm run db:migrate -- --name ...`: Windows PowerShell drops the `--`, so the flags never reach Prisma.
 - Prisma cannot express RLS policies, partial unique indexes or CHECK constraints. Add them as raw SQL in the same migration folder.
 - Never edit a migration that has already been applied anywhere. Create a new one.
-- Forward references (section 1): when a migration creates a table that an earlier table already points to, the same migration adds the missing FK. Known cases: `notifications.ownerId` → `owners` (Phase 2), `garage_settings.logoFileId` → `files` (Phase 3).
+- Forward references (section 1): when a migration creates a table that an earlier table already points to, the same migration adds the missing FK. Known cases: `notifications.ownerId` → `owners` (added in Phase 2, step 2.1), `garage_settings.logoFileId` → `files` (Phase 3).
 - Production: `prisma migrate deploy` runs as a separate deploy step using `MIGRATION_DATABASE_URL`.

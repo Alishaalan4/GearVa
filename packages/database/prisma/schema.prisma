@@ -75,6 +75,42 @@ enum NotificationStatus {
   SKIPPED
 }
 
+enum DistanceUnit {
+  KM
+  MI
+}
+
+enum VisitStatus {
+  IN_PROGRESS
+  WAITING_FOR_PARTS
+  DONE
+}
+
+enum ReminderKind {
+  SERVICE_DUE
+  WARRANTY_END
+  RECOMMENDED_NEXT
+}
+
+enum ReminderStatus {
+  ACTIVE
+  SENT
+  COMPLETED
+  CANCELLED
+}
+
+enum SuggestionField {
+  OIL_BRAND
+  OIL_GRADE
+  FILTER_BRAND
+  BATTERY_BRAND
+  TIRE_BRAND
+  BRAKE_PAD_BRAND
+  SERVICE_NAME
+  VEHICLE_MAKE
+  VEHICLE_MODEL
+}
+
 // ---------------------------------------------------------------------------
 // Platform tables (section 4.1, no garage_id, no RLS)
 // ---------------------------------------------------------------------------
@@ -115,6 +151,31 @@ model Session {
   @@map("sessions")
 }
 
+// Global car-owner account, one per phone (section 4.1). Not a tenant table, but garage
+// code may read only the owners linked to its own customers (owners_linked_read policy),
+// and creates or finds one only through find_or_create_owner() (section 6.6).
+model Owner {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  // E.164, the login identity (Phase 6)
+  phone       String    @unique
+  // the name given by the first garage that added them
+  name        String
+  email       String?
+  locale      String
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garageCustomers GarageCustomer[]
+  vehicles        Vehicle[]
+  visits          Visit[]
+  serviceRecords  ServiceRecord[]
+  reminders       Reminder[]
+  notifications   Notification[]
+
+  @@map("owners")
+}
+
 // ---------------------------------------------------------------------------
 // Tenant root and settings (section 4.2)
 // ---------------------------------------------------------------------------
@@ -139,12 +200,19 @@ model Garage {
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  createdByAdmin AdminUser       @relation(fields: [createdByAdminId], references: [id])
+  createdByAdmin AdminUser        @relation(fields: [createdByAdminId], references: [id])
   settings       GarageSettings?
   branches       Branch[]
   users          User[]
   auditLogs      AuditLog[]
   notifications  Notification[]
+  customers      GarageCustomer[]
+  vehicles       Vehicle[]
+  serviceTypes   ServiceType[]
+  suggestions    Suggestion[]
+  visits         Visit[]
+  serviceRecords ServiceRecord[]
+  reminders      Reminder[]
 
   @@index([status, expiresAt])
   @@map("garages")
@@ -188,10 +256,15 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage Garage @relation(fields: [garageId], references: [id])
-  users  User[]
+  garage         Garage          @relation(fields: [garageId], references: [id])
+  users          User[]
+  visits         Visit[]
+  serviceRecords ServiceRecord[]
 
   @@unique([garageId, code])
+  // Target of the garage-scoped foreign keys (section 6.6): a row can only point to a
+  // branch of its own garage.
+  @@unique([garageId, id])
   @@map("branches")
 }
 
@@ -213,12 +286,251 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage        Garage         @relation(fields: [garageId], references: [id])
-  branch        Branch?        @relation(fields: [branchId], references: [id])
-  notifications Notification[]
+  garage         Garage          @relation(fields: [garageId], references: [id])
+  branch         Branch?         @relation(fields: [branchId], references: [id])
+  notifications  Notification[]
+  visits         Visit[]
+  serviceRecords ServiceRecord[]
 
+  // Target of the garage-scoped foreign keys (section 6.6).
+  @@unique([garageId, id])
   @@index([garageId, role])
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Customers and vehicles (section 4.3)
+//
+// Links between tenant rows use garage-scoped foreign keys: (garage_id, x_id) points to
+// (garage_id, id) of the parent, so the database itself refuses a row that points into
+// another garage, even if a query forgot its filter (section 6.6).
+// ---------------------------------------------------------------------------
+
+model GarageCustomer {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  garageId        String    @map("garage_id") @db.Uuid
+  ownerId         String    @map("owner_id") @db.Uuid
+  // the garage's own name for the customer
+  name            String
+  // private to this garage
+  notes           String?
+  inviteSentAt    DateTime? @map("invite_sent_at") @db.Timestamptz(3)
+  remindersOptOut Boolean   @default(false) @map("reminders_opt_out")
+  marketingOptOut Boolean   @default(false) @map("marketing_opt_out")
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage   Garage    @relation(fields: [garageId], references: [id])
+  owner    Owner     @relation(fields: [ownerId], references: [id])
+  vehicles Vehicle[]
+  visits   Visit[]
+
+  @@unique([garageId, ownerId])
+  @@unique([garageId, id])
+  @@index([garageId, deletedAt])
+  @@map("garage_customers")
+}
+
+model Vehicle {
+  id               String       @id @default(uuid(7)) @db.Uuid
+  garageId         String       @map("garage_id") @db.Uuid
+  garageCustomerId String       @map("garage_customer_id") @db.Uuid
+  // denormalized from the customer, for the owner app (Phase 6)
+  ownerId          String       @map("owner_id") @db.Uuid
+  // as typed
+  plate            String
+  // uppercase, no spaces or dashes; unique per garage among cars not deleted (SQL)
+  plateNormalized  String       @map("plate_normalized")
+  make             String
+  model            String
+  year             Int?
+  distanceUnit     DistanceUnit @default(KM) @map("distance_unit")
+  // last recorded odometer, in km
+  currentKm        Int          @map("current_km")
+  lastOdometerAt   DateTime?    @map("last_odometer_at") @db.Timestamptz(3)
+  // recalculated after each visit (flow.md section 5)
+  avgDailyKm       Decimal?     @map("avg_daily_km") @db.Decimal(7, 2)
+  notes            String?
+  deletedAt        DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage         Garage          @relation(fields: [garageId], references: [id])
+  customer       GarageCustomer  @relation(fields: [garageId, garageCustomerId], references: [garageId, id])
+  owner          Owner           @relation(fields: [ownerId], references: [id])
+  visits         Visit[]
+  serviceRecords ServiceRecord[]
+  reminders      Reminder[]
+
+  @@unique([garageId, id])
+  @@index([garageId, garageCustomerId])
+  @@index([ownerId])
+  @@map("vehicles")
+}
+
+// ---------------------------------------------------------------------------
+// Services, visits, records, reminders (section 4.4)
+// ---------------------------------------------------------------------------
+
+// garageId null = global default (seeded, managed in V2); set = a garage's override.
+// Garages read both; they can change only their own rows (section 6.2, special policy).
+model ServiceType {
+  id                    String   @id @default(uuid(7)) @db.Uuid
+  garageId              String?  @map("garage_id") @db.Uuid
+  code                  String
+  nameAr                String   @map("name_ar")
+  nameEn                String   @map("name_en")
+  // null = time-based only
+  defaultIntervalKm     Int?     @map("default_interval_km")
+  defaultIntervalMi     Int?     @map("default_interval_mi")
+  defaultIntervalMonths Int?     @map("default_interval_months")
+  // which Zod schema validates ServiceRecord.details
+  detailKey             String?  @map("detail_key")
+  sortOrder             Int      @default(0) @map("sort_order")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage         Garage?         @relation(fields: [garageId], references: [id], onDelete: Restrict)
+  serviceRecords ServiceRecord[]
+  reminders      Reminder[]
+
+  // Unique code per garage, and among global rows: two partial unique indexes (SQL).
+  @@map("service_types")
+}
+
+// Per-garage autocomplete (flow.md 4.3). Never shared between garages.
+model Suggestion {
+  id              String          @id @default(uuid(7)) @db.Uuid
+  garageId        String          @map("garage_id") @db.Uuid
+  field           SuggestionField
+  // display value as first typed ("Castrol")
+  value           String
+  // lowercase, trimmed, collapsed spaces; prefix search index in SQL
+  valueNormalized String          @map("value_normalized")
+  useCount        Int             @default(1) @map("use_count")
+  lastUsedAt      DateTime        @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage Garage @relation(fields: [garageId], references: [id])
+
+  @@unique([garageId, field, valueNormalized])
+  @@map("suggestions")
+}
+
+model Visit {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  garageId         String      @map("garage_id") @db.Uuid
+  branchId         String      @map("branch_id") @db.Uuid
+  vehicleId        String      @map("vehicle_id") @db.Uuid
+  garageCustomerId String      @map("garage_customer_id") @db.Uuid
+  // denormalized, for the owner app (Phase 6)
+  ownerId          String      @map("owner_id") @db.Uuid
+  // the signed-in user who opened it
+  mechanicId       String      @map("mechanic_id") @db.Uuid
+  status           VisitStatus @default(IN_PROGRESS)
+  odometerKm       Int         @map("odometer_km")
+  openedAt         DateTime    @default(now()) @map("opened_at") @db.Timestamptz(3)
+  // set by "Finish visit" (from Phase 3 it also creates the invoice)
+  finishedAt       DateTime?   @map("finished_at") @db.Timestamptz(3)
+  notes            String?
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage   Garage          @relation(fields: [garageId], references: [id])
+  branch   Branch          @relation(fields: [garageId, branchId], references: [garageId, id])
+  vehicle  Vehicle         @relation(fields: [garageId, vehicleId], references: [garageId, id])
+  customer GarageCustomer  @relation(fields: [garageId, garageCustomerId], references: [garageId, id])
+  owner    Owner           @relation(fields: [ownerId], references: [id])
+  mechanic User            @relation(fields: [garageId, mechanicId], references: [garageId, id])
+  records  ServiceRecord[]
+
+  @@unique([garageId, id])
+  @@index([garageId, branchId, openedAt(sort: Desc)])
+  @@index([vehicleId, openedAt(sort: Desc)])
+  @@map("visits")
+}
+
+// Never deleted (section 1): no DELETE grant for the runtime roles.
+model ServiceRecord {
+  id                     String    @id @default(uuid(7)) @db.Uuid
+  garageId               String    @map("garage_id") @db.Uuid
+  branchId               String    @map("branch_id") @db.Uuid
+  visitId                String    @map("visit_id") @db.Uuid
+  vehicleId              String    @map("vehicle_id") @db.Uuid
+  // denormalized, for the owner app (Phase 6)
+  ownerId                String    @map("owner_id") @db.Uuid
+  serviceTypeId          String    @map("service_type_id") @db.Uuid
+  // used when the type is OTHER
+  customName             String?   @map("custom_name")
+  performedAt            DateTime  @map("performed_at") @db.Timestamptz(3)
+  // km at service time
+  odometerKm             Int       @map("odometer_km")
+  quantity               Decimal   @default(1) @db.Decimal(8, 2)
+  unitPriceCents         Int       @map("unit_price_cents")
+  // quantity x unit price, rounded to whole cents
+  totalCents             Int       @map("total_cents")
+  laborCents             Int?      @map("labor_cents")
+  partsCents             Int?      @map("parts_cents")
+  mechanicId             String    @map("mechanic_id") @db.Uuid
+  notes                  String?
+  // service-specific fields, validated by the schema named in service_types.detailKey
+  details                Json      @default("{}")
+  warrantyUntil          DateTime? @map("warranty_until") @db.Date
+  recommendedNote        String?   @map("recommended_note")
+  recommendedAfterMonths Int?      @map("recommended_after_months")
+  // computed on save (flow.md section 6)
+  nextDueKm              Int?      @map("next_due_km")
+  nextDueDate            DateTime? @map("next_due_date") @db.Date
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage      Garage      @relation(fields: [garageId], references: [id])
+  branch      Branch      @relation(fields: [garageId, branchId], references: [garageId, id])
+  visit       Visit       @relation(fields: [garageId, visitId], references: [garageId, id])
+  vehicle     Vehicle     @relation(fields: [garageId, vehicleId], references: [garageId, id])
+  owner       Owner       @relation(fields: [ownerId], references: [id])
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
+  mechanic    User        @relation(fields: [garageId, mechanicId], references: [garageId, id])
+  reminders   Reminder[]
+
+  @@unique([garageId, id])
+  @@index([vehicleId, serviceTypeId, performedAt(sort: Desc)])
+  @@index([garageId, performedAt(sort: Desc)])
+  @@index([visitId])
+  @@map("service_records")
+}
+
+model Reminder {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  garageId       String         @map("garage_id") @db.Uuid
+  vehicleId      String         @map("vehicle_id") @db.Uuid
+  ownerId        String         @map("owner_id") @db.Uuid
+  serviceTypeId  String?        @map("service_type_id") @db.Uuid
+  // the record that created it
+  sourceRecordId String         @map("source_record_id") @db.Uuid
+  kind           ReminderKind
+  // in km
+  nextDueKm      Int?           @map("next_due_km")
+  // time fallback
+  nextDueDate    DateTime?      @map("next_due_date") @db.Date
+  status         ReminderStatus @default(ACTIVE)
+  notifyCount    Int            @default(0) @map("notify_count")
+  lastNotifiedAt DateTime?      @map("last_notified_at") @db.Timestamptz(3)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage       Garage        @relation(fields: [garageId], references: [id])
+  vehicle      Vehicle       @relation(fields: [garageId, vehicleId], references: [garageId, id])
+  owner        Owner         @relation(fields: [ownerId], references: [id])
+  serviceType  ServiceType?  @relation(fields: [serviceTypeId], references: [id])
+  sourceRecord ServiceRecord @relation(fields: [garageId, sourceRecordId], references: [garageId, id])
+
+  @@index([garageId, status, nextDueDate])
+  @@index([vehicleId, serviceTypeId, status])
+  @@map("reminders")
 }
 
 // ---------------------------------------------------------------------------
@@ -228,7 +540,6 @@ model User {
 model Notification {
   id           String              @id @default(uuid(7)) @db.Uuid
   garageId     String              @map("garage_id") @db.Uuid
-  // FK to owners is added in the Phase 2 migration (forward reference, section 10)
   ownerId      String?             @map("owner_id") @db.Uuid
   userId       String?             @map("user_id") @db.Uuid
   channel      NotificationChannel
@@ -251,6 +562,7 @@ model Notification {
 
   garage Garage @relation(fields: [garageId], references: [id])
   user   User?  @relation(fields: [userId], references: [id])
+  owner  Owner? @relation(fields: [ownerId], references: [id])
 
   @@unique([garageId, dedupeKey])
   @@index([garageId, status, scheduledFor])

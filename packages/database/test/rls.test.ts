@@ -96,11 +96,7 @@ describe('RLS behavior', () => {
     }
   });
 
-  afterAll(async () => {
-    await platform.branch.deleteMany({ where: { garageId: { in: [garageA, garageB] } } });
-    await platform.garage.deleteMany({ where: { id: { in: [garageA, garageB] } } });
-    await platform.adminUser.delete({ where: { id: adminId } });
-  });
+  // No cleanup: the test database is recreated before every run (README section 8).
 
   it('without a tenant context, the app role sees nothing', async () => {
     expect(await app.garage.count({ where: { id: { in: [garageA, garageB] } } })).toBe(0);
@@ -147,5 +143,203 @@ describe('RLS behavior', () => {
     await expect(asGarage(garageA, (tx) => tx.$executeRaw`DELETE FROM audit_logs`)).rejects.toThrow(
       /permission denied/,
     );
+  });
+});
+
+// Phase 2 (step 2.1): owners, global service types, garage-scoped foreign keys, and the
+// "never deleted" grants (database.md 4.3, 4.4, 6.6).
+describe('Phase 2 tables', () => {
+  const adminId = randomUUID();
+  const garageA = randomUUID();
+  const garageB = randomUUID();
+  /** A fresh valid E.164 number (Lebanese mobile range 70). */
+  const newPhone = () => `+96170${String(Math.floor(Math.random() * 1e6)).padStart(6, '0')}`;
+
+  const ownerIdFor = (garageId: string, phone: string) =>
+    asGarage(garageId, async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`
+        SELECT find_or_create_owner(${phone}, 'Test Owner', 'en') AS id`;
+      return rows[0]?.id as string;
+    });
+
+  beforeAll(async () => {
+    await platform.adminUser.create({
+      data: {
+        id: adminId,
+        email: `p2-${adminId}@test.local`,
+        passwordHash: 'x',
+        name: 'P2',
+        role: 'ADMIN',
+      },
+    });
+    for (const id of [garageA, garageB]) {
+      await platform.garage.create({
+        data: {
+          id,
+          name: `Garage ${id}`,
+          email: `${id}@test.local`,
+          phone: '+9611000000',
+          locationText: 'Test',
+          defaultLocale: 'en',
+          status: 'ACTIVE',
+          createdByAdminId: adminId,
+        },
+      });
+    }
+  });
+
+  describe('owners (linked-only access)', () => {
+    it('find_or_create_owner returns one id per phone, from any garage', async () => {
+      const phone = newPhone();
+      const first = await ownerIdFor(garageA, phone);
+      expect(first).toMatch(/^[0-9a-f-]{36}$/);
+      // UUID v7: the version nibble is 7.
+      expect(first[14]).toBe('7');
+      expect(await ownerIdFor(garageA, phone)).toBe(first);
+      expect(await ownerIdFor(garageB, phone)).toBe(first);
+    });
+
+    it('it refuses bad input and needs a tenant context', async () => {
+      await expect(ownerIdFor(garageA, '03123456')).rejects.toThrow(/E\.164/);
+      await expect(
+        app.$queryRaw`SELECT find_or_create_owner(${newPhone()}, 'X', 'en')`,
+      ).rejects.toThrow(/tenant context/);
+    });
+
+    it('a garage sees an owner only once it has them as a customer', async () => {
+      const ownerId = await ownerIdFor(garageA, newPhone());
+      const seen = (garageId: string) =>
+        asGarage(garageId, (tx) => tx.owner.count({ where: { id: ownerId } }));
+      expect(await seen(garageA)).toBe(0);
+
+      await asGarage(garageA, (tx) =>
+        tx.garageCustomer.create({ data: { garageId: garageA, ownerId, name: 'Customer A' } }),
+      );
+      expect(await seen(garageA)).toBe(1);
+      expect(await seen(garageB)).toBe(0);
+      // And never all owners: without a context nothing at all.
+      expect(await app.owner.count()).toBe(0);
+    });
+
+    it('garage code cannot write owners directly', async () => {
+      await expect(
+        asGarage(garageA, (tx) =>
+          tx.owner.create({ data: { phone: newPhone(), name: 'Direct', locale: 'en' } }),
+        ),
+      ).rejects.toThrow(/permission denied/);
+    });
+  });
+
+  describe('service_types (global defaults + garage overrides)', () => {
+    const code = `T_${randomUUID().slice(0, 8)}`;
+    let globalId: string;
+
+    beforeAll(async () => {
+      const base = { code, nameAr: 'اختبار', nameEn: 'Test', defaultIntervalKm: 5000 };
+      globalId = (await platform.serviceType.create({ data: base })).id;
+      await platform.serviceType.create({
+        data: { ...base, garageId: garageA, defaultIntervalKm: 7000 },
+      });
+      await platform.serviceType.create({
+        data: { ...base, garageId: garageB, defaultIntervalKm: 9000 },
+      });
+    });
+
+    it("a garage reads the global row and its own override, never another garage's", async () => {
+      const rows = await asGarage(garageA, (tx) =>
+        tx.serviceType.findMany({ where: { code }, orderBy: { defaultIntervalKm: 'asc' } }),
+      );
+      expect(rows.map((r) => [r.garageId, r.defaultIntervalKm])).toEqual([
+        [null, 5000],
+        [garageA, 7000],
+      ]);
+    });
+
+    it('a garage cannot change or add global rows', async () => {
+      const updated = await asGarage(garageA, (tx) =>
+        tx.serviceType.updateMany({ where: { id: globalId }, data: { defaultIntervalKm: 1 } }),
+      );
+      expect(updated.count).toBe(0);
+      await expect(
+        asGarage(garageA, (tx) =>
+          tx.serviceType.create({ data: { code: `${code}_2`, nameAr: 'x', nameEn: 'x' } }),
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('a code is unique among global rows', async () => {
+      await expect(
+        platform.serviceType.create({ data: { code, nameAr: 'x', nameEn: 'x' } }),
+      ).rejects.toThrow(/Unique constraint/);
+    });
+  });
+
+  describe('garage-scoped foreign keys', () => {
+    it("a row of garage A can never point to garage B's customer", async () => {
+      const ownerId = await ownerIdFor(garageB, newPhone());
+      const customerB = await asGarage(garageB, (tx) =>
+        tx.garageCustomer.create({ data: { garageId: garageB, ownerId, name: 'Customer B' } }),
+      );
+      // Even through the platform role (no RLS), the database refuses the cross link.
+      await expect(
+        platform.vehicle.create({
+          data: {
+            garageId: garageA,
+            garageCustomerId: customerB.id,
+            ownerId,
+            plate: 'B 123',
+            plateNormalized: 'B123',
+            make: 'Kia',
+            model: 'Rio',
+            currentKm: 1000,
+          },
+        }),
+      ).rejects.toThrow(/Foreign key constraint/);
+    });
+
+    it('a plate is unique per garage among cars that are not deleted', async () => {
+      const ownerId = await ownerIdFor(garageA, newPhone());
+      const customer = await asGarage(garageA, (tx) =>
+        tx.garageCustomer.create({ data: { garageId: garageA, ownerId, name: 'Plates' } }),
+      );
+      const car = {
+        garageId: garageA,
+        garageCustomerId: customer.id,
+        ownerId,
+        plate: 'P 1',
+        plateNormalized: `P${randomUUID().slice(0, 6).toUpperCase()}`,
+        make: 'Kia',
+        model: 'Rio',
+        currentKm: 0,
+      };
+      const first = await asGarage(garageA, (tx) => tx.vehicle.create({ data: car }));
+      await expect(asGarage(garageA, (tx) => tx.vehicle.create({ data: car }))).rejects.toThrow();
+      // After a soft delete the plate can be used again.
+      await asGarage(garageA, (tx) =>
+        tx.vehicle.update({ where: { id: first.id }, data: { deletedAt: new Date() } }),
+      );
+      await asGarage(garageA, (tx) => tx.vehicle.create({ data: car }));
+      // Negative odometer is refused by a CHECK constraint.
+      await expect(
+        asGarage(garageA, (tx) =>
+          tx.vehicle.create({ data: { ...car, plateNormalized: 'NEG1', currentKm: -1 } }),
+        ),
+      ).rejects.toThrow();
+    });
+  });
+
+  it('records, visits, customers and vehicles are never deleted by the app role', async () => {
+    for (const table of [
+      'garage_customers',
+      'vehicles',
+      'visits',
+      'service_records',
+      'reminders',
+    ]) {
+      await expect(
+        asGarage(garageA, (tx) => tx.$executeRawUnsafe(`DELETE FROM "${table}"`)),
+        table,
+      ).rejects.toThrow(/permission denied/);
+    }
   });
 });

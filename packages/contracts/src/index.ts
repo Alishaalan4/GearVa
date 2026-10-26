@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './customers';
 export * from './distance';
 export * from './errors';
 export * from './garages';
@@ -9,4 +10,5 @@ export * from './odometer';
 export * from './pagination';
 export * from './phone';
 export * from './staff';
+export * from './suggestions';
 export * from './text-normalize';

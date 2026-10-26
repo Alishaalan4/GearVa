@@ -84,3 +84,35 @@ export async function latestLinkToken(platform: PrismaClient, userId: string): P
   const link = new URL((n.payload as { link: string }).link);
   return link.searchParams.get('token') as string;
 }
+
+/** A fresh valid E.164 number (Lebanese mobile range 70), unique enough for one run. */
+export function randomPhone(): string {
+  return `+96170${String(Math.floor(Math.random() * 1e6)).padStart(6, '0')}`;
+}
+
+/**
+ * An active staff member with a password, created through the platform role, signed in.
+ * Returns the Cookie header value.
+ */
+export async function signInAsStaff(
+  app: INestApplication,
+  garage: TestStaffGarage,
+  role: 'MANAGER' | 'MECHANIC' | 'RECEPTIONIST',
+): Promise<{ userId: string; cookie: string }> {
+  const platform = app.get(PlatformDb).client;
+  const email = `${role.toLowerCase()}-${randomUUID().slice(0, 8)}@test.local`;
+  const password = 'staff password 123';
+  const user = await platform.user.create({
+    data: {
+      garageId: garage.garageId,
+      branchId: role === 'MANAGER' ? null : garage.branchId,
+      email,
+      name: `Test ${role}`,
+      role,
+      locale: 'en',
+      passwordHash: await app.get(PasswordService).hash(password),
+    },
+  });
+  const { cookie } = await staffLogin(app, email, password);
+  return { userId: user.id, cookie };
+}

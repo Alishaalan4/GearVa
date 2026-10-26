@@ -22,8 +22,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.0 Doc fixes before Phase 2 | ✅ Done | 2026-10-23 |
 | 2 | 2.1 Database: customers, vehicles, services, visits, reminders | ✅ Done | 2026-10-24 |
 | 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ✅ Done | 2026-10-26 |
-| 2 | 2.3 API: customers, vehicles, search, suggestions | ⏳ Next | |
-| 2 | 2.4 API: quick entry, visits, history | | |
+| 2 | 2.3 API: customers, vehicles, search, suggestions | ✅ Done | 2026-10-26 |
+| 2 | 2.4 API: quick entry, visits, history | ⏳ Next | |
 | 2 | 2.5 garage-web: search, customers, cars | | |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | | |
 
@@ -523,6 +523,37 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - database.md 1 (plate normalization), 4.4 (`totalCents` rounding).
 
 **Verified:** by me: 35 contracts tests, typecheck/lint/build of `contracts`, typecheck of API, garage-web and admin. By the user: `npm install`, `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy`.
-**Commit:** pending — `Phase 2.2: shared calculations (km/mi, plates, daily km, next due, line totals) with unit tests`
+**Commit:** `37eec1c` — `Phase 2.2: shared calculations (km/mi, plates, daily km, next due, line totals) with unit tests` (CI green)
+
+---
+
+## Phase 2 · Step 2.3 — API: customers, vehicles, search, suggestions
+**When:** 2026-10-26 (~1 h)
+
+**Implements:** flow.md 1 (all roles add customers and cars), 3.1, 3.2, 3.2.1, 3.3, 4.3, 12 (audit on viewing a customer), 13 (same phone twice, same plate in two garages); database.md 4.3, 6.6; README 5.1.6 (tenancy case per endpoint).
+
+**Summary:** Garage staff can add a customer by name and phone (any format, stored E.164; the owner is found or created with `find_or_create_owner()`, then linked), get the existing customer back for a phone the garage already has (200, `created: false`), view and edit customers, add any number of cars (odometer in the car's unit, stored in km), view and edit cars (with today's estimated km), search by plate prefix or phone ending, and get autocomplete suggestions. A plate already used in the garage answers `409 VEHICLE_PLATE_EXISTS` with the existing car. New customers get an app invite recorded for WhatsApp and logged `SKIPPED` (no email is collected yet). Viewing a customer or a car writes an audit row.
+
+**Decisions**
+- Search returns one row per car; a phone match also returns a customer without a car (`vehicle: null`), so staff can add one. Phone matching needs at least 4 digits and phone-like text; leading zeros are dropped so the local form matches the E.164 ending.
+- Suggestions are upserted with one `INSERT … ON CONFLICT` statement (no lost update or failed save when two staff type a new value at once); ids come from a small UUID v7 helper because raw SQL skips Prisma's default.
+- The odometer of a car changes only through visits (2.4).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/customers.ts`, `suggestions.ts` (new), `errors.ts`, `index.ts` | Schemas and types for customers, vehicles, search, suggestions; `VEHICLE_PLATE_EXISTS` |
+| `apps/api/src/customers/*` (new) | `CustomersService` (find-or-link, view audit, invite), `SearchService` (parameterized SQL in the tenant transaction), controllers, mappers |
+| `apps/api/src/vehicles/*` (new) | Cars: create, detail with estimate, update, plate conflicts (also under a race) |
+| `apps/api/src/suggestions/*` (new) | List and record |
+| `apps/api/src/common/uuid-v7.ts` (new), `app.module.ts` | UUID v7 helper; modules registered |
+| `apps/api/test/customers.spec.ts` (new) | 15 feature tests |
+| `apps/api/test/tenancy.spec.ts`, `helpers/staff.ts` | 8 new isolation cases (B's rows incl. customers, cars and suggestions must stay identical); `randomPhone`, `signInAsStaff` helpers |
+
+**Doc changes**
+- flow.md 3.1, 3.2, 3.3, 4.3: the API behaviour; 14: `/v1/customers/:id/vehicles`, `/v1/search`.
+
+**Verified:** by me: 89 API tests (9 suites) on a fresh test database, typecheck, lint. By the user: `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy`.
+**Commit:** pending — `Phase 2.3: customers, vehicles, search and suggestions API`
 
 ---

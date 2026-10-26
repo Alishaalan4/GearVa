@@ -23,6 +23,8 @@ export const ERROR_CODES = {
   USER_NOT_ACTIVATED: 'USER_NOT_ACTIVATED',
   CANNOT_MODIFY_OWNER: 'CANNOT_MODIFY_OWNER',
   MAIN_BRANCH_REQUIRED: 'MAIN_BRANCH_REQUIRED',
+  /** A car with this plate already exists in the garage; details.vehicle is that car. */
+  VEHICLE_PLATE_EXISTS: 'VEHICLE_PLATE_EXISTS',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */

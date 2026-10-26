@@ -11,6 +11,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { StaffGuard } from './auth/staff.guard';
 import { BranchesModule } from './branches/branches.module';
+import { CustomersModule } from './customers/customers.module';
 import { DatabaseModule } from './common/db/database.module';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 import { REDIS, RedisModule } from './common/redis/redis.module';
@@ -18,7 +19,9 @@ import { ENV, type Env } from './config/env';
 import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SuggestionsModule } from './suggestions/suggestions.module';
 import { UsersModule } from './users/users.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -52,6 +55,9 @@ import { UsersModule } from './users/users.module';
     AdminModule,
     BranchesModule,
     UsersModule,
+    CustomersModule,
+    VehiclesModule,
+    SuggestionsModule,
     HealthModule,
   ],
   providers: [

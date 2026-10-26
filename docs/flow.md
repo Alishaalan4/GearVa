@@ -131,11 +131,15 @@ sequenceDiagram
 
 **Same phone at two garages:** both garages link to the same `owners` row. Each garage sees only its own `garage_customers`, vehicles, visits and invoices (RLS). The owner app (phase 6) sees both histories through `ownerId`.
 
+API (step 2.3): `POST /v1/customers` `{ name, phone, notes? }` answers **201** with the new customer, or **200** with the existing one when this garage already has the phone (`created: false`; name and notes are left unchanged). The phone may be typed in any format; it is stored in E.164 (a number without a country code is read as Lebanese). Staff enter no email in Phase 2, so the app invite of step 5 is recorded for WhatsApp (`customer-app-invite`) and logged as `SKIPPED`. `GET /v1/customers/:id` (with the cars; writes a `customer.view` audit row, section 12) and `PATCH /v1/customers/:id` (name, notes, opt-outs; the phone is the owner's identity and does not change here). All four roles may use them.
+
 ### 3.2 Add a vehicle
 1. Staff enters plate, make, model, year, current odometer, and chooses the display unit (KM or MI).
 2. Odometer is converted to km and stored in `vehicles.currentKm`.
 3. Make and model go through `suggestions` (section 4.3).
 4. Plate uniqueness is checked per garage on `plateNormalized`. If the plate exists for another customer, show the existing car instead of failing silently.
+
+API (step 2.3): `POST /v1/customers/:customerId/vehicles` `{ plate, make, model, year?, distanceUnit, odometer, notes? }`. A plate already used in this garage (any spelling: `b 123-456` = `B123456`) answers **409 `VEHICLE_PLATE_EXISTS`** with the existing car and its customer in `details`. `GET /v1/vehicles/:id` returns the car with its customer and today's `estimatedKm` (section 5.2) and writes a `vehicle.view` audit row; `PATCH /v1/vehicles/:id` edits plate, make, model, year, unit and notes. The odometer changes only through visits (section 4), never by editing the car.
 
 ### 3.2.1 Add another car to an existing customer
 A customer can have any number of cars (no limit in the schema).
@@ -147,6 +151,8 @@ A customer can have any number of cars (no limit in the schema).
 
 ### 3.3 Search
 One search box accepts a plate or a phone number. Search matches `plateNormalized` prefix or the phone suffix, always inside the garage, always paginated (max 50), always rate limited. Results show customer, plate, make/model.
+
+API (step 2.3): `GET /v1/search?q=` (2 to 40 characters, `page`, `pageSize`, 60 requests per minute per IP). The text is normalized like a plate and matched as a prefix; when it looks like a phone (only digits, spaces and `+ - ( ) .`, at least 4 digits) its digits without leading zeros are also matched as the end of the owner's phone, so `03 123 456` finds `+9613123456`. One row per car; a matching customer with no car comes back once with `vehicle: null` so staff can add one.
 
 ---
 
@@ -186,6 +192,7 @@ flowchart LR
 - Tapping a suggestion fills the field.
 - On save, every suggestion-backed value is upserted: new values are created, existing ones increment `useCount` and update `lastUsedAt`. The normalized form (lowercase, trimmed) prevents "Castrol" vs "castrol" duplicates; the display value keeps the first spelling used.
 - Lists are per garage and never shared.
+- API (step 2.3): `GET /v1/suggestions?field=&q=` returns at most 10 values (`{ items: [{ value, useCount }] }`); an empty `q` returns the most used. Saving a car records its make and model.
 
 ### 4.4 Visit status
 `IN_PROGRESS` and `WAITING_FOR_PARTS` keep the visit open (no invoice yet). `DONE` plus "Finish visit" closes it (and, from Phase 3, issues the invoice). Moving a visit to `DONE` queues a `CAR_READY` notification to the owner (email or in-app now).
@@ -460,7 +467,7 @@ Subscription revenue per month and year, growth (garages new, renewed, lost), an
 ```
 /v1/auth/*                    staff auth
 /v1/garage, /v1/branches, /v1/users, /v1/settings
-/v1/customers, /v1/vehicles
+/v1/customers, /v1/customers/:id/vehicles, /v1/vehicles, /v1/search
 /v1/visits, /v1/visits/quick, /v1/visits/:id/records, /v1/visits/:id/finish
 /v1/suggestions
 /v1/service-types

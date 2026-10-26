@@ -201,25 +201,27 @@ Recalculated after every saved visit for that vehicle:
 
 ```
 readings = last 5 odometer readings for the vehicle (service_records.odometerKm with performedAt), oldest to newest
-drop any reading lower than the one before it (treated as a correction, flagged in the audit log)
+a reading lower than the one before it is a confirmed correction (5.3): start again from it, so only it and later readings count
 if fewer than 2 valid readings:
     avgDailyKm = null     (the estimate falls back to garage_settings.defaultDailyKm, else system default 35)
 else:
     avgDailyKm = (lastKm - firstKm) / max(1, days between first and last)
-clamp avgDailyKm to the range 5..300 per day
+clamp avgDailyKm to the range 5..300 per day, rounded to 2 decimals
 ```
+
+Step 2.2 (2026-10-26): the earlier text said to *drop* a lower reading, which disagreed with 5.3 ("resets from that point"). After an odometer is replaced every new reading is lower than the old ones, so dropping them would freeze the average on the old odometer; the calculation now starts again from the correction. Implemented in `packages/contracts/src/odometer.ts` (`averageDailyKm`).
 
 ### 5.2 Estimated current km
 ```
-daysSince = days between vehicles.lastOdometerAt and today
-estimatedKm = vehicles.currentKm + (avgDailyKm ?? defaultDailyKm) * daysSince
+daysSince = whole days between vehicles.lastOdometerAt and now (never negative)
+estimatedKm = vehicles.currentKm + round((avgDailyKm ?? garage defaultDailyKm ?? 35) * daysSince)
 ```
 
 Used for: the pre-filled odometer in quick entry, and the daily reminder job.
 
 ### 5.3 Rules
 - A new odometer lower than the last recorded one is allowed only after a confirmation ("odometer correction"), is audit logged, and resets `avgDailyKm` calculation from that point.
-- A jump of more than 5,000 km in one day is flagged as a likely typo and needs confirmation.
+- A jump of more than 5,000 km per day since the last reading (days counted as at least 1) is flagged as a likely typo and needs confirmation (`checkOdometer` answers `OK`, `CORRECTION` or `TYPO`).
 - Display uses the vehicle's unit: `miles = round(km / 1.609344)`. Entry in miles is converted with `round(miles x 1.609344)`.
 
 ---
@@ -235,7 +237,8 @@ intervalKm   = (vehicle uses KM) ? interval.defaultIntervalKm : interval.default
 intervalMonths = interval.defaultIntervalMonths
 
 nextDueKm   = intervalKm   ? odometerKm + intervalKm : null
-nextDueDate = intervalMonths ? performedAt + intervalMonths months : null
+nextDueDate = intervalMonths ? (performedAt as a date in the garage's time zone) + intervalMonths months : null
+             (the day is kept, or clamped to the month's last day: Aug 31 + 6 months = Feb 28)
 ```
 
 Example: a car on KM, oil change at 5,500 km, default 5,000 km: `nextDueKm = 10,500`. For a car on MI with interval 3,600 mi at 3,417 mi: next at 7,017 mi, stored as km.

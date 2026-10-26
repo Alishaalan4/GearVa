@@ -21,8 +21,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 1 | 1.8 Review fixes (guard, phones, branch rule, CI) | ✅ Done | 2026-10-23 |
 | 2 | 2.0 Doc fixes before Phase 2 | ✅ Done | 2026-10-23 |
 | 2 | 2.1 Database: customers, vehicles, services, visits, reminders | ✅ Done | 2026-10-24 |
-| 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ⏳ Next | |
-| 2 | 2.3 API: customers, vehicles, search, suggestions | | |
+| 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ✅ Done | 2026-10-26 |
+| 2 | 2.3 API: customers, vehicles, search, suggestions | ⏳ Next | |
 | 2 | 2.4 API: quick entry, visits, history | | |
 | 2 | 2.5 garage-web: search, customers, cars | | |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | | |
@@ -463,7 +463,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - README 7: daily-km decision confirmed.
 
 **Verified:** docs only (read through).
-**Commit:** pending — committed together with step 2.1 (both change database.md)
+**Commit:** `cfb2d54` — committed together with step 2.1 (both change database.md)
 
 ---
 
@@ -496,6 +496,33 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Problems hit and fixed:** the first schema check (migration applied to a scratch database, then `prisma migrate diff` against the schema) showed Prisma would drop the suggestions prefix index → index removed, check re-run: empty diff. The scratch database was deleted afterwards.
 
 **Verified:** by me: 17 database tests on the test database, typecheck and lint of the database package and API, empty schema diff. By the user: `prisma migrate dev`, `npm run db:seed` (11 service types), `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy`.
-**Commit:** pending — `Phase 2.0 + 2.1: doc fixes, Phase 2 database (owners, customers, vehicles, service types, visits, records, reminders)`
+**Commit:** `cfb2d54` — `Phase 2.0 + 2.1: doc fixes, Phase 2 database (owners, customers, vehicles, service types, visits, records, reminders)` (CI green)
+
+---
+
+## Phase 2 · Step 2.2 — Calculations (km/mi, plates, daily km, next due, line totals)
+**When:** 2026-10-26 (~40 min)
+
+**Implements:** flow.md 4.3 (suggestion normalization), 5 (average daily usage, estimated km, odometer rules), 6 (next-change logic); database.md 1 (plates), 4.4 (`service_records.totalCents`); README 5.4 (money in cents, km internally), 8 (unit tests for the pure logic).
+
+**Summary:** The pure rules Phase 2 needs now live in `packages/contracts`, shared by the API and the web apps, each with unit tests and edge cases: km ↔ miles; plate normalization (uppercase, Arabic-Indic digits as ASCII, no spaces or dashes); suggestion normalization; average daily km (last 5 readings, clamp 5..300, a lower reading restarts it); estimated current km (car → garage default → 35 km/day, whole days, never backwards); odometer check (`OK` / `CORRECTION` / `TYPO` at more than 5,000 km per day); interval resolution (garage override → global, miles interval for cars on miles); next due km and date (calendar date in the garage's time zone, end-of-month clamping); line total in integer cents.
+
+**Decisions (2026-10-24/26):**
+- Line total = quantity × unit price, rounded to the nearest cent with halves up, computed in integers (first-review item 10; a float would turn 4.35 × 110 into 478.4999… and round the wrong way).
+- A lower odometer reading restarts the average (flow.md 5.3) instead of being dropped (old 5.1 text): after an odometer replacement, dropping every new reading would freeze the average.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/distance.ts`, `text-normalize.ts`, `odometer.ts`, `next-due.ts`, `money.ts` (new), `index.ts` | The calculations |
+| `packages/contracts/test/*.test.ts` (new) | 35 unit tests |
+| `packages/contracts/package.json`, `tsconfig.json`, `tsconfig.build.json` (new), `vitest.config.mts` (new) | Vitest (same version as `packages/database`), `test` script, build only from `src` |
+
+**Doc changes**
+- flow.md 5.1 (correction restarts the average, rounding), 5.2 (whole days, rounding, fallbacks), 5.3 (jump per day, check results), 6 (date in the garage's time zone, month-end clamp).
+- database.md 1 (plate normalization), 4.4 (`totalCents` rounding).
+
+**Verified:** by me: 35 contracts tests, typecheck/lint/build of `contracts`, typecheck of API, garage-web and admin. By the user: `npm install`, `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy`.
+**Commit:** pending — `Phase 2.2: shared calculations (km/mi, plates, daily km, next due, line totals) with unit tests`
 
 ---

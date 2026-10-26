@@ -14,7 +14,7 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 | Money | Integer **cents** (`Int`), currency USD. Column suffix `Cents`. Never `Float`/`Decimal` for money |
 | Distance | Integer **km** (`Int`), column suffix `Km`. Miles only at the display edge (1 mi = 1.609344 km) |
 | Phone numbers | E.164 string (`+9613123456`), normalized before save with `phoneSchema` / `normalizePhone` from `packages/contracts` (libphonenumber-js; a number without a country code is read as Lebanese). Invalid numbers are refused |
-| Plates | Store `plate` (as typed) and `plateNormalized` (uppercase, no spaces or dashes) for search and uniqueness |
+| Plates | Store `plate` (as typed) and `plateNormalized` (uppercase, Arabic-Indic digits as ASCII, no spaces or dashes; `normalizePlate` in `packages/contracts`) for search and uniqueness |
 | Enums | Prisma enums, listed in section 5 |
 | Deletion | Invoices, payments, service records and audit rows are **never deleted**. Garages, customers and vehicles use soft delete (`deletedAt`) |
 | Tenant column | Every tenant table has `garageId` (`garage_id`), `NOT NULL`, indexed, with a foreign key to `garages`. One exception: `audit_logs.garageId` is nullable for admin/system actions that belong to no garage (see 4.6) |
@@ -295,7 +295,7 @@ A finished visit is locked: its records can only change through the invoice edit
 | odometerKm | int | km at service time |
 | quantity | numeric(8,2) | default 1 |
 | unitPriceCents | int | |
-| totalCents | int | quantity x unit price |
+| totalCents | int | quantity x unit price, rounded to the nearest cent with halves up (`lineTotalCents` in `packages/contracts`, integer math; decided 2026-10-24, first-review item 10) |
 | laborCents / partsCents | int? | optional split |
 | mechanicId | uuid FK | from the logged-in user |
 | notes | text? | |

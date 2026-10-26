@@ -53,15 +53,16 @@ export class UsersService {
 
   async list(query: PaginationQuery): Promise<Paginated<StaffItem>> {
     const garageId = this.db.garageId;
-    const [items, total] = await this.db.run((tx) =>
-      Promise.all([
-        tx.user.findMany({
-          where: { garageId },
-          orderBy: { createdAt: 'asc' },
-          ...toSkipTake(query),
-        }),
-        tx.user.count({ where: { garageId } }),
-      ]),
+    const [items, total] = await this.db.run(
+      async (tx) =>
+        [
+          await tx.user.findMany({
+            where: { garageId },
+            orderBy: { createdAt: 'asc' },
+            ...toSkipTake(query),
+          }),
+          await tx.user.count({ where: { garageId } }),
+        ] as const,
     );
     return paginated(items.map(toItem), total, query);
   }

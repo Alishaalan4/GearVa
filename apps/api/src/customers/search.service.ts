@@ -61,17 +61,18 @@ export class SearchService {
         AND (${plateMatch} OR ${phoneMatch})`;
     const { skip, take } = toSkipTake(query);
 
-    const [rows, counted] = await this.db.run((tx) =>
-      Promise.all([
-        tx.$queryRaw<Row[]>`
-          SELECT gc."id" AS customer_id, gc."name" AS customer_name, o."phone",
-                 v."id" AS vehicle_id, v."plate", v."make", v."model", v."year",
-                 v."distance_unit"::text AS distance_unit, v."current_km"
-          ${from}
-          ORDER BY (v."plate_normalized" = ${plate}) DESC NULLS LAST, gc."name", v."plate_normalized"
-          LIMIT ${take} OFFSET ${skip}`,
-        tx.$queryRaw<{ total: bigint }[]>`SELECT COUNT(*) AS total ${from}`,
-      ]),
+    const [rows, counted] = await this.db.run(
+      async (tx) =>
+        [
+          await tx.$queryRaw<Row[]>`
+        SELECT gc."id" AS customer_id, gc."name" AS customer_name, o."phone",
+               v."id" AS vehicle_id, v."plate", v."make", v."model", v."year",
+               v."distance_unit"::text AS distance_unit, v."current_km"
+        ${from}
+        ORDER BY (v."plate_normalized" = ${plate}) DESC NULLS LAST, gc."name", v."plate_normalized"
+        LIMIT ${take} OFFSET ${skip}`,
+          await tx.$queryRaw<{ total: bigint }[]>`SELECT COUNT(*) AS total ${from}`,
+        ] as const,
     );
 
     const items = rows.map((r): SearchResult => ({

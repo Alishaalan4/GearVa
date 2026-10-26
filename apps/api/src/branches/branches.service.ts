@@ -41,15 +41,16 @@ export class BranchesService {
 
   async list(query: PaginationQuery): Promise<Paginated<BranchItem>> {
     const garageId = this.db.garageId;
-    const [items, total] = await this.db.run((tx) =>
-      Promise.all([
-        tx.branch.findMany({
-          where: { garageId },
-          orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }],
-          ...toSkipTake(query),
-        }),
-        tx.branch.count({ where: { garageId } }),
-      ]),
+    const [items, total] = await this.db.run(
+      async (tx) =>
+        [
+          await tx.branch.findMany({
+            where: { garageId },
+            orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }],
+            ...toSkipTake(query),
+          }),
+          await tx.branch.count({ where: { garageId } }),
+        ] as const,
     );
     return paginated(items.map(toItem), total, query);
   }

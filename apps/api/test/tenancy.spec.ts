@@ -38,6 +38,8 @@ interface Side {
   vehicleId: string;
   plate: string;
   make: string;
+  openVisitId: string;
+  overrideTypeId: string;
 }
 
 describe('Tenant isolation (test:tenancy)', () => {
@@ -45,6 +47,8 @@ describe('Tenant isolation (test:tenancy)', () => {
   let platform: PrismaClient;
   let a: Side;
   let b: Side;
+  /** The global OIL_CHANGE service type (seeded by test:prepare). */
+  let oilChangeId: string;
 
   const http = () => request(app.getHttpServer());
   const asA = {
@@ -85,6 +89,22 @@ describe('Tenant isolation (test:tenancy)', () => {
         odometer: 1000,
       }).expect(201)
     ).body;
+    // An open visit with one oil change, and the garage's own oil-change override.
+    const visit = (await as('/v1/visits', { vehicleId: vehicle.id, odometer: 1200 }).expect(201))
+      .body;
+    await as(`/v1/visits/${visit.id}/records`, {
+      services: [{ serviceTypeId: oilChangeId, unitPriceCents: 2500 }],
+    }).expect(201);
+    const override = await platform.serviceType.create({
+      data: {
+        garageId: garage.garageId,
+        code: 'OIL_CHANGE',
+        nameEn: 'Oil change (own)',
+        nameAr: 'تغيير زيت',
+        defaultIntervalKm: 7000,
+        defaultIntervalMonths: 9,
+      },
+    });
     return {
       garage,
       cookie,
@@ -95,6 +115,8 @@ describe('Tenant isolation (test:tenancy)', () => {
       vehicleId: vehicle.id,
       plate,
       make,
+      openVisitId: visit.id,
+      overrideTypeId: override.id,
     };
   }
 
@@ -102,17 +124,35 @@ describe('Tenant isolation (test:tenancy)', () => {
   async function snapshotB() {
     const garageId = b.garage.garageId;
     const byId = { orderBy: { id: 'asc' as const } };
-    const [garage, branches, users, notifications, customers, vehicles, suggestions] =
-      await Promise.all([
-        platform.garage.findUniqueOrThrow({ where: { id: garageId } }),
-        platform.branch.findMany({ where: { garageId }, ...byId }),
-        platform.user.findMany({ where: { garageId }, ...byId }),
-        platform.notification.count({ where: { garageId } }),
-        platform.garageCustomer.findMany({ where: { garageId }, ...byId }),
-        platform.vehicle.findMany({ where: { garageId }, ...byId }),
-        platform.suggestion.findMany({ where: { garageId }, ...byId }),
-      ]);
-    return { garage, branches, users, notifications, customers, vehicles, suggestions };
+    const where = { where: { garageId }, ...byId };
+    const rows = await Promise.all([
+      platform.garage.findUniqueOrThrow({ where: { id: garageId } }),
+      platform.branch.findMany(where),
+      platform.user.findMany(where),
+      platform.notification.count({ where: { garageId } }),
+      platform.garageCustomer.findMany(where),
+      platform.vehicle.findMany(where),
+      platform.suggestion.findMany(where),
+      platform.visit.findMany(where),
+      platform.serviceRecord.findMany(where),
+      platform.reminder.findMany(where),
+      platform.serviceType.findMany(where),
+    ]);
+    const [garage, branches, users, notifications, customers, vehicles, suggestions] = rows;
+    const [visits, records, reminders, serviceTypes] = rows.slice(7);
+    return {
+      garage,
+      branches,
+      users,
+      notifications,
+      customers,
+      vehicles,
+      suggestions,
+      visits,
+      records,
+      reminders,
+      serviceTypes,
+    };
   }
 
   /** Runs `attempt`, then checks that none of garage B's rows changed. */
@@ -125,6 +165,9 @@ describe('Tenant isolation (test:tenancy)', () => {
   beforeAll(async () => {
     app = await createTestApp();
     platform = app.get(PlatformDb).client;
+    oilChangeId = (
+      await platform.serviceType.findFirstOrThrow({ where: { garageId: null, code: 'OIL_CHANGE' } })
+    ).id;
     a = await createSide();
     b = await createSide();
   });
@@ -282,6 +325,99 @@ describe('Tenant isolation (test:tenancy)', () => {
       await expectBUnchanged(async () => {
         await asA.patch(`/v1/vehicles/${b.vehicleId}`, { make: 'Hacked' }).expect(404);
         await asA.patch(`/v1/vehicles/${b.vehicleId}`, { plate: 'HACKED' }).expect(404);
+      });
+    },
+
+    // Step 2.4: service types, quick entry, visits, history.
+
+    'GET /v1/service-types': async () => {
+      const res = await asA.get('/v1/service-types').expect(200);
+      const ids = res.body.map((t: { id: string }) => t.id);
+      expect(ids).toContain(a.overrideTypeId);
+      expect(ids).not.toContain(b.overrideTypeId);
+      // A sees its own oil change override (7000 km), never B's.
+      const oil = res.body.find((t: { code: string }) => t.code === 'OIL_CHANGE');
+      expect(oil.id).toBe(a.overrideTypeId);
+    },
+
+    'GET /v1/vehicles/:vehicleId/prefill': async () => {
+      await asA.get(`/v1/vehicles/${b.vehicleId}/prefill?serviceTypeId=${oilChangeId}`).expect(404);
+      // B's own service type cannot be used either.
+      await asA
+        .get(`/v1/vehicles/${a.vehicleId}/prefill?serviceTypeId=${b.overrideTypeId}`)
+        .expect(404);
+      // A's car, with the global type: A's override applies, and "last used" is A's own.
+      const own = await asA
+        .get(`/v1/vehicles/${a.vehicleId}/prefill?serviceTypeId=${oilChangeId}`)
+        .expect(200);
+      expect(own.body.serviceType.id).toBe(a.overrideTypeId);
+      expect(own.body.last.unitPriceCents).toBe(2500);
+    },
+
+    'GET /v1/vehicles/:vehicleId/history': async () => {
+      await asA.get(`/v1/vehicles/${b.vehicleId}/history`).expect(404);
+    },
+
+    'POST /v1/visits/quick': async () => {
+      await expectBUnchanged(async () => {
+        const oil = [{ serviceTypeId: oilChangeId }];
+        await asA
+          .post('/v1/visits/quick', { vehicleId: b.vehicleId, odometer: 5000, services: oil })
+          .expect(404);
+        // A's car, but B's service type or B's branch: refused.
+        await asA
+          .post('/v1/visits/quick', {
+            vehicleId: a.vehicleId,
+            odometer: 1300,
+            services: [{ serviceTypeId: b.overrideTypeId }],
+          })
+          .expect(404);
+        await asA
+          .post('/v1/visits/quick', {
+            vehicleId: a.vehicleId,
+            odometer: 1300,
+            branchId: b.branchId,
+            services: oil,
+          })
+          .expect(404);
+      });
+    },
+
+    'POST /v1/visits': async () => {
+      await expectBUnchanged(async () => {
+        await asA.post('/v1/visits', { vehicleId: b.vehicleId, odometer: 5000 }).expect(404);
+      });
+    },
+
+    'GET /v1/visits/:visitId': async () => {
+      await asA.get(`/v1/visits/${b.openVisitId}`).expect(404);
+    },
+
+    'POST /v1/visits/:visitId/records': async () => {
+      await expectBUnchanged(async () => {
+        await asA
+          .post(`/v1/visits/${b.openVisitId}/records`, {
+            services: [{ serviceTypeId: oilChangeId }],
+          })
+          .expect(404);
+        // A's open visit cannot receive B's service type.
+        await asA
+          .post(`/v1/visits/${a.openVisitId}/records`, {
+            services: [{ serviceTypeId: b.overrideTypeId }],
+          })
+          .expect(404);
+      });
+    },
+
+    'PATCH /v1/visits/:visitId': async () => {
+      await expectBUnchanged(async () => {
+        await asA.patch(`/v1/visits/${b.openVisitId}`, { status: 'WAITING_FOR_PARTS' }).expect(404);
+      });
+    },
+
+    'POST /v1/visits/:visitId/finish': async () => {
+      await expectBUnchanged(async () => {
+        await asA.post(`/v1/visits/${b.openVisitId}/finish`).expect(404);
       });
     },
 

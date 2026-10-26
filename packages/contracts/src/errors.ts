@@ -25,6 +25,10 @@ export const ERROR_CODES = {
   MAIN_BRANCH_REQUIRED: 'MAIN_BRANCH_REQUIRED',
   /** A car with this plate already exists in the garage; details.vehicle is that car. */
   VEHICLE_PLATE_EXISTS: 'VEHICLE_PLATE_EXISTS',
+  /** An odometer lower than the last one or a jump over 5,000 km/day must be confirmed. */
+  ODOMETER_CONFIRMATION_REQUIRED: 'ODOMETER_CONFIRMATION_REQUIRED',
+  VISIT_ALREADY_FINISHED: 'VISIT_ALREADY_FINISHED',
+  VISIT_HAS_NO_RECORDS: 'VISIT_HAS_NO_RECORDS',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */

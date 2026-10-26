@@ -186,6 +186,13 @@ flowchart LR
 - `POST /v1/visits/quick` accepts `{ vehicleId, odometer, odometerUnit, services: [...], finish: boolean }` and creates visit, records and reminders in **one transaction**; with `finish` the visit is also closed (`DONE`, `finishedAt` set). From Phase 3, `finish` also creates the invoice (section 7.1) in that same transaction.
 - For longer jobs: `POST /v1/visits` (opens `IN_PROGRESS`), `POST /v1/visits/:id/records`, `PATCH /v1/visits/:id` (status), `POST /v1/visits/:id/finish`.
 - **Phase split (decision 2026-10-23):** invoices are Phase 3, so in Phase 2 "finish" (quick entry or `POST /v1/visits/:id/finish`) only closes the visit. Phase 3 adds the invoice to the same action; visits finished during Phase 2 development simply have no invoice.
+- **Implemented in step 2.4 (2026-10-26):**
+  - `GET /v1/service-types` lists one type per code, the garage's override instead of the global default. `GET /v1/vehicles/:id/prefill?serviceTypeId=` returns the estimated odometer (km and the car's unit), the "last used for this car" values (latest record of the same service code) and the next due values if done today.
+  - A service line needs only `serviceTypeId`; `quantity` defaults to 1 (at most 2 decimals), `unitPriceCents` to 0 (flow.md 13). `details` must match the type's `detailKey` (database.md 4.4); a type without one takes no details. `OTHER` needs `customName`. `nextDueOdometer` (in the car's unit) and `nextDueDate` replace the computed values; `null` removes them.
+  - **Branch:** staff bound to a branch (mechanic, receptionist) always record in their own branch; another `branchId` is refused (`FORBIDDEN`). Owners and managers may pass `branchId`; the default is the main branch. An inactive branch is refused (`BRANCH_INACTIVE`).
+  - **Odometer:** a reading lower than the car's last one or more than 5,000 km per day answers `409 ODOMETER_CONFIRMATION_REQUIRED` with `details.check` (`CORRECTION` or `TYPO`); repeating the request with `confirmOdometer` set to that value saves it. A confirmed correction writes a `vehicle.odometer_correction` audit row (before and after km). Every visit sets the car's `currentKm`, `lastOdometerAt` and `avgDailyKm` (section 5.1).
+  - **Roles (section 1):** OWNER, MANAGER and MECHANIC create visits and records and finish visits; a RECEPTIONIST can read visits and history but not create or change them. Staff bound to a branch see only that branch's visits; a car's history (`GET /v1/vehicles/:id/history`, newest first, paginated) shows every branch.
+  - Finishing locks the visit row (`SELECT … FOR UPDATE`): a second finish gets `VISIT_ALREADY_FINISHED`; a visit without records gets `VISIT_HAS_NO_RECORDS`. A finished visit takes no more records or status changes. `PATCH` sets only `IN_PROGRESS` or `WAITING_FOR_PARTS`; `DONE` comes only from finishing.
 
 ### 4.3 Smart suggestions
 - When a field with a suggestion list gets focus or typing, the web app calls `GET /v1/suggestions?field=OIL_BRAND&q=cas`. The API returns matches on `valueNormalized` prefix, ordered by `useCount DESC`.
@@ -195,7 +202,7 @@ flowchart LR
 - API (step 2.3): `GET /v1/suggestions?field=&q=` returns at most 10 values (`{ items: [{ value, useCount }] }`); an empty `q` returns the most used. Saving a car records its make and model.
 
 ### 4.4 Visit status
-`IN_PROGRESS` and `WAITING_FOR_PARTS` keep the visit open (no invoice yet). `DONE` plus "Finish visit" closes it (and, from Phase 3, issues the invoice). Moving a visit to `DONE` queues a `CAR_READY` notification to the owner (email or in-app now).
+`IN_PROGRESS` and `WAITING_FOR_PARTS` keep the visit open (no invoice yet). `DONE` plus "Finish visit" closes it (and, from Phase 3, issues the invoice). Moving a visit to `DONE` queues a `CAR_READY` notification to the owner (email or in-app now). Until owners have an email or the app, it is recorded for WhatsApp (template `car-ready`) and logged `SKIPPED` (step 2.4).
 
 ---
 
@@ -207,7 +214,7 @@ All values in km internally.
 Recalculated after every saved visit for that vehicle:
 
 ```
-readings = last 5 odometer readings for the vehicle (service_records.odometerKm with performedAt), oldest to newest
+readings = last 5 odometer readings for the vehicle (one per visit: visits.odometerKm with openedAt, plus the car's reading before this visit, so a car added without history gets an average at its first visit), oldest to newest
 a reading lower than the one before it is a confirmed correction (5.3): start again from it, so only it and later readings count
 if fewer than 2 valid readings:
     avgDailyKm = null     (the estimate falls back to garage_settings.defaultDailyKm, else system default 35)
@@ -254,7 +261,7 @@ Example: a car on KM, oil change at 5,500 km, default 5,000 km: `nextDueKm = 10,
 - Each service type has its own interval (brakes, battery, gear oil do not follow the oil cycle).
 - The date is a **time fallback**: if the customer drives little, the reminder still fires when the date arrives.
 - Saving a record creates or replaces the reminder automatically:
-  1. Mark the previous `ACTIVE` or `SENT` `SERVICE_DUE` reminder for the same vehicle and service type as `COMPLETED`.
+  1. Mark the previous `ACTIVE` or `SENT` `SERVICE_DUE` reminder for the same vehicle and service type as `COMPLETED`. "Same service type" means the same code, so a garage override and the global default are one service. `OTHER` records never complete each other (two different custom services share the code).
   2. Insert a new `ACTIVE` reminder with `nextDueKm` and `nextDueDate`.
   3. If `warrantyUntil` is set, insert a `WARRANTY_END` reminder.
   4. If `recommendedAfterMonths` is set, insert a `RECOMMENDED_NEXT` reminder.
@@ -468,6 +475,7 @@ Subscription revenue per month and year, growth (garages new, renewed, lost), an
 /v1/auth/*                    staff auth
 /v1/garage, /v1/branches, /v1/users, /v1/settings
 /v1/customers, /v1/customers/:id/vehicles, /v1/vehicles, /v1/search
+/v1/vehicles/:id/prefill, /v1/vehicles/:id/history
 /v1/visits, /v1/visits/quick, /v1/visits/:id/records, /v1/visits/:id/finish
 /v1/suggestions
 /v1/service-types

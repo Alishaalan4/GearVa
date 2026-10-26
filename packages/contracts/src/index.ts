@@ -12,3 +12,4 @@ export * from './phone';
 export * from './staff';
 export * from './suggestions';
 export * from './text-normalize';
+export * from './visits';

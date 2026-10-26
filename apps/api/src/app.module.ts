@@ -18,10 +18,12 @@ import { REDIS, RedisModule } from './common/redis/redis.module';
 import { ENV, type Env } from './config/env';
 import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
+import { VisitsModule } from './visits/visits.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { VehiclesModule } from './vehicles/vehicles.module';
     CustomersModule,
     VehiclesModule,
     SuggestionsModule,
+    MaintenanceModule,
+    VisitsModule,
     HealthModule,
   ],
   providers: [

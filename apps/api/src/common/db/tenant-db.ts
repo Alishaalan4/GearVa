@@ -26,6 +26,11 @@ export class TenantDb {
     return this.context.requireGarageId();
   }
 
+  /**
+   * Runs `fn` in one tenant transaction. A transaction has one connection, so queries
+   * inside it run one after the other: never `Promise.all` on `tx` (pg is removing
+   * support for overlapping queries on one client).
+   */
   run<T>(fn: (tx: TenantTx) => Promise<T>, options?: TenantTxOptions): Promise<T> {
     return runAsTenant(this.client, this.context.requireGarageId(), fn, options);
   }

@@ -23,8 +23,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.1 Database: customers, vehicles, services, visits, reminders | ✅ Done | 2026-10-24 |
 | 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ✅ Done | 2026-10-26 |
 | 2 | 2.3 API: customers, vehicles, search, suggestions | ✅ Done | 2026-10-26 |
-| 2 | 2.4 API: quick entry, visits, history | ⏳ Next | |
-| 2 | 2.5 garage-web: search, customers, cars | | |
+| 2 | 2.4 API: quick entry, visits, history | ✅ Done | 2026-10-26 |
+| 2 | 2.5 garage-web: search, customers, cars | ⏳ Next | |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | | |
 
 ---
@@ -554,6 +554,39 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - flow.md 3.1, 3.2, 3.3, 4.3: the API behaviour; 14: `/v1/customers/:id/vehicles`, `/v1/search`.
 
 **Verified:** by me: 89 API tests (9 suites) on a fresh test database, typecheck, lint. By the user: `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy`.
-**Commit:** pending — `Phase 2.3: customers, vehicles, search and suggestions API`
+**Commit:** `50d0736` — `Phase 2.3: customers, vehicles, search and suggestions API` (CI green)
+
+---
+
+## Phase 2 · Step 2.4 — API: quick entry, visits, records, reminders, history
+**When:** 2026-10-26 (~1.5 h, including two fixes after the user's first test run)
+
+**Implements:** flow.md 1 (who creates visits; branch scope), 4.1–4.4 (quick entry, longer jobs, finish), 5 (odometer, average, estimate, confirmations), 6 (next due, reminders), 13 (price 0, two staff finishing at once); database.md 4.4, 8 (history timeline); README 5.6 (audit on every mutation).
+
+**Summary:** The quick-entry API works. `POST /v1/visits/quick` saves the visit, its service records (integer-cent totals, details checked against the type, next due km and date or the mechanic's own values), the reminders (previous due reminder of the same service code completed; warranty end and "recommended in N months" added), the car's odometer and average daily km, and the suggestions, all in one transaction; with `finish` the visit is closed and a `CAR_READY` notification is recorded (WhatsApp, `SKIPPED` until a channel exists). An unusual odometer (lower, or more than 5,000 km per day) answers `409 ODOMETER_CONFIRMATION_REQUIRED` until confirmed; a confirmed correction is audit logged. Longer jobs: open, add records, wait for parts, finish (row lock: a second finish gets `VISIT_ALREADY_FINISHED`; no records gets `VISIT_HAS_NO_RECORDS`). Also: the effective service-type list (garage override replaces the default), the quick-entry prefill (estimated km, "last used for this car") and the car's history timeline. Receptionists read but do not create or change visits; staff of one branch record and see only that branch.
+
+**Decisions (where the docs were silent, now in flow.md):** visit branch rules; reminders match by service code (`OTHER` never completes another custom service); the average uses one reading per visit plus the car's reading before the visit, so a new car gets an average at its first visit.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/visits.ts` (new), `errors.ts`, `index.ts` | Service line, quick/open/records/update schemas, `details` shapes per type, answers; `ODOMETER_CONFIRMATION_REQUIRED`, `VISIT_ALREADY_FINISHED`, `VISIT_HAS_NO_RECORDS` |
+| `apps/api/src/maintenance/*` (new) | `ServiceTypesService` (effective list, override resolution), `RecordsService` (lines, reminders, suggestions, prefill, history), controller |
+| `apps/api/src/visits/*` (new) | `VisitsService` (open with branch and odometer rules, quick, records, status, finish with `FOR UPDATE`, CAR_READY), controller |
+| `packages/database/src/service-types-seed.ts` (new), `seed.ts`, `scripts/prepare-test-db.ts` | Service-type list shared by the seed and the test database |
+| `apps/api/test/visits.spec.ts` (new), `tenancy.spec.ts` | 16 feature tests; 9 isolation cases (B also has an open visit and its own service type override; B's visits, records, reminders and types must stay identical) |
+| `apps/api/src/common/db/tenant-db.ts`, `branches/`, `users/`, `customers/search.service.ts`, `vehicles/`, `maintenance/`, `visits/` | No `Promise.all` inside a transaction (see below) |
+| `packages/database/test/rls.test.ts` | Its temporary global service type is inactive (see below) |
+
+**Doc changes**
+- flow.md 4.2 (implemented rules), 4.4 (CAR_READY channel), 5.1 (readings), 6 (reminder matching), 14 (prefill, history).
+- README 8: the test database also gets the global service types.
+
+**Problems hit and fixed**
+- The user's first `npm test` failed one test: turbo runs the database and API tests at the same time on the same test database, and a database test's temporary *global* service type showed up in the API test's service-type list (my own runs were one after the other). The temporary type is now inactive; the full parallel run passed three times.
+- `pg` warned "calling client.query() when the client is already executing a query" (to be removed in pg 9): our code ran `Promise.all` on one transaction's connection in 7 places → now sequential, and the rule is written on `TenantDb.run`. Two warnings remain from inside Prisma (it loads `include` relations in parallel on the transaction); nothing to change on our side, recheck when upgrading Prisma.
+
+**Verified:** by me: full parallel `npm test` (112 API, 35 contracts, 17 database tests) three times, typecheck, lint. By the user: `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` (27 tenancy tests).
+**Commit:** pending — `Phase 2.4: quick entry, visits, service records, reminders and history API`
 
 ---

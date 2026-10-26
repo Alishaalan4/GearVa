@@ -148,17 +148,18 @@ export class VehiclesService {
 
   private async load(vehicleId: string): Promise<VehicleDetail> {
     const garageId = this.db.garageId;
-    const [vehicle, settings] = await this.db.run((tx) =>
-      Promise.all([
-        tx.vehicle.findFirst({
-          where: { id: vehicleId, garageId, deletedAt: null },
-          include: { customer: { include: { owner: true } } },
-        }),
-        tx.garageSettings.findUnique({
-          where: { garageId },
-          select: { defaultDailyKm: true },
-        }),
-      ]),
+    const [vehicle, settings] = await this.db.run(
+      async (tx) =>
+        [
+          await tx.vehicle.findFirst({
+            where: { id: vehicleId, garageId, deletedAt: null },
+            include: { customer: { include: { owner: true } } },
+          }),
+          await tx.garageSettings.findUnique({
+            where: { garageId },
+            select: { defaultDailyKm: true },
+          }),
+        ] as const,
     );
     if (!vehicle) throw vehicleNotFound();
     const avgDailyKm = vehicle.avgDailyKm === null ? null : Number(vehicle.avgDailyKm);

@@ -236,7 +236,9 @@ describe('Phase 2 tables', () => {
 
     beforeAll(async () => {
       const base = { code, nameAr: 'اختبار', nameEn: 'Test', defaultIntervalKm: 5000 };
-      globalId = (await platform.serviceType.create({ data: base })).id;
+      // Inactive: the API tests run at the same time on the same test database and list
+      // the active global types; an extra one would appear in every garage.
+      globalId = (await platform.serviceType.create({ data: { ...base, isActive: false } })).id;
       await platform.serviceType.create({
         data: { ...base, garageId: garageA, defaultIntervalKm: 7000 },
       });

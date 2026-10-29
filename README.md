@@ -12,7 +12,7 @@ This repository is the single monorepo for everything. **Read this file first, t
 |---|---|---|---|---|
 | V1 | **Garage System** (`garage-web`) | Garage owner, manager, mechanic, receptionist | Responsive web (phone + laptop), Arabic/English, RTL | Customers, vehicles, quick service entry, invoices, payments, reminders, offers |
 | V2 | **Admin System** (`admin`) | The platform owner (super-admin) + optional admins | Web, separate domain, optional 2FA, Arabic/English | Create garage accounts, subscriptions, usage monitoring, system settings |
-| V3 | **Owner App** (`mobile`) | Car owners (garage customers) | React Native (Expo) | See cars, service history, invoices, offers, notifications. Login by phone number |
+| V3 | **Owner App** (`mobile`) | Car owners (garage customers) | React Native (Expo) | See cars, service history, invoices, offers, notifications. Login by email + password given by the garage (decision 2026-10-29) |
 
 One backend (`api`) serves all three.
 
@@ -204,7 +204,7 @@ Anyone writing code here (human or AI) must follow these.
 ### 5.2 Auth and roles
 - Garage staff roles: `OWNER`, `MANAGER`, `MECHANIC`, `RECEPTIONIST`. Permission matrix in `flow.md`.
 - Admin roles: `SUPER_ADMIN`, `ADMIN`. Admin TOTP 2FA is optional per admin and recommended (flow.md 2.3). Admin endpoints live only under `apps/api/src/admin` with `AdminGuard`.
-- Owners (mobile) log in by phone number with a one-time code.
+- Owners (mobile) log in with an email and password given by their garage (decision 2026-10-29, replacing phone + one-time code; designed in Phase 6, see flow.md 2.4).
 - Access tokens are JWTs that last 15 minutes. Refresh tokens are random values that last 30 days; only their hash is stored in `sessions`. Every refresh replaces the token, and presenting an already-replaced one revokes all of that person's sessions (it means the token was copied).
 - Both live in httpOnly, SameSite=Lax cookies (Secure in production) that are **host-only**: each web app forwards its API paths to the API (`admin` forwards `/admin/v1/*`, `garage-web` forwards `/v1/*`), so the browser sees the cookies as belonging to `admin.gearva.online` or `app.gearva.online` and never sends admin cookies to the garage app or the other way round. No CORS and no shared cookie domain are needed.
 
@@ -285,10 +285,11 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 
 ### Phase 5: Admin completion
 - Subscription payments, expiring-soon list, paid/unpaid list, usage monitoring, system settings (default service types, reminder rules), view-as-garage with access log, business view
+- Public website with an application form, and an admin **Applications** page: approving an application creates the garage and sends the owner's invite link (decision 2026-10-29, from the design prototype)
 - **Done when:** the admin can run the whole subscription lifecycle without touching the database.
 
 ### Phase 6: Owner mobile app
-- Expo app, phone + OTP login, cars, history, invoices, in-app notifications, push, offers
+- Expo app, email + password login (given by the garage), cars, history, invoices, in-app notifications, push, offers
 - Owner-scoped access (see `database.md`)
 
 ### Phase 7: Offers, revenue screens, polish
@@ -310,7 +311,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |
 | Fair-use message cap per garage | set later, from real cost data | Phase 5 |
 | VAT on invoices | off by default, toggle only after accountant confirms | Phase 3 |
-| Owner OTP delivery | SMS or email at first, WhatsApp later | Phase 6 |
+| Owner app login | **Decided 2026-10-29:** email + password given by the garage (from the design prototype), not phone + one-time code. To settle in Phase 6: who sets the password (typed by staff, or an invite link like staff accounts), reset, and an owner who is a customer at two garages | Phase 6 |
 
 ---
 

@@ -26,6 +26,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.4 API: quick entry, visits, history | ✅ Done | 2026-10-26 |
 | 2 | 2.5 garage-web: search, customers, cars | 🔄 In progress | |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ⏳ Next | |
+| Design | Apply the HTML design (`docs/design/gearva-demo.html`) to garage-web and admin | After 2.6 | |
 
 ---
 
@@ -621,5 +622,25 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Verified:** by me: typecheck and lint (garage-web, admin, ui), `next build` of garage-web, en/ar key check, full parallel `npm test` (115 API tests). By the user: `format:check`, `typecheck`, `lint`, `npm test`, and the 14-step browser check (add customer, same phone twice, bad phone, car in miles, autocomplete, duplicate plate, search by plate and phone, customer without a car, edits, Customers page and filter, Arabic).
 **Commit:** pending — `Phase 2.5: garage-web search, customers, cars and customer list`
+
+---
+
+## Design prototype review and decisions
+**When:** 2026-10-29 (~30 min, docs only)
+
+**Summary:** The user shared the design prototype ("Gearva Demo.html": website, garage V1, admin V2, phone app, workflow). It is the visual design for **both existing apps** (garage-web and admin stay the real frontends; only the look changes). Reviewed: clear tokens (orange `#FF600F`, dark `#101A19`, warm background, Plus Jakarta Sans, dark mode), 44 px touch targets, the same flows as the docs; no Arabic yet (left/right in CSS, to become logical properties). The prototype also embedded product decisions; the user answered each.
+
+**Decisions (user, 2026-10-29)**
+- **Owner app login: email + password given by the garage** (prototype), replacing phone + one-time code. Recorded in README 1, 5.2, 6 (Phase 6), 7, and flow.md 2.4; details (who sets the password, reset, an owner at two garages) are settled at the start of Phase 6, with database.md.
+- Staff keep **personal accounts with roles** (not one shared garage login).
+- Garage owners keep **invite links** (the admin never sees a password).
+- **Public website + application form + admin Applications page**: added to Phase 5 in README 6.
+- Kept as built/confirmed (prototype differs): exact mile factor 1.609344 (prototype 0.72 is wrong), confirmed service intervals, price decided in Phase 5, text-selection lock only on customer lists.
+- Plan: finish 2.6 in the current plain style, then a **design step** before Phase 3 (tokens and components in `packages/ui`, then page layouts, both apps, English and Arabic).
+
+**Doc changes:** README 1, 5.2, 6 (Phase 5 website, Phase 6 login), 7; flow.md 2.4 (change note).
+
+**Verified:** docs only.
+**Commit:** pending — goes with the next commit.
 
 ---

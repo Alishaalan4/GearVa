@@ -82,6 +82,8 @@ Same as above. **Two-factor authentication (TOTP) is optional per admin** (decis
 7. 10 failed password or 2FA attempts for one email lock it for 15 minutes, on top of the per-IP limit.
 
 ### 2.4 Owner (customer) login on mobile (Phase 6)
+**Changed 2026-10-29 (user decision, design prototype):** owners log in with an **email and password given by their garage**, not with phone + one-time code. The steps below describe the old design and are rewritten at the start of Phase 6, together with database.md (`owners` gets a login email and password hash; `owner_otps` is dropped). Open points for then: whether staff type the password or the owner gets an invite link to set it, password reset, and an owner who is a customer at two garages (one global login).
+
 1. Owner enters their phone number. The API creates an `owner_otps` row and sends a code (email or SMS now, WhatsApp later). Same response whether or not the number exists, to avoid revealing who is a customer.
 2. Owner enters the code (max 5 attempts, 10 minute expiry). On success, issue tokens for `SubjectType.OWNER`.
 3. The `owners` row already exists because a garage created it when adding the customer. A number nobody added cannot log in.

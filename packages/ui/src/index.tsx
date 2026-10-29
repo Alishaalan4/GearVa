@@ -3,13 +3,7 @@
 // menus) come with shadcn/ui when needed. Shipped as source: each app lists @gearva/ui in
 // transpilePackages and scans it with @source in app/globals.css. Nothing app-specific
 // (i18n, API client) belongs here.
-import type {
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
-} from 'react';
+import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from 'react';
 
 const BUTTON_STYLES = {
   primary: 'bg-slate-900 text-white hover:bg-slate-700',
@@ -33,18 +27,15 @@ export function Button({
 const CONTROL =
   'block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 aria-[invalid=true]:border-red-500';
 
-export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className = '', ...props }: ComponentProps<'input'>) {
   return <input className={`${CONTROL} ${className}`} {...props} />;
 }
 
-export function Select({ className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className = '', ...props }: ComponentProps<'select'>) {
   return <select className={`${CONTROL} ${className}`} {...props} />;
 }
 
-export function Textarea({
-  className = '',
-  ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({ className = '', ...props }: ComponentProps<'textarea'>) {
   return <textarea className={`${CONTROL} ${className}`} {...props} />;
 }
 

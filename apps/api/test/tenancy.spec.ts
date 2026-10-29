@@ -293,6 +293,17 @@ describe('Tenant isolation (test:tenancy)', () => {
       expect(all.body.items.map((x: { value: string }) => x.value)).toEqual([a.make]);
     },
 
+    'GET /v1/customers': async () => {
+      const all = await asA.get('/v1/customers?pageSize=50').expect(200);
+      expect(all.body.items.map((c: { id: string }) => c.id)).toEqual([a.customerId]);
+      expect(all.body.total).toBe(1);
+      // Filtering by B's customer's phone or name finds nothing in A.
+      for (const q of [b.phone.slice(-6), 'Customer']) {
+        const res = await asA.get(`/v1/customers?q=${encodeURIComponent(q)}`).expect(200);
+        expect(res.body.items.map((c: { id: string }) => c.id)).not.toContain(b.customerId);
+      }
+    },
+
     'GET /v1/customers/:customerId': async () => {
       await asA.get(`/v1/customers/${b.customerId}`).expect(404);
     },

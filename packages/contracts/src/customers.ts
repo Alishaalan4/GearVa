@@ -51,6 +51,20 @@ export interface CustomerDetail extends CustomerSummary {
   vehicles: VehicleItem[];
 }
 
+/**
+ * GET /v1/customers: the garage's customers, newest first, paginated (README 5.4: no
+ * export). `q` filters by name, or by the end of the phone when it has 4+ digits.
+ */
+export const customerListQuerySchema = paginationQuerySchema.extend({
+  q: z.string().trim().max(60).optional(),
+});
+export type CustomerListQuery = z.infer<typeof customerListQuerySchema>;
+
+export interface CustomerListItem extends CustomerSummary {
+  vehicleCount: number;
+  createdAt: string;
+}
+
 /** POST /v1/customers: a phone this garage already has returns that customer (flow.md 13). */
 export interface CreateCustomerResponse extends CustomerDetail {
   created: boolean;

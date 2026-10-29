@@ -13,9 +13,11 @@ import { Throttle } from '@nestjs/throttler';
 import {
   type CreateCustomerResponse,
   type CustomerDetail,
+  type CustomerListItem,
   type Paginated,
   type SearchResult,
   createCustomerSchema,
+  customerListQuerySchema,
   searchQuerySchema,
   updateCustomerSchema,
 } from '@gearva/contracts';
@@ -28,6 +30,7 @@ import { SearchService } from './search.service';
 class CreateCustomerDto extends createZodDto(createCustomerSchema) {}
 class UpdateCustomerDto extends createZodDto(updateCustomerSchema) {}
 class SearchQueryDto extends createZodDto(searchQuerySchema) {}
+class CustomerListQueryDto extends createZodDto(customerListQuerySchema) {}
 
 /** flow.md 1: every staff role adds and edits customers. */
 @Controller('v1/customers')
@@ -44,6 +47,13 @@ export class CustomersController {
     const result = await this.customers.create(body);
     res.status(result.created ? 201 : 200);
     return result;
+  }
+
+  /** The customer list: every role (decision 2026-10-27), paginated, no export. */
+  @Get()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  list(@Query() query: CustomerListQueryDto): Promise<Paginated<CustomerListItem>> {
+    return this.customers.list(query);
   }
 
   @Get(':customerId')

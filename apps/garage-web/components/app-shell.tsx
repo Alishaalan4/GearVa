@@ -49,16 +49,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/" className="font-semibold">
             {me.garage.name}
           </Link>
-          {me.role === 'OWNER' && (
-            <nav className="flex gap-4 text-sm">
-              <Link href="/settings/branches" className="text-slate-700 hover:text-slate-900">
-                {t('nav.branches')}
-              </Link>
-              <Link href="/settings/staff" className="text-slate-700 hover:text-slate-900">
-                {t('nav.staff')}
-              </Link>
-            </nav>
-          )}
+          <nav className="flex gap-4 text-sm">
+            <Link href="/customers" className="text-slate-700 hover:text-slate-900">
+              {t('nav.customers')}
+            </Link>
+            {me.role === 'OWNER' && (
+              <>
+                <Link href="/settings/branches" className="text-slate-700 hover:text-slate-900">
+                  {t('nav.branches')}
+                </Link>
+                <Link href="/settings/staff" className="text-slate-700 hover:text-slate-900">
+                  {t('nav.staff')}
+                </Link>
+              </>
+            )}
+          </nav>
           <div className="ms-auto flex items-center gap-4 text-sm">
             <span className="text-slate-500">{me.name}</span>
             <LanguageToggle />

@@ -9,7 +9,9 @@
     "pageOf": "Page {page} of {pages}",
     "save": "Save",
     "cancel": "Cancel",
-    "ownerOnly": "Only the garage owner can open this page."
+    "ownerOnly": "Only the garage owner can open this page.",
+    "edit": "Edit",
+    "backToSearch": "← Search"
   },
   "errors": {
     "BAD_REQUEST": "The request was not valid.",
@@ -29,13 +31,18 @@
     "CANNOT_MODIFY_OWNER": "The owner account is managed by Gearva support.",
     "MAIN_BRANCH_REQUIRED": "The main branch cannot be deactivated.",
     "BRANCH_HAS_STAFF": "This branch still has active staff. Move them to another branch (or deactivate them) first.",
-    "BRANCH_INACTIVE": "That branch is deactivated. Choose an active branch."
+    "BRANCH_INACTIVE": "That branch is deactivated. Choose an active branch.",
+    "VEHICLE_PLATE_EXISTS": "A car with this plate is already registered in this garage.",
+    "ODOMETER_CONFIRMATION_REQUIRED": "The odometer looks unusual. Check it and confirm.",
+    "VISIT_ALREADY_FINISHED": "This visit is already finished.",
+    "VISIT_HAS_NO_RECORDS": "Add at least one service before finishing."
   },
   "nav": {
     "branches": "Branches",
     "staff": "Staff",
     "signOut": "Sign out",
-    "switchLanguage": "العربية"
+    "switchLanguage": "العربية",
+    "customers": "Customers"
   },
   "login": {
     "title": "Sign in",
@@ -149,5 +156,92 @@
     "deactivated": "{name} was deactivated and signed out.",
     "activate": "Activate",
     "activated": "{name} can sign in again."
+  },
+  "search": {
+    "title": "Find a car or customer",
+    "placeholder": "Plate or phone number",
+    "hint": "Type at least 2 characters of a plate or a phone number.",
+    "empty": "Nothing found. Check the spelling, or add a new customer.",
+    "noCar": "No car yet",
+    "addCustomer": "Add customer",
+    "showing": "Showing {shown} of {total}. Type more to narrow it down."
+  },
+  "customers": {
+    "newTitle": "New customer",
+    "name": "Name",
+    "phone": "Phone",
+    "phoneHint": "Any format, for example 03 123 456 or +961 3 123 456.",
+    "phoneFixed": "The phone number is the customer’s identity and cannot be changed here.",
+    "notes": "Notes (only your garage sees them)",
+    "submit": "Save customer",
+    "notFound": "This customer does not exist.",
+    "existing": "This phone number already belongs to {name}. Here is their file.",
+    "remindersOptOut": "No service reminders",
+    "marketingOptOut": "No offers",
+    "cars": "Cars",
+    "addCar": "Add car",
+    "noCars": "No car yet. Add one to start recording services.",
+    "invalid": {
+      "name": "Enter a name (2 to 120 characters).",
+      "phone": "Enter a valid phone number.",
+      "notes": "Use at most 1000 characters."
+    }
+  },
+  "vehicles": {
+    "newTitle": "New car for {name}",
+    "backToCustomer": "← {name}",
+    "plate": "Plate",
+    "make": "Make",
+    "model": "Model",
+    "year": "Year (optional)",
+    "unit": "Odometer unit",
+    "unitNames": {
+      "KM": "Kilometres",
+      "MI": "Miles"
+    },
+    "odometer": "Odometer now ({unit})",
+    "odometerFixed": "The odometer changes only with a visit.",
+    "notes": "Notes",
+    "submit": "Save car",
+    "notFound": "This car does not exist.",
+    "plateExists": "This plate is already registered: {make} {model} of {name}.",
+    "openExisting": "Open that car",
+    "owner": "Customer",
+    "estimated": "Estimated today",
+    "lastOdometer": "Last odometer reading",
+    "perDay": "Average per day",
+    "noAverage": "Not enough visits yet",
+    "invalid": {
+      "plate": "Enter the plate.",
+      "make": "Enter the make.",
+      "model": "Enter the model.",
+      "year": "Enter a year between 1950 and next year.",
+      "odometer": "Enter the odometer as a whole number."
+    }
+  },
+  "history": {
+    "title": "Service history",
+    "empty": "No service recorded yet.",
+    "at": "at {value}",
+    "nextDue": "Next: {value}",
+    "branch": "Branch {code}",
+    "status": {
+      "IN_PROGRESS": "In progress",
+      "WAITING_FOR_PARTS": "Waiting for parts",
+      "DONE": "Done"
+    }
+  },
+  "units": {
+    "KM": "km",
+    "MI": "mi"
+  },
+  "customerList": {
+    "title": "Customers",
+    "add": "Add customer",
+    "filter": "Filter by name or phone",
+    "empty": "No customers yet.",
+    "noMatch": "No customer matches.",
+    "cars": "{count, plural, =0 {No car} one {# car} other {# cars}}",
+    "total": "{count, plural, one {# customer} other {# customers}}"
   }
 }

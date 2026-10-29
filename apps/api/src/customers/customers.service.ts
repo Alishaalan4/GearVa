@@ -3,13 +3,17 @@ import {
   type CreateCustomerInput,
   type CreateCustomerResponse,
   type CustomerDetail,
+  type CustomerListItem,
+  type CustomerListQuery,
   ERROR_CODES,
+  type Paginated,
   type UpdateCustomerInput,
 } from '@gearva/contracts';
 import { type Notification, Prisma, type TenantTx } from '@gearva/database';
 import { AuditService } from '../audit/audit.service';
 import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
+import { paginated, toSkipTake } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { toCustomerSummary, toVehicleItem } from './mappers';
 
@@ -58,6 +62,46 @@ export class CustomersService {
     }
     const detail = await this.load(outcome.customerId);
     return { ...detail, created: outcome.created };
+  }
+
+  /**
+   * The garage's customers, newest first, one page at a time (README 5.4: paginated,
+   * rate limited, never exported). `q` matches the name, or the end of the phone.
+   */
+  async list(query: CustomerListQuery): Promise<Paginated<CustomerListItem>> {
+    const garageId = this.db.garageId;
+    const q = query.q?.trim() ?? '';
+    const digits = q.replace(/\D/g, '').replace(/^0+/, '');
+    const filter: Prisma.GarageCustomerWhereInput = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            ...(digits.length >= 4 ? [{ owner: { phone: { endsWith: digits } } }] : []),
+          ],
+        }
+      : {};
+    const where: Prisma.GarageCustomerWhereInput = { garageId, deletedAt: null, ...filter };
+    const [rows, total] = await this.db.run(
+      async (tx) =>
+        [
+          await tx.garageCustomer.findMany({
+            where,
+            include: {
+              owner: true,
+              _count: { select: { vehicles: { where: { deletedAt: null } } } },
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            ...toSkipTake(query),
+          }),
+          await tx.garageCustomer.count({ where }),
+        ] as const,
+    );
+    const items = rows.map((c): CustomerListItem => ({
+      ...toCustomerSummary(c),
+      vehicleCount: c._count.vehicles,
+      createdAt: c.createdAt.toISOString(),
+    }));
+    return paginated(items, total, query);
   }
 
   /** The customer with their cars. Viewing a customer is audit logged (flow.md 12). */

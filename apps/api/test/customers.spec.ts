@@ -144,6 +144,34 @@ describe('Customers, vehicles, search, suggestions', () => {
     });
   });
 
+  describe('customer list (README 5.4: paginated, no export)', () => {
+    it('newest first, with the number of cars, for every role', async () => {
+      const older = await addCustomer();
+      const newer = await addCustomer();
+      await addCar(newer.id).expect(201);
+      const { cookie } = await signInAsStaff(app, g, 'MECHANIC');
+      const res = await as(cookie).get('/v1/customers?pageSize=2').expect(200);
+      expect(res.body.items.map((c: { id: string }) => c.id)).toEqual([newer.id, older.id]);
+      expect(res.body.items[0]).toMatchObject({ vehicleCount: 1, phone: newer.phone });
+      expect(res.body.total).toBeGreaterThanOrEqual(2);
+    });
+
+    it('filters by name or by the end of the phone; pages stay at most 50', async () => {
+      const name = `Ziad ${randomUUID().slice(0, 6)}`;
+      const phone = randomPhone();
+      const customer = (await as(owner).post('/v1/customers', { name, phone }).expect(201))
+        .body as { id: string };
+      const byName = await as(owner)
+        .get(`/v1/customers?q=${encodeURIComponent(name.toLowerCase())}`)
+        .expect(200);
+      expect(byName.body.items.map((c: { id: string }) => c.id)).toEqual([customer.id]);
+      const local = `0${phone.slice(4)}`;
+      const byPhone = await as(owner).get(`/v1/customers?q=${local}`).expect(200);
+      expect(byPhone.body.items.map((c: { id: string }) => c.id)).toEqual([customer.id]);
+      await as(owner).get('/v1/customers?pageSize=51').expect(400);
+    });
+  });
+
   describe('vehicles (flow.md 3.2)', () => {
     it('stores the odometer in km for a car on miles, and estimates today', async () => {
       const customer = await addCustomer();

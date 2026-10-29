@@ -24,8 +24,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ✅ Done | 2026-10-26 |
 | 2 | 2.3 API: customers, vehicles, search, suggestions | ✅ Done | 2026-10-26 |
 | 2 | 2.4 API: quick entry, visits, history | ✅ Done | 2026-10-26 |
-| 2 | 2.5 garage-web: search, customers, cars | ⏳ Next | |
-| 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | | |
+| 2 | 2.5 garage-web: search, customers, cars | 🔄 In progress | |
+| 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ⏳ Next | |
 
 ---
 
@@ -587,6 +587,39 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - `pg` warned "calling client.query() when the client is already executing a query" (to be removed in pg 9): our code ran `Promise.all` on one transaction's connection in 7 places → now sequential, and the rule is written on `TenantDb.run`. Two warnings remain from inside Prisma (it loads `include` relations in parallel on the transaction); nothing to change on our side, recheck when upgrading Prisma.
 
 **Verified:** by me: full parallel `npm test` (112 API, 35 contracts, 17 database tests) three times, typecheck, lint. By the user: `format:check`, `typecheck`, `lint`, `npm test`, `npm run test:tenancy` (27 tenancy tests).
-**Commit:** pending — `Phase 2.4: quick entry, visits, service records, reminders and history API`
+**Commit:** `2f750f2` — `Phase 2.4: quick entry, visits, service records, reminders and history API` (CI green)
+
+---
+
+## Phase 2 · Step 2.5 — garage-web: search, customers, cars
+**When:** 2026-10-27 → 2026-10-29 (~1.5 h of work; browser check by the user)
+
+**Implements:** flow.md 3.1, 3.2, 3.2.1, 3.3 (screens), 4.3 (autocomplete), 12 (audit on viewing; no export); README 5.4 (money in cents, km internally), 5.7 (mobile-first, TanStack Query, react-hook-form with the API's Zod schemas, next-intl, logical Tailwind classes).
+
+**Summary:** The garage app now has the customer side. The home page is the search for every role (plate or phone, results as you type). Staff add customers (any phone format; a known phone opens that customer's file with a note), view and edit a customer (name, notes, opt-outs; the phone is fixed), add cars (make and model with the garage's autocomplete, km or miles; a plate already registered shows that car with a link), and open a car (estimated km today, last reading, average per day, service history). A new **Customers** page lists all customers, newest first, paginated, with a name or phone filter.
+
+**Decision (user, 2026-10-27):** a customer list page exists and **every staff role** may browse it (options were owner+manager, all roles, owner only). It stays within README 5.4: paginated (max 50), rate limited, no export.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/customers.ts` | `customerListQuerySchema`, `CustomerListItem` |
+| `apps/api/src/customers/customers.service.ts`, `customers.controller.ts` | `GET /v1/customers` (filter by name or phone ending, car counts, 60 requests/minute) |
+| `apps/api/test/customers.spec.ts`, `tenancy.spec.ts` | 2 feature tests; isolation case for the list |
+| `apps/garage-web/features/search/*`, `features/home/home-screen.tsx` | Search home |
+| `apps/garage-web/features/customers/*` | New customer, customer file with edit, customer list |
+| `apps/garage-web/features/vehicles/*` | Car form (create/edit), new car, car page, service history |
+| `apps/garage-web/components/suggest-input.tsx`, `lib/format.ts`, `lib/use-debounced-value.ts` | Autocomplete input (native datalist); money formatted from exact decimal text (no float), distances in the car's unit; debounce |
+| `apps/garage-web/app/[locale]/(app)/customers/**`, `vehicles/[vehicleId]/page.tsx`, `components/app-shell.tsx` | Routes; "Customers" header link |
+| `apps/garage-web/messages/en.json`, `ar.json` | All new texts (both files keep the same keys) |
+| `packages/ui/src/index.tsx` | `Input`, `Select`, `Textarea` typed with `ComponentProps` so `ref` is typed (React 19 passes it) |
+
+**Doc changes**
+- flow.md 3.1 (customer list endpoint and decision), 3.3 (the search screen and the Customers page).
+
+**Problems hit and fixed:** `@gearva/ui` inputs did not declare `ref` in their types → `ComponentProps`; the car form's edit mode used an `as never` cast → a typed edit schema without the odometer.
+
+**Verified:** by me: typecheck and lint (garage-web, admin, ui), `next build` of garage-web, en/ar key check, full parallel `npm test` (115 API tests). By the user: `format:check`, `typecheck`, `lint`, `npm test`, and the 14-step browser check (add customer, same phone twice, bad phone, car in miles, autocomplete, duplicate plate, search by plate and phone, customer without a car, edits, Customers page and filter, Arabic).
+**Commit:** pending — `Phase 2.5: garage-web search, customers, cars and customer list`
 
 ---

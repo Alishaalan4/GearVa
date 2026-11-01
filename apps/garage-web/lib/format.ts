@@ -39,3 +39,16 @@ export function useDistance(): (km: number, unit: DistanceUnit) => string {
 export function calendarDate(date: string): Date {
   return new Date(`${date}T12:00:00Z`);
 }
+
+/**
+ * Dollars typed by staff ("45", "45.5", "45.50") as integer cents, without a float:
+ * the digits are read as text. Empty = 0 (a service may be free, flow.md 13); anything
+ * else that is not an amount = null.
+ */
+export function dollarsToCents(text: string): number | null {
+  const value = text.trim().replace(',', '.');
+  if (value === '') return 0;
+  const match = /^(\d{1,7})(?:\.(\d{1,2}))?$/.exec(value);
+  if (!match) return null;
+  return Number(match[1]) * 100 + Number((match[2] ?? '').padEnd(2, '0'));
+}

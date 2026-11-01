@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
+import { useStaff } from '@/features/auth/use-staff';
+import { ServicePicker, canRecordServices } from '@/features/quick-entry/service-picker';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPatch } from '@/lib/api';
 import { useDistance } from '@/lib/format';
@@ -28,6 +30,7 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
   const format = useFormatter();
   const distance = useDistance();
   const queryClient = useQueryClient();
+  const { data: me } = useStaff();
   const [editing, setEditing] = useState(false);
 
   const vehicle = useQuery({
@@ -126,6 +129,10 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
           </div>
         )}
       </Card>
+
+      {canRecordServices(me?.role) && (
+        <ServicePicker href={(type) => `/vehicles/${v.id}/service?type=${type.id}`} />
+      )}
 
       <ServiceHistory vehicleId={v.id} unit={v.distanceUnit} />
     </div>

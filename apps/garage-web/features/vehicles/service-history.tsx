@@ -6,6 +6,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
+import { Link } from '@/i18n/navigation';
 import { api } from '@/lib/api';
 import { calendarDate, useDistance, useMoney } from '@/lib/format';
 
@@ -51,7 +52,12 @@ export function ServiceHistory({ vehicleId, unit }: { vehicleId: string; unit: D
           return (
             <li key={r.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-medium">{name}</span>
+                <Link
+                  href={`/visits/${r.visit.id}`}
+                  className="font-medium underline-offset-2 hover:underline"
+                >
+                  {name}
+                </Link>
                 <span className="text-sm text-slate-500">
                   {format.dateTime(new Date(r.performedAt), { dateStyle: 'medium' })}
                 </span>

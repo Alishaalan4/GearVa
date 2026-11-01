@@ -24,9 +24,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.2 Calculations (km/mi, plates, daily km, next due) | ✅ Done | 2026-10-26 |
 | 2 | 2.3 API: customers, vehicles, search, suggestions | ✅ Done | 2026-10-26 |
 | 2 | 2.4 API: quick entry, visits, history | ✅ Done | 2026-10-26 |
-| 2 | 2.5 garage-web: search, customers, cars | 🔄 In progress | |
-| 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ⏳ Next | |
-| Design | Apply the HTML design (`docs/design/gearva-demo.html`) to garage-web and admin | After 2.6 | |
+| 2 | 2.5 garage-web: search, customers, cars | ✅ Done | 2026-10-29 |
+| 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ✅ Done | 2026-11-01 |
+| Design | Apply the HTML design (`docs/design/gearva-demo.html`) to garage-web and admin | ⏭ Next | |
 
 ---
 
@@ -621,7 +621,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Problems hit and fixed:** `@gearva/ui` inputs did not declare `ref` in their types → `ComponentProps`; the car form's edit mode used an `as never` cast → a typed edit schema without the odometer.
 
 **Verified:** by me: typecheck and lint (garage-web, admin, ui), `next build` of garage-web, en/ar key check, full parallel `npm test` (115 API tests). By the user: `format:check`, `typecheck`, `lint`, `npm test`, and the 14-step browser check (add customer, same phone twice, bad phone, car in miles, autocomplete, duplicate plate, search by plate and phone, customer without a car, edits, Customers page and filter, Arabic).
-**Commit:** pending — `Phase 2.5: garage-web search, customers, cars and customer list`
+**Commit:** `2350892` — `Phase 2.5: garage-web search, customers, cars and customer list`
 
 ---
 
@@ -641,6 +641,39 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Doc changes:** README 1, 5.2, 6 (Phase 5 website, Phase 6 login), 7; flow.md 2.4 (change note).
 
 **Verified:** docs only.
-**Commit:** pending — goes with the next commit.
+**Commit:** `5117d47` — `Changes in docs after setting the design pages` (CI green)
+
+---
+
+## Phase 2 · Step 2.6 — garage-web: quick entry, visits (Phase 2 done)
+**When:** 2026-11-01 (~1.5 h of work; browser test by the user)
+
+**Summary:** The quick-entry screen (flow.md 4.1). Search → tap the car → tap a service button → a pre-filled form (odometer from today's estimate, brand/grade/quantity/price from the last time on this car, next due km and date updated as you type) → **Confirm and finish** or **Confirm and add another**. An unusual odometer asks "Is this right?" (**Yes, save** / **Fix it**). "More details" holds labour/parts, warranty, the recommended months, your own next due, "no reminder" and notes. The visit page shows the services, next due values and total, and for an open visit: add another service, waiting for parts / parts arrived, finish. History lines link to their visit. Service buttons show for owner, manager and mechanic only (flow.md 1.2). No API changes.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/features/quick-entry/service-picker.tsx` | Service types query, big service buttons, `canRecordServices` |
+| `apps/garage-web/features/quick-entry/service-form.tsx` | The pre-filled form, live next due, odometer confirmation, save to `POST /v1/visits/quick` or `POST /v1/visits/:id/records` |
+| `apps/garage-web/features/quick-entry/quick-entry-page.tsx` | New visit for a car; add a service to an open visit |
+| `apps/garage-web/features/visits/visit-page.tsx` | Visit summary, finish, waiting for parts, add another |
+| `apps/garage-web/app/[locale]/(app)/vehicles/[vehicleId]/service/page.tsx`, `visits/[visitId]/page.tsx`, `visits/[visitId]/add/page.tsx` | Routes |
+| `apps/garage-web/features/vehicles/vehicle-page.tsx`, `service-history.tsx` | Service buttons on the car page; history lines link to the visit |
+| `apps/garage-web/lib/format.ts` | `dollarsToCents` (typed dollars → integer cents, no float) |
+| `apps/garage-web/messages/en.json`, `ar.json` | `quick` and `visit` texts (264 keys each) |
+
+**Doc changes**
+- flow.md 4.1: the garage-web quick-entry screen.
+- README 5.7: the visual design comes from the user's prototype (`docs/design/gearva-demo.html`), applied in the design step.
+
+**Notes from the test**
+- Checked with the user: next due values for steering oil (car in miles, 45,000 → 70,000 mi, +24 months), AC (date only, +12 months), gear oil (+40,000 km, +24 months), differential oil (+60,000 km, +36 months), battery (date only, +24 months) all match the database.md 4.4 intervals.
+- An empty price saves as $0.00 on purpose (free/warranty work). Whether to ask "Save as free?" is decided in Phase 3 with invoices.
+- User asked about paid/unpaid and a money report: both are already planned (Phase 3 payments + debt list, flow.md 7.1, 8; Phase 7 revenue screens, flow.md 8.3). Possibly moving a simple income screen into Phase 3 is to be decided when Phase 3 starts.
+
+**Phase 2 Done when:** a mechanic can add a customer, car and service on a phone with correct next due km/date. The user tested the flow and confirmed it works; the next due values were checked (above). Stopwatch times were not reported.
+
+**Verified:** by me: typecheck and lint (garage-web), `next build` of garage-web (the three new routes), en/ar key check. By the user: the browser test of quick entry, add another, visit page and history.
+**Commit:** _(filled in at the next step)_
 
 ---

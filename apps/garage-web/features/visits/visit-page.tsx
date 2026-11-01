@@ -1,0 +1,158 @@
+'use client';
+
+import type { VisitDetail } from '@gearva/contracts';
+import { Alert, Button, Card } from '@gearva/ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { ApiErrorAlert } from '@/components/api-error';
+import { useStaff } from '@/features/auth/use-staff';
+import { ServicePicker, canRecordServices } from '@/features/quick-entry/service-picker';
+import { Link } from '@/i18n/navigation';
+import { ApiError, api, apiPatch, apiPost } from '@/lib/api';
+import { calendarDate, useDistance, useMoney } from '@/lib/format';
+
+/**
+ * One visit (flow.md 4.2, 4.4). Open: add another service, wait for parts, finish.
+ * Done: the summary with each service's next due values.
+ */
+export function VisitPage({ visitId, justDone }: { visitId: string; justDone: boolean }) {
+  const t = useTranslations('visit');
+  const tCommon = useTranslations('common');
+  const tHistory = useTranslations('history');
+  const locale = useLocale();
+  const format = useFormatter();
+  const money = useMoney();
+  const distance = useDistance();
+  const queryClient = useQueryClient();
+  const { data: me } = useStaff();
+
+  const visit = useQuery({
+    queryKey: ['visit', visitId],
+    queryFn: () => api<VisitDetail>(`/v1/visits/${visitId}`),
+  });
+  const onSaved = (saved: VisitDetail) => {
+    queryClient.setQueryData(['visit', visitId], saved);
+    void queryClient.invalidateQueries({ queryKey: ['history', saved.vehicle.id] });
+    void queryClient.invalidateQueries({ queryKey: ['vehicle', saved.vehicle.id] });
+  };
+  const finish = useMutation({
+    mutationFn: () => apiPost<VisitDetail>(`/v1/visits/${visitId}/finish`),
+    onSuccess: onSaved,
+  });
+  const status = useMutation({
+    mutationFn: (next: 'IN_PROGRESS' | 'WAITING_FOR_PARTS') =>
+      apiPatch<VisitDetail>(`/v1/visits/${visitId}`, { status: next }),
+    onSuccess: onSaved,
+  });
+
+  if (visit.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (visit.error) {
+    const missing = visit.error instanceof ApiError && visit.error.status === 404;
+    return missing ? <Alert>{t('notFound')}</Alert> : <ApiErrorAlert error={visit.error} />;
+  }
+  const v = visit.data;
+  const unit = v.vehicle.distanceUnit;
+  const open = v.finishedAt === null;
+  const canEdit = open && canRecordServices(me?.role);
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <Link
+        href={`/vehicles/${v.vehicle.id}`}
+        className="text-sm text-slate-600 hover:text-slate-900"
+      >
+        {t('backToCar', { plate: v.vehicle.plate })}
+      </Link>
+      {(justDone || finish.isSuccess) && !open && <Alert tone="success">{t('saved')}</Alert>}
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="font-mono text-2xl font-semibold" dir="ltr">
+              {v.vehicle.plate}
+            </h1>
+            <p className="text-sm text-slate-600">
+              {v.customer.name} · {distance(v.odometerKm, unit)} ·{' '}
+              {format.dateTime(new Date(v.openedAt), { dateStyle: 'medium', timeStyle: 'short' })}
+            </p>
+            <p className="text-sm text-slate-500">
+              {tHistory('branch', { code: v.branch.code })} · {v.mechanic.name}
+            </p>
+          </div>
+          <span
+            className={`rounded px-2 py-1 text-xs font-medium ${open ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}
+          >
+            {tHistory(`status.${v.status}`)}
+          </span>
+        </div>
+
+        <ul className="mt-4 divide-y divide-slate-100">
+          {v.records.map((r) => (
+            <li key={r.id} className="py-3">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="font-medium">
+                  {r.customName ?? (locale === 'ar' ? r.serviceType.nameAr : r.serviceType.nameEn)}
+                  {r.quantity !== '1.00' && (
+                    <span className="text-slate-500" dir="ltr">
+                      {' '}
+                      × {Number(r.quantity)}
+                    </span>
+                  )}
+                </span>
+                <span>{money(r.totalCents)}</span>
+              </div>
+              {(r.nextDueKm !== null || r.nextDueDate) && (
+                <p className="text-sm text-slate-600">
+                  {tHistory('nextDue', {
+                    value: [
+                      r.nextDueKm !== null ? distance(r.nextDueKm, unit) : null,
+                      r.nextDueDate
+                        ? format.dateTime(calendarDate(r.nextDueDate), { dateStyle: 'medium' })
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · '),
+                  })}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+        {v.records.length === 0 && <p className="text-sm text-slate-500">{t('noServices')}</p>}
+        <div className="mt-2 flex justify-between border-t border-slate-200 pt-3 font-semibold">
+          <span>{t('total')}</span>
+          <span>{money(v.totalCents)}</span>
+        </div>
+      </Card>
+
+      <ApiErrorAlert error={finish.error ?? status.error} />
+      {canEdit && (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              className="py-3 text-base"
+              disabled={finish.isPending || v.records.length === 0}
+              onClick={() => finish.mutate()}
+            >
+              {t('finish')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={status.isPending}
+              onClick={() =>
+                status.mutate(
+                  v.status === 'WAITING_FOR_PARTS' ? 'IN_PROGRESS' : 'WAITING_FOR_PARTS',
+                )
+              }
+            >
+              {v.status === 'WAITING_FOR_PARTS' ? t('partsArrived') : t('waitingForParts')}
+            </Button>
+          </div>
+          <ServicePicker href={(type) => `/visits/${v.id}/add?type=${type.id}`} />
+        </>
+      )}
+    </div>
+  );
+}

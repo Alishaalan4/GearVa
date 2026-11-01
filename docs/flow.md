@@ -187,6 +187,8 @@ flowchart LR
 4. Staff fixes the odometer, enters price and quantity, then taps **Confirm and finish** (one visit with that service, closed as `DONE`; from Phase 3 this also issues the invoice) or **Confirm and add another** (keeps the visit open).
 5. "More details" (collapsed): labor and parts split, warranty, photos, status, recommended next service, notes.
 
+Garage web (step 2.6): search → tap the car → tap a service button on the car page (owner, manager, mechanic) → the pre-filled form → **Confirm and finish** (visit summary with the next due values) or **Confirm and add another** (the visit stays open; its page offers the service buttons again, "Waiting for parts" and **Finish visit**). The odometer starts at today's estimate; the next due km follows it as it is typed. Price is typed in dollars and turned into cents as text, never through a float. An unusual odometer shows "Is this right?" with **Yes, save** (sent again with `confirmOdometer`) or **Fix it**. Photos are not in Phase 2 (files arrive in Phase 3).
+
 ### 4.2 API behavior
 - `POST /v1/visits/quick` accepts `{ vehicleId, odometer, odometerUnit, services: [...], finish: boolean }` and creates visit, records and reminders in **one transaction**; with `finish` the visit is also closed (`DONE`, `finishedAt` set). From Phase 3, `finish` also creates the invoice (section 7.1) in that same transaction.
 - For longer jobs: `POST /v1/visits` (opens `IN_PROGRESS`), `POST /v1/visits/:id/records`, `PATCH /v1/visits/:id` (status), `POST /v1/visits/:id/finish`.

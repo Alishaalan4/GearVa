@@ -52,7 +52,7 @@ export function SetPasswordForm({ token }: { token: string | undefined }) {
 
   return (
     <AuthLayout title={t('title')}>
-      <p className="-mt-3 mb-5 text-sm text-slate-500">{t('intro')}</p>
+      <p className="-mt-3 mb-5 text-sm text-muted">{t('intro')}</p>
       <form
         className="space-y-4"
         noValidate

@@ -1,7 +1,7 @@
 'use client';
 
 import type { CustomerListItem, Paginated } from '@gearva/contracts';
-import { Button, Input } from '@gearva/ui';
+import { Button, buttonClass, Input } from '@gearva/ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -37,11 +37,8 @@ export function CustomerList() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t('title')}</h1>
-        <Link
-          href="/customers/new"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
+        <h1 className="text-2xl font-extrabold">{t('title')}</h1>
+        <Link href="/customers/new" className={buttonClass()}>
           {t('add')}
         </Link>
       </div>
@@ -57,25 +54,25 @@ export function CustomerList() {
       />
 
       <ApiErrorAlert error={customers.error} />
-      {customers.isPending && <p className="text-sm text-slate-500">{tCommon('loading')}</p>}
+      {customers.isPending && <p className="text-sm text-muted">{tCommon('loading')}</p>}
       {customers.data?.items.length === 0 && (
-        <p className="text-sm text-slate-500">{q ? t('noMatch') : t('empty')}</p>
+        <p className="text-sm text-muted">{q ? t('noMatch') : t('empty')}</p>
       )}
 
-      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+      <ul className="divide-y divide-line rounded-xl border border-line bg-card">
         {customers.data?.items.map((c) => (
           <li key={c.id}>
             <Link
               href={`/customers/${c.id}`}
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-slate-50"
+              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-soft"
             >
               <div>
                 <p className="font-medium">{c.name}</p>
-                <p className="text-sm text-slate-500" dir="ltr">
+                <p className="text-sm text-muted" dir="ltr">
                   {c.phone}
                 </p>
               </div>
-              <div className="text-end text-sm text-slate-500">
+              <div className="text-end text-sm text-muted">
                 <p>{t('cars', { count: c.vehicleCount })}</p>
                 <p>{format.dateTime(new Date(c.createdAt), { dateStyle: 'medium' })}</p>
               </div>
@@ -85,7 +82,7 @@ export function CustomerList() {
       </ul>
 
       {customers.data && pages > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
           <span>{t('total', { count: customers.data.total })}</span>
           <div className="flex items-center gap-2">
             <Button

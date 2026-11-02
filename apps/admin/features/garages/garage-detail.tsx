@@ -20,7 +20,7 @@ import { StatusBadge } from './status-badge';
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-wrap justify-between gap-2 py-2 text-sm">
-      <dt className="text-slate-500">{label}</dt>
+      <dt className="text-muted">{label}</dt>
       <dd className="font-medium">{children}</dd>
     </div>
   );
@@ -57,7 +57,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
     defaultValues: { reason: '' },
   });
 
-  if (garage.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (garage.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (garage.error) {
     const missing = garage.error instanceof ApiError && garage.error.status === 404;
     return missing ? <Alert>{t('notFound')}</Alert> : <ApiErrorAlert error={garage.error} />;
@@ -74,11 +74,11 @@ export function GarageDetail({ garageId }: { garageId: string }) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Link href="/garages" className="text-sm text-slate-600 hover:text-slate-900">
+        <Link href="/garages" className="text-sm text-muted hover:text-ink">
           {t('backToList')}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">{g.name}</h1>
+          <h1 className="text-2xl font-extrabold">{g.name}</h1>
           <StatusBadge status={g.status} />
         </div>
       </div>
@@ -88,7 +88,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title={t('overview')}>
-          <dl className="divide-y divide-slate-100">
+          <dl className="divide-y divide-line">
             <Row label={t('email')}>
               <span dir="ltr">{g.email}</span>
             </Row>
@@ -110,17 +110,17 @@ export function GarageDetail({ garageId }: { garageId: string }) {
         <Card title={t('owner')}>
           {g.owner ? (
             <div className="space-y-4">
-              <dl className="divide-y divide-slate-100">
+              <dl className="divide-y divide-line">
                 <Row label={t('owner')}>{g.owner.name}</Row>
                 <Row label={t('email')}>
                   <span dir="ltr">{g.owner.email}</span>
                 </Row>
                 <Row label={t('lastLogin')}>{dateTime(g.owner.lastLoginAt)}</Row>
               </dl>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted">
                 {g.owner.hasPassword ? t('passwordSet') : t('invitePending')}
                 {g.owner.linkExpiresAt && (
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-xs text-muted">
                     {t('linkExpires', { date: dateTime(g.owner.linkExpiresAt) })}
                   </span>
                 )}
@@ -154,7 +154,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
               )}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">{t('noOwner')}</p>
+            <p className="text-sm text-muted">{t('noOwner')}</p>
           )}
         </Card>
 
@@ -163,7 +163,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
             <div className="space-y-3">
               <p className="text-sm">{t('suspendedSince', { date: dateTime(g.suspendedAt) })}</p>
               {g.suspendedReason && (
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted">
                   {t('reasonText', { reason: g.suspendedReason })}
                 </p>
               )}
@@ -183,7 +183,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
                 suspendForm.reset();
               })}
             >
-              <p className="text-sm text-slate-600">{t('suspendHint')}</p>
+              <p className="text-sm text-muted">{t('suspendHint')}</p>
               <Field
                 label={t('reasonLabel')}
                 error={suspendForm.formState.errors.reason && t('reasonInvalid')}
@@ -198,16 +198,16 @@ export function GarageDetail({ garageId }: { garageId: string }) {
         </Card>
 
         <Card title={t('branches')}>
-          <ul className="divide-y divide-slate-100 text-sm">
+          <ul className="divide-y divide-line text-sm">
             {g.branches.map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-2 py-2">
                 <span>
                   {b.name}{' '}
-                  <span className="text-xs text-slate-500" dir="ltr">
+                  <span className="text-xs text-muted" dir="ltr">
                     {b.code}
                   </span>
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted">
                   {b.isMain && t('main')} {!b.isActive && t('inactive')}
                 </span>
               </li>

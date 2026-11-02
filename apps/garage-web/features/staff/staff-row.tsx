@@ -57,28 +57,28 @@ export function StaffRow({
   const isOwner = member.role === 'OWNER';
 
   return (
-    <li className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <li className="space-y-3 rounded-xl border border-line bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{member.name}</span>
-            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs">{tRoles(member.role)}</span>
+            <span className="rounded bg-soft px-2 py-0.5 text-xs">{tRoles(member.role)}</span>
             {!member.isActive ? (
-              <span className="rounded bg-red-100 px-2 py-0.5 text-xs text-red-800">
+              <span className="rounded bg-bad px-2 py-0.5 text-xs text-bad-ink">
                 {t('inactive')}
               </span>
             ) : (
               !member.hasPassword && (
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                <span className="rounded bg-tint px-2 py-0.5 text-xs text-brand-ink">
                   {t('invitePending')}
                 </span>
               )
             )}
           </div>
-          <p className="text-sm text-slate-600" dir="ltr">
+          <p className="text-sm text-muted" dir="ltr">
             {member.email}
           </p>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted">
             {branch ? `${branch.name} (${branch.code})` : t('allBranches')}
             {' · '}
             {member.lastLoginAt
@@ -90,7 +90,7 @@ export function StaffRow({
                 })
               : t('neverSignedIn')}
           </p>
-          {isOwner && <p className="text-xs text-slate-500">{t('ownerNote')}</p>}
+          {isOwner && <p className="text-xs text-muted">{t('ownerNote')}</p>}
         </div>
 
         {!isOwner && !editing && (
@@ -211,7 +211,7 @@ function EditStaffForm({
 
   return (
     <form
-      className="space-y-4 border-t border-slate-100 pt-4"
+      className="space-y-4 border-t border-line pt-4"
       noValidate
       onSubmit={form.handleSubmit(({ name, role, branchId }) =>
         // The branch is sent only when it changed, so an unchanged inactive branch is kept.

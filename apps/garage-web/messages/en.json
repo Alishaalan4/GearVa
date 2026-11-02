@@ -38,6 +38,7 @@
     "VISIT_HAS_NO_RECORDS": "Add at least one service before finishing."
   },
   "nav": {
+    "home": "Search",
     "branches": "Branches",
     "staff": "Staff",
     "signOut": "Sign out",

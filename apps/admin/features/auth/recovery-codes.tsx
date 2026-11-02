@@ -12,8 +12,8 @@ export function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () =
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600">{t('intro')}</p>
-      <ul className="grid grid-cols-2 gap-2 rounded-md bg-slate-50 p-3 font-mono text-sm" dir="ltr">
+      <p className="text-sm text-muted">{t('intro')}</p>
+      <ul className="grid grid-cols-2 gap-2 rounded-md bg-soft p-3 font-mono text-sm" dir="ltr">
         {codes.map((code) => (
           <li key={code}>{code}</li>
         ))}

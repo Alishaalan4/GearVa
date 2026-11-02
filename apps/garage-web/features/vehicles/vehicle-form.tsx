@@ -109,7 +109,7 @@ export function VehicleForm({
           />
         </Field>
         <fieldset className="space-y-1">
-          <legend className="text-sm font-medium text-slate-700">{t('unit')}</legend>
+          <legend className="text-sm font-medium text-soft-ink">{t('unit')}</legend>
           <div className="flex gap-6 pt-1 text-sm">
             {DISTANCE_UNITS.map((u) => (
               <label key={u} className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export function VehicleForm({
             />
           </Field>
         ) : (
-          <p className="self-end text-xs text-slate-500">{t('odometerFixed')}</p>
+          <p className="self-end text-xs text-muted">{t('odometerFixed')}</p>
         )}
         <div className="sm:col-span-2">
           <Field label={t('notes')}>

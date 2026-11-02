@@ -26,7 +26,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.4 API: quick entry, visits, history | ✅ Done | 2026-10-26 |
 | 2 | 2.5 garage-web: search, customers, cars | ✅ Done | 2026-10-29 |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ✅ Done | 2026-11-01 |
-| Design | Apply the HTML design (`docs/design/gearva-demo.html`) to garage-web and admin | ⏭ Next | |
+| Design | D.1 Colours, dark mode, fonts, shared components, sidebar | 🔄 In progress | |
+| Design | D.2 Page layouts (login, cards, tables, status pills) | Next | |
 
 ---
 
@@ -675,5 +676,30 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Verified:** by me: typecheck and lint (garage-web), `next build` of garage-web (the three new routes), en/ar key check. By the user: the browser test of quick entry, add another, visit page and history.
 **Commit:** `7305e63` — `Phase 2.6: garage-web quick entry, visit page and service buttons (Phase 2 done)`
+
+---
+
+## Design · Step D.1 — colours, dark mode, fonts, shared components, sidebar
+**When:** 2026-11-02 (~1 h of work)
+
+**Summary:** First half of the design step: every screen of garage-web and admin takes the prototype's look (`docs/design/gearva-demo.html`). Named colour tokens with automatic dark mode, Plus Jakarta Sans plus IBM Plex Sans Arabic, restyled buttons, inputs (44 px high), cards and alerts, the Gearva logo, and a dark sidebar that becomes a top row on phones. No API, data or logic changes. Page layouts (login split screen, tables, status pills) are step D.2.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/ui/src/theme.css` | New: tokens from the prototype, light and dark |
+| `packages/ui/src/index.tsx` | Restyled components; new `buttonClass`, `Logo`, `navItemClass`, `AppFrame` |
+| `apps/*/app/globals.css`, `apps/*/app/[locale]/layout.tsx` | Load the tokens and both fonts (`next/font`, no new package) |
+| `apps/garage-web/components/app-shell.tsx`, `apps/admin/components/panel-shell.tsx` | Sidebar with the current page highlighted |
+| `apps/*/components/language-toggle.tsx`, `apps/*/features/auth/auth-layout.tsx` | Sidebar styling option; logo on sign-in pages |
+| `apps/garage-web/messages/en.json`, `ar.json` | New `nav.home` (Search), so the sidebar has a way back to search |
+| `apps/*/features/**` (36 files) | Palette colours replaced with tokens; shadows removed |
+
+**Doc changes:** README 5.7 (tokens and the Arabic font).
+
+**Decisions:** inputs use 16 px text on phones (the prototype's 14 px makes iPhones zoom in on tap). Dark mode follows the device; no switch in the app yet.
+
+**Verified:** by me: typecheck and lint (ui, garage-web, admin), `format:check`, `next build` of both apps, tokens present in the compiled CSS, en/ar keys match (garage-web 265, admin 150). Not seen in a browser yet: waiting for the user's check.
+**Commit:** _(filled in at the next step)_
 
 ---

@@ -68,13 +68,13 @@ export function TwoFactorCard({ admin }: { admin: AdminProfile }) {
       <div className="space-y-4">
         {notice && <Alert tone="success">{notice}</Alert>}
         <p className="text-sm">
-          <span className="text-slate-500">{t('status')} </span>
+          <span className="text-muted">{t('status')} </span>
           <span className="font-medium">{admin.totpEnabled ? t('on') : t('off')}</span>
         </p>
 
         {admin.totpEnabled ? (
           <>
-            <p className="text-sm text-slate-600">{t('turnOffHint')}</p>
+            <p className="text-sm text-muted">{t('turnOffHint')}</p>
             <SecondFactorForm
               codeLabel={t('codeLabel')}
               submitLabel={t('turnOff')}
@@ -86,7 +86,7 @@ export function TwoFactorCard({ admin }: { admin: AdminProfile }) {
           </>
         ) : !setup.data ? (
           <>
-            <p className="text-sm text-slate-600">{t('offHint')}</p>
+            <p className="text-sm text-muted">{t('offHint')}</p>
             <ApiErrorAlert error={setup.error} />
             <Button type="button" disabled={setup.isPending} onClick={() => setup.mutate()}>
               {t('turnOn')}
@@ -94,13 +94,13 @@ export function TwoFactorCard({ admin }: { admin: AdminProfile }) {
           </>
         ) : (
           <>
-            <p className="text-sm text-slate-600">{t('scan')}</p>
-            <div className="flex justify-center rounded-md bg-white p-2 sm:justify-start">
+            <p className="text-sm text-muted">{t('scan')}</p>
+            <div className="flex justify-center rounded-md bg-card p-2 sm:justify-start">
               <QRCodeSVG value={setup.data.otpauthUri} size={192} marginSize={2} />
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-slate-500">{t('manual')}</p>
-              <p className="break-all rounded bg-slate-50 p-2 font-mono text-sm" dir="ltr">
+              <p className="text-xs text-muted">{t('manual')}</p>
+              <p className="break-all rounded bg-soft p-2 font-mono text-sm" dir="ltr">
                 {setup.data.secret}
               </p>
             </div>

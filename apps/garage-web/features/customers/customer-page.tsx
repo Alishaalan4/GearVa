@@ -6,7 +6,7 @@ import {
   type UpdateCustomerInput,
   updateCustomerSchema,
 } from '@gearva/contracts';
-import { Alert, Button, Card, Field, Input, Textarea } from '@gearva/ui';
+import { Alert, Button, buttonClass, Card, Field, Input, Textarea } from '@gearva/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -31,7 +31,7 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
     refetchOnWindowFocus: false,
   });
 
-  if (customer.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (customer.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (customer.error) {
     const missing = customer.error instanceof ApiError && customer.error.status === 404;
     return missing ? <Alert>{t('notFound')}</Alert> : <ApiErrorAlert error={customer.error} />;
@@ -40,7 +40,7 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link href="/" className="text-sm text-slate-600 hover:text-slate-900">
+      <Link href="/" className="text-sm text-muted hover:text-ink">
         {tCommon('backToSearch')}
       </Link>
       {existing && <Alert tone="success">{t('existing', { name: c.name })}</Alert>}
@@ -51,19 +51,19 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
         ) : (
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
-              <h1 className="text-2xl font-semibold">{c.name}</h1>
-              <p className="text-slate-600" dir="ltr">
+              <h1 className="text-2xl font-extrabold">{c.name}</h1>
+              <p className="text-muted" dir="ltr">
                 {c.phone}
               </p>
-              {c.notes && <p className="whitespace-pre-line text-sm text-slate-600">{c.notes}</p>}
+              {c.notes && <p className="whitespace-pre-line text-sm text-muted">{c.notes}</p>}
               <div className="flex flex-wrap gap-2 pt-1 text-xs">
                 {c.remindersOptOut && (
-                  <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800">
+                  <span className="rounded bg-tint px-2 py-0.5 text-brand-ink">
                     {t('remindersOptOut')}
                   </span>
                 )}
                 {c.marketingOptOut && (
-                  <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800">
+                  <span className="rounded bg-tint px-2 py-0.5 text-brand-ink">
                     {t('marketingOptOut')}
                   </span>
                 )}
@@ -79,31 +79,28 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t('cars')}</h2>
-          <Link
-            href={`/customers/${c.id}/vehicles/new`}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-          >
+          <Link href={`/customers/${c.id}/vehicles/new`} className={buttonClass()}>
             {t('addCar')}
           </Link>
         </div>
-        {c.vehicles.length === 0 && <p className="text-sm text-slate-500">{t('noCars')}</p>}
+        {c.vehicles.length === 0 && <p className="text-sm text-muted">{t('noCars')}</p>}
         <ul className="space-y-2">
           {c.vehicles.map((v) => (
             <li key={v.id}>
               <Link
                 href={`/vehicles/${v.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-400"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card p-4 hover:border-ink"
               >
                 <div>
                   <p className="font-mono text-lg font-semibold" dir="ltr">
                     {v.plate}
                   </p>
-                  <p className="text-sm text-slate-700">
+                  <p className="text-sm text-soft-ink">
                     {v.make} {v.model}
                     {v.year ? ` · ${v.year}` : ''}
                   </p>
                 </div>
-                <p className="text-sm text-slate-500">{distance(v.currentKm, v.distanceUnit)}</p>
+                <p className="text-sm text-muted">{distance(v.currentKm, v.distanceUnit)}</p>
               </Link>
             </li>
           ))}

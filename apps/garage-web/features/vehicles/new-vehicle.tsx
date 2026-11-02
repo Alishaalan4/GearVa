@@ -32,18 +32,15 @@ export function NewVehicle({ customerId }: { customerId: string }) {
     },
   });
 
-  if (customer.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (customer.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (customer.error) return <ApiErrorAlert error={customer.error} />;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link
-        href={`/customers/${customerId}`}
-        className="text-sm text-slate-600 hover:text-slate-900"
-      >
+      <Link href={`/customers/${customerId}`} className="text-sm text-muted hover:text-ink">
         {t('backToCustomer', { name: customer.data.name })}
       </Link>
-      <h1 className="text-2xl font-semibold">{t('newTitle', { name: customer.data.name })}</h1>
+      <h1 className="text-2xl font-extrabold">{t('newTitle', { name: customer.data.name })}</h1>
       <Card>
         <VehicleForm
           mode="create"

@@ -1,7 +1,7 @@
 'use client';
 
 import type { Paginated, SearchResult } from '@gearva/contracts';
-import { Input } from '@gearva/ui';
+import { buttonClass, Input } from '@gearva/ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -41,11 +41,8 @@ export function SearchPanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t('title')}</h1>
-        <Link
-          href={newCustomerHref}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
+        <h1 className="text-2xl font-extrabold">{t('title')}</h1>
+        <Link href={newCustomerHref} className={buttonClass()}>
           {t('addCustomer')}
         </Link>
       </div>
@@ -60,20 +57,20 @@ export function SearchPanel() {
         onChange={(e) => setText(e.target.value)}
         aria-label={t('placeholder')}
       />
-      {!enabled && <p className="text-sm text-slate-500">{t('hint')}</p>}
+      {!enabled && <p className="text-sm text-muted">{t('hint')}</p>}
 
       {enabled && (
         <>
           <ApiErrorAlert error={results.error} />
           {results.data && results.data.items.length === 0 && (
-            <p className="text-sm text-slate-500">{t('empty')}</p>
+            <p className="text-sm text-muted">{t('empty')}</p>
           )}
           <ul className="space-y-2">
             {results.data?.items.map((r) => (
               <li key={`${r.customer.id}:${r.vehicle?.id ?? ''}`}>
                 <Link
                   href={r.vehicle ? `/vehicles/${r.vehicle.id}` : `/customers/${r.customer.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-400"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card p-4 hover:border-ink"
                 >
                   <div className="space-y-0.5">
                     {r.vehicle ? (
@@ -81,18 +78,18 @@ export function SearchPanel() {
                         <p className="font-mono text-lg font-semibold" dir="ltr">
                           {r.vehicle.plate}
                         </p>
-                        <p className="text-sm text-slate-700">
+                        <p className="text-sm text-soft-ink">
                           {r.vehicle.make} {r.vehicle.model}
                           {r.vehicle.year ? ` · ${r.vehicle.year}` : ''}
                         </p>
                       </>
                     ) : (
-                      <p className="text-sm italic text-slate-500">{t('noCar')}</p>
+                      <p className="text-sm italic text-muted">{t('noCar')}</p>
                     )}
                   </div>
                   <div className="text-end text-sm">
                     <p className="font-medium">{r.customer.name}</p>
-                    <p className="text-slate-500" dir="ltr">
+                    <p className="text-muted" dir="ltr">
                       {r.customer.phone}
                     </p>
                   </div>
@@ -101,7 +98,7 @@ export function SearchPanel() {
             ))}
           </ul>
           {results.data && results.data.total > results.data.items.length && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted">
               {t('showing', { shown: results.data.items.length, total: results.data.total })}
             </p>
           )}

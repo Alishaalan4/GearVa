@@ -242,7 +242,7 @@ Build `EMAIL` and `IN_APP` first. `WHATSAPP` is a later adapter and must need ze
 ### 5.7 Frontend conventions
 - Server state with TanStack Query. Forms with react-hook-form + Zod resolver using the **same** schema as the API.
 - Mobile-first layouts: mechanics use phones in the garage.
-- The visual design (colours, font, layouts, dark mode) comes from the user's prototype `docs/design/gearva-demo.html` (decision 2026-10-29): it restyles garage-web and admin; logic, API and data stay as built. Screens are built plain first and restyled in the design step after Phase 2.
+- The visual design (colours, font, layouts, dark mode) comes from the user's prototype `docs/design/gearva-demo.html` (decision 2026-10-29): it restyles garage-web and admin; logic, API and data stay as built. Screens are built plain first and restyled in the design step after Phase 2. The colours and dark mode live in `packages/ui/src/theme.css` as named tokens (`bg-page`, `text-muted`, `bg-brand`...): use these, not Tailwind's palette colours such as `slate-500`. Plus Jakarta Sans has no Arabic letters, so Arabic text uses IBM Plex Sans Arabic.
 - **Quick entry must stay under 20 seconds**: search by plate or phone, tap a service, confirm. Do not add required fields to this flow. Extra fields go in the collapsed "More details".
 - Every user-facing string goes through `next-intl` (`messages/ar.json`, `messages/en.json`). No hardcoded text.
 

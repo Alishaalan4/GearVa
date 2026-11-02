@@ -1,0 +1,81 @@
+/* Design tokens from docs/design/gearva-demo.html, shared by garage-web and admin.
+   Dark mode follows the device; data-theme on <html> can force either. */
+:root {
+  --bg: #f4f2ee;
+  --card: #fff;
+  --ink: #101a19;
+  --mut: #55605e;
+  --line: #ddd8d0;
+  --o: #ff600f;
+  --ot: #bf4300;
+  --tint: #ffede1;
+  --okb: #ddf3e4;
+  --okt: #14612f;
+  --badb: #fde3dd;
+  --badt: #8a1f0e;
+  --nb: #eceae5;
+  --nt: #3a4442;
+  --inp: #fff;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b1211;
+    --card: #15201e;
+    --ink: #f2f4f3;
+    --mut: #a9b4b1;
+    --line: #2a3735;
+    --ot: #ff8a4d;
+    --tint: #3a2417;
+    --okb: #173826;
+    --okt: #8be0ab;
+    --badb: #47211b;
+    --badt: #ffb4a6;
+    --nb: #24302e;
+    --nt: #c9d1cf;
+    --inp: #101a19;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b1211;
+  --card: #15201e;
+  --ink: #f2f4f3;
+  --mut: #a9b4b1;
+  --line: #2a3735;
+  --ot: #ff8a4d;
+  --tint: #3a2417;
+  --okb: #173826;
+  --okt: #8be0ab;
+  --badb: #47211b;
+  --badt: #ffb4a6;
+  --nb: #24302e;
+  --nt: #c9d1cf;
+  --inp: #101a19;
+  color-scheme: dark;
+}
+
+/* Latin text uses Plus Jakarta Sans; it has no Arabic letters, so those fall to the second font. */
+@theme inline {
+  --font-sans: var(--font-latin), var(--font-arabic), system-ui, sans-serif;
+  --color-page: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--mut);
+  --color-line: var(--line);
+  --color-brand: var(--o);
+  --color-brand-ink: var(--ot);
+  --color-on-brand: #101a19;
+  --color-tint: var(--tint);
+  --color-ok: var(--okb);
+  --color-ok-ink: var(--okt);
+  --color-bad: var(--badb);
+  --color-bad-ink: var(--badt);
+  --color-soft: var(--nb);
+  --color-soft-ink: var(--nt);
+  --color-field: var(--inp);
+  --color-sidebar: #101a19;
+  --color-sidebar-ink: #c9d1cf;
+}

@@ -10,7 +10,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
-import { Button, Input, Select } from '@gearva/ui';
+import { Button, buttonClass, Input, Select } from '@gearva/ui';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api } from '@/lib/api';
 import { StatusBadge } from './status-badge';
@@ -45,11 +45,8 @@ export function GarageList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t('title')}</h1>
-        <Link
-          href="/garages/new"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
+        <h1 className="text-2xl font-extrabold">{t('title')}</h1>
+        <Link href="/garages/new" className={buttonClass()}>
           {t('new')}
         </Link>
       </div>
@@ -90,9 +87,9 @@ export function GarageList() {
 
       <ApiErrorAlert error={garages.error} />
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-start text-xs uppercase text-slate-500">
+          <thead className="bg-soft text-start text-xs uppercase text-muted">
             <tr>
               <th className="px-4 py-3 text-start font-medium">{t('columns.name')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('columns.status')}</th>
@@ -101,25 +98,25 @@ export function GarageList() {
               <th className="px-4 py-3 text-start font-medium">{t('columns.created')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {garages.data?.items.map((g) => (
               <tr
                 key={g.id}
-                className="cursor-pointer hover:bg-slate-50"
+                className="cursor-pointer hover:bg-soft"
                 onClick={() => router.push(`/garages/${g.id}`)}
               >
                 <td className="px-4 py-3">
                   <Link href={`/garages/${g.id}`} className="font-medium hover:underline">
                     {g.name}
                   </Link>
-                  <div className="text-xs text-slate-500" dir="ltr">
+                  <div className="text-xs text-muted" dir="ltr">
                     {g.email}
                   </div>
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={g.status} />
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-muted">
                   {g.expiresAt
                     ? t('paidUntil', { date: date(g.expiresAt) })
                     : g.trialEndsAt
@@ -127,21 +124,21 @@ export function GarageList() {
                       : tCommon('none')}
                 </td>
                 <td className="px-4 py-3">{format.number(g.branchCount)}</td>
-                <td className="px-4 py-3 text-slate-600">{date(g.createdAt)}</td>
+                <td className="px-4 py-3 text-muted">{date(g.createdAt)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {garages.data && garages.data.items.length === 0 && (
-          <p className="p-6 text-center text-sm text-slate-500">{t('empty')}</p>
+          <p className="p-6 text-center text-sm text-muted">{t('empty')}</p>
         )}
         {garages.isPending && (
-          <p className="p-6 text-center text-sm text-slate-500">{tCommon('loading')}</p>
+          <p className="p-6 text-center text-sm text-muted">{tCommon('loading')}</p>
         )}
       </div>
 
       {garages.data && (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
           <span>{t('total', { count: garages.data.total })}</span>
           <div className="flex items-center gap-2">
             <Button

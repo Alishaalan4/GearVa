@@ -30,8 +30,8 @@ export function LockScreen({ reason, onClose }: { reason: GarageLockReason; onCl
   return (
     <AuthLayout title={t(`title.${reason}`)}>
       <div className="space-y-4">
-        <p className="text-sm text-slate-700">{t(`body.${reason}`)}</p>
-        <p className="text-sm text-slate-500">{t('dataSafe')}</p>
+        <p className="text-sm text-soft-ink">{t(`body.${reason}`)}</p>
+        <p className="text-sm text-muted">{t('dataSafe')}</p>
         <Button
           type="button"
           className="w-full"

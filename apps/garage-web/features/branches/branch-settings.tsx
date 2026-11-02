@@ -32,7 +32,7 @@ export function BranchSettings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
       {notice && <Alert tone="success">{notice}</Alert>}
 
       <Card title={t('add')}>
@@ -50,7 +50,7 @@ export function BranchSettings() {
       </Card>
 
       <ApiErrorAlert error={branches.error} />
-      {branches.isPending && <p className="text-sm text-slate-500">{tCommon('loading')}</p>}
+      {branches.isPending && <p className="text-sm text-muted">{tCommon('loading')}</p>}
       <ul className="space-y-3">
         {branches.data?.items.map((branch) => (
           <BranchRow key={branch.id} branch={branch} onNotice={setNotice} />
@@ -83,7 +83,7 @@ function BranchRow({
   });
 
   return (
-    <li className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <li className="rounded-xl border border-line bg-card p-4">
       {editing ? (
         <BranchForm
           defaultValues={{
@@ -110,21 +110,21 @@ function BranchRow({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{branch.name}</span>
-              <span className="text-xs text-slate-500" dir="ltr">
+              <span className="text-xs text-muted" dir="ltr">
                 {branch.code}
               </span>
               {branch.isMain && (
-                <span className="rounded bg-slate-100 px-2 py-0.5 text-xs">{t('main')}</span>
+                <span className="rounded bg-soft px-2 py-0.5 text-xs">{t('main')}</span>
               )}
               {!branch.isActive && (
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                <span className="rounded bg-tint px-2 py-0.5 text-xs text-brand-ink">
                   {t('inactive')}
                 </span>
               )}
             </div>
-            {branch.address && <p className="text-sm text-slate-600">{branch.address}</p>}
+            {branch.address && <p className="text-sm text-muted">{branch.address}</p>}
             {branch.phone && (
-              <p className="text-sm text-slate-600" dir="ltr">
+              <p className="text-sm text-muted" dir="ltr">
                 {branch.phone}
               </p>
             )}

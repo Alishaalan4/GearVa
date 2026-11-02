@@ -15,7 +15,7 @@ export function HomeScreen() {
     <div className="mx-auto max-w-2xl space-y-6">
       <SearchPanel />
       {me.role === 'OWNER' && (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           {t('setupBody')}{' '}
           <Link href="/settings/branches" className="underline">
             {t('manageBranches')}

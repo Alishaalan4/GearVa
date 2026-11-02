@@ -128,7 +128,7 @@ export function ServiceForm({
     staleTime: 0,
   });
   const tCommon = useTranslations('common');
-  if (prefill.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (prefill.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (prefill.error) return <ApiErrorAlert error={prefill.error} />;
   return (
     <LoadedForm
@@ -302,15 +302,15 @@ function LoadedForm({
 
   return (
     <form className="space-y-4" noValidate onSubmit={(e) => e.preventDefault()}>
-      <h1 className="text-2xl font-semibold">{serviceName(type)}</h1>
-      <p className="font-mono text-sm text-slate-600" dir="ltr">
+      <h1 className="text-2xl font-extrabold">{serviceName(type)}</h1>
+      <p className="font-mono text-sm text-muted" dir="ltr">
         {vehicle.plate} · {vehicle.make} {vehicle.model}
       </p>
 
       <Card>
         <div className="grid gap-4 sm:grid-cols-2">
           {visit ? (
-            <p className="text-sm text-slate-600 sm:col-span-2">
+            <p className="text-sm text-muted sm:col-span-2">
               {t('visitOdometer', { value: distance(visit.odometerKm, unit) })}
             </p>
           ) : (
@@ -396,13 +396,13 @@ function LoadedForm({
         </div>
 
         {prefill.last && (
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted">
             {t('lastUsed', {
               date: format.dateTime(new Date(prefill.last.performedAt), { dateStyle: 'medium' }),
             })}
           </p>
         )}
-        <div className="mt-4 rounded-md bg-slate-100 px-3 py-2 text-sm">
+        <div className="mt-4 rounded-md bg-soft px-3 py-2 text-sm">
           {noReminder
             ? t('noReminderSet')
             : nextKm === null && !nextDate
@@ -422,7 +422,7 @@ function LoadedForm({
 
       <button
         type="button"
-        className="text-sm font-medium text-slate-700 underline"
+        className="text-sm font-medium text-soft-ink underline"
         aria-expanded={moreOpen}
         onClick={() => setMoreOpen((v) => !v)}
       >

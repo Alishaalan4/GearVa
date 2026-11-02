@@ -73,7 +73,7 @@ export function GarageForm() {
       noValidate
       onSubmit={form.handleSubmit((values) => create.mutate(values))}
     >
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
 
       <Card title={t('sectionGarage')}>
         <div className="grid gap-4 sm:grid-cols-2">

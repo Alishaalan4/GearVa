@@ -45,7 +45,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
     onSuccess: onSaved,
   });
 
-  if (visit.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (visit.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (visit.error) {
     const missing = visit.error instanceof ApiError && visit.error.status === 404;
     return missing ? <Alert>{t('notFound')}</Alert> : <ApiErrorAlert error={visit.error} />;
@@ -57,10 +57,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link
-        href={`/vehicles/${v.vehicle.id}`}
-        className="text-sm text-slate-600 hover:text-slate-900"
-      >
+      <Link href={`/vehicles/${v.vehicle.id}`} className="text-sm text-muted hover:text-ink">
         {t('backToCar', { plate: v.vehicle.plate })}
       </Link>
       {(justDone || finish.isSuccess) && !open && <Alert tone="success">{t('saved')}</Alert>}
@@ -68,32 +65,32 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-mono text-2xl font-semibold" dir="ltr">
+            <h1 className="font-mono text-2xl font-extrabold" dir="ltr">
               {v.vehicle.plate}
             </h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               {v.customer.name} · {distance(v.odometerKm, unit)} ·{' '}
               {format.dateTime(new Date(v.openedAt), { dateStyle: 'medium', timeStyle: 'short' })}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted">
               {tHistory('branch', { code: v.branch.code })} · {v.mechanic.name}
             </p>
           </div>
           <span
-            className={`rounded px-2 py-1 text-xs font-medium ${open ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}
+            className={`rounded px-2 py-1 text-xs font-medium ${open ? 'bg-tint text-brand-ink' : 'bg-ok text-ok-ink'}`}
           >
             {tHistory(`status.${v.status}`)}
           </span>
         </div>
 
-        <ul className="mt-4 divide-y divide-slate-100">
+        <ul className="mt-4 divide-y divide-line">
           {v.records.map((r) => (
             <li key={r.id} className="py-3">
               <div className="flex flex-wrap justify-between gap-2">
                 <span className="font-medium">
                   {r.customName ?? (locale === 'ar' ? r.serviceType.nameAr : r.serviceType.nameEn)}
                   {r.quantity !== '1.00' && (
-                    <span className="text-slate-500" dir="ltr">
+                    <span className="text-muted" dir="ltr">
                       {' '}
                       × {Number(r.quantity)}
                     </span>
@@ -102,7 +99,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
                 <span>{money(r.totalCents)}</span>
               </div>
               {(r.nextDueKm !== null || r.nextDueDate) && (
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted">
                   {tHistory('nextDue', {
                     value: [
                       r.nextDueKm !== null ? distance(r.nextDueKm, unit) : null,
@@ -118,8 +115,8 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
             </li>
           ))}
         </ul>
-        {v.records.length === 0 && <p className="text-sm text-slate-500">{t('noServices')}</p>}
-        <div className="mt-2 flex justify-between border-t border-slate-200 pt-3 font-semibold">
+        {v.records.length === 0 && <p className="text-sm text-muted">{t('noServices')}</p>}
+        <div className="mt-2 flex justify-between border-t border-line pt-3 font-semibold">
           <span>{t('total')}</span>
           <span>{money(v.totalCents)}</span>
         </div>

@@ -33,7 +33,7 @@ export function LoginForm() {
 
   return (
     <AuthLayout title={t('title')}>
-      <p className="-mt-3 mb-5 text-sm text-slate-500">{t('subtitle')}</p>
+      <p className="-mt-3 mb-5 text-sm text-muted">{t('subtitle')}</p>
       <form
         className="space-y-4"
         noValidate
@@ -60,7 +60,7 @@ export function LoginForm() {
         <Button type="submit" className="w-full" disabled={login.isPending}>
           {t('submit')}
         </Button>
-        <p className="text-center text-xs text-slate-500">{t('forgot')}</p>
+        <p className="text-center text-xs text-muted">{t('forgot')}</p>
       </form>
     </AuthLayout>
   );

@@ -30,7 +30,7 @@ export function StaffSettings() {
   });
 
   if (!me.data || branches.isPending) {
-    return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+    return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   }
   if (branches.error) return <ApiErrorAlert error={branches.error} />;
 
@@ -40,7 +40,7 @@ export function StaffSettings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
       {notice && <Alert tone="success">{notice}</Alert>}
 
       <Card title={t('invite')}>
@@ -55,7 +55,7 @@ export function StaffSettings() {
       </Card>
 
       <ApiErrorAlert error={staff.error} />
-      {staff.isPending && <p className="text-sm text-slate-500">{tCommon('loading')}</p>}
+      {staff.isPending && <p className="text-sm text-muted">{tCommon('loading')}</p>}
       <ul className="space-y-3">
         {staff.data?.items.map((member) => (
           <StaffRow key={member.id} member={member} branches={allBranches} onNotice={setNotice} />
@@ -63,7 +63,7 @@ export function StaffSettings() {
       </ul>
 
       {staff.data && pages > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
           <span>{t('total', { count: staff.data.total })}</span>
           <div className="flex items-center gap-2">
             <Button

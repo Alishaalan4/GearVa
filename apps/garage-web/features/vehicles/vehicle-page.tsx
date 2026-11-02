@@ -17,7 +17,7 @@ import { VehicleForm } from './vehicle-form';
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-wrap justify-between gap-2 py-2 text-sm">
-      <dt className="text-slate-500">{label}</dt>
+      <dt className="text-muted">{label}</dt>
       <dd className="font-medium">{children}</dd>
     </div>
   );
@@ -50,7 +50,7 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
     },
   });
 
-  if (vehicle.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (vehicle.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (vehicle.error) {
     const missing = vehicle.error instanceof ApiError && vehicle.error.status === 404;
     return missing ? <Alert>{t('notFound')}</Alert> : <ApiErrorAlert error={vehicle.error} />;
@@ -59,7 +59,7 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link href="/" className="text-sm text-slate-600 hover:text-slate-900">
+      <Link href="/" className="text-sm text-muted hover:text-ink">
         {tCommon('backToSearch')}
       </Link>
 
@@ -88,10 +88,10 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="font-mono text-2xl font-semibold" dir="ltr">
+                <h1 className="font-mono text-2xl font-extrabold" dir="ltr">
                   {v.plate}
                 </h1>
-                <p className="text-slate-700">
+                <p className="text-soft-ink">
                   {v.make} {v.model}
                   {v.year ? ` · ${v.year}` : ''}
                 </p>
@@ -100,12 +100,12 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
                 {tCommon('edit')}
               </Button>
             </div>
-            <dl className="divide-y divide-slate-100">
+            <dl className="divide-y divide-line">
               <Row label={t('owner')}>
                 <Link href={`/customers/${v.customer.id}`} className="underline">
                   {v.customer.name}
                 </Link>{' '}
-                <span className="text-slate-500" dir="ltr">
+                <span className="text-muted" dir="ltr">
                   {v.customer.phone}
                 </span>
               </Row>
@@ -113,7 +113,7 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
               <Row label={t('lastOdometer')}>
                 {distance(v.currentKm, v.distanceUnit)}
                 {v.lastOdometerAt && (
-                  <span className="text-slate-500">
+                  <span className="text-muted">
                     {' · '}
                     {format.dateTime(new Date(v.lastOdometerAt), { dateStyle: 'medium' })}
                   </span>
@@ -125,7 +125,7 @@ export function VehiclePage({ vehicleId }: { vehicleId: string }) {
                   : distance(Math.round(v.avgDailyKm), v.distanceUnit)}
               </Row>
             </dl>
-            {v.notes && <p className="whitespace-pre-line text-sm text-slate-600">{v.notes}</p>}
+            {v.notes && <p className="whitespace-pre-line text-sm text-muted">{v.notes}</p>}
           </div>
         )}
       </Card>

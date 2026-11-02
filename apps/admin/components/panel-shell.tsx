@@ -1,10 +1,11 @@
 'use client';
 
+import { AppFrame, Logo, navItemClass } from '@gearva/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect } from 'react';
 import { useAdmin } from '@/features/auth/use-admin';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { ApiError, apiPost } from '@/lib/api';
 import { ApiErrorAlert } from './api-error';
 import { LanguageToggle } from './language-toggle';
@@ -13,6 +14,7 @@ import { LanguageToggle } from './language-toggle';
 export function PanelShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const admin = useAdmin();
 
@@ -30,7 +32,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   });
 
   if (admin.isPending || notSignedIn) {
-    return <p className="p-8 text-sm text-slate-500">{t('common.loading')}</p>;
+    return <p className="p-8 text-sm text-muted">{t('common.loading')}</p>;
   }
   if (admin.error) {
     return (
@@ -40,36 +42,41 @@ export function PanelShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const item = (href: string, label: string) => (
+    <Link href={href} className={navItemClass(pathname.startsWith(href))}>
+      {label}
+    </Link>
+  );
   return (
-    <div className="min-h-dvh">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-          <Link href="/garages" className="font-semibold">
-            {t('nav.brand')}
-          </Link>
-          <nav className="flex gap-4 text-sm">
-            <Link href="/garages" className="text-slate-700 hover:text-slate-900">
-              {t('nav.garages')}
-            </Link>
-            <Link href="/account" className="text-slate-700 hover:text-slate-900">
-              {t('nav.account')}
-            </Link>
-          </nav>
-          <div className="ms-auto flex items-center gap-4 text-sm">
-            <span className="text-slate-500">{admin.data.name}</span>
-            <LanguageToggle />
-            <button
-              type="button"
-              className="text-slate-700 hover:text-slate-900"
-              disabled={signOut.isPending}
-              onClick={() => signOut.mutate()}
-            >
-              {t('nav.signOut')}
-            </button>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">{children}</main>
-    </div>
+    <AppFrame
+      brand={
+        <Link href="/garages">
+          <Logo />
+        </Link>
+      }
+      subtitle={t('nav.brand')}
+      nav={
+        <>
+          {item('/garages', t('nav.garages'))}
+          {item('/account', t('nav.account'))}
+        </>
+      }
+      footer={
+        <>
+          <span className="px-3.5 py-2 text-xs text-sidebar-ink">{admin.data.name}</span>
+          <LanguageToggle className={navItemClass()} />
+          <button
+            type="button"
+            className={navItemClass()}
+            disabled={signOut.isPending}
+            onClick={() => signOut.mutate()}
+          >
+            {t('nav.signOut')}
+          </button>
+        </>
+      }
+    >
+      {children}
+    </AppFrame>
   );
 }

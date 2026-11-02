@@ -7,7 +7,11 @@ import { LOCALE_COOKIE } from '@/i18n/routing';
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
 /** Switches between English and Arabic on the same page and remembers the choice. */
-export function LanguageToggle() {
+export function LanguageToggle({
+  className = 'text-sm text-soft-ink hover:text-ink',
+}: {
+  className?: string;
+}) {
   const t = useTranslations('nav');
   const locale = useLocale();
   const pathname = usePathname();
@@ -15,7 +19,7 @@ export function LanguageToggle() {
   return (
     <button
       type="button"
-      className="text-sm text-slate-700 hover:text-slate-900"
+      className={className}
       onClick={() => {
         const next = locale === 'ar' ? 'en' : 'ar';
         // Read by proxy.ts, so links without /en or /ar (emails, bookmarks) open in it.

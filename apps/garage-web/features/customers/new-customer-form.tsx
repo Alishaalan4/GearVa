@@ -49,7 +49,7 @@ export function NewCustomerForm({ phone = '' }: { phone?: string }) {
       noValidate
       onSubmit={form.handleSubmit((values) => create.mutate(values))}
     >
-      <h1 className="text-2xl font-semibold">{t('newTitle')}</h1>
+      <h1 className="text-2xl font-extrabold">{t('newTitle')}</h1>
       <Card>
         <div className="space-y-4">
           <Field label={t('name')} error={errors.name && t('invalid.name')}>

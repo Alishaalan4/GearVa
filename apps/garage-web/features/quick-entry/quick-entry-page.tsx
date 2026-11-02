@@ -35,11 +35,11 @@ export function QuickEntryPage({
 
   if (me && !canRecordServices(me.role)) return <Alert>{t('notAllowed')}</Alert>;
   if (!serviceTypeId) return <Alert>{t('noService')}</Alert>;
-  if (vehicle.isPending) return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+  if (vehicle.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (vehicle.error) return <ApiErrorAlert error={vehicle.error} />;
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link href={`/vehicles/${vehicleId}`} className="text-sm text-slate-600 hover:text-slate-900">
+      <Link href={`/vehicles/${vehicleId}`} className="text-sm text-muted hover:text-ink">
         {t('backToCar', { plate: vehicle.data.plate })}
       </Link>
       <ServiceForm vehicle={vehicle.data} serviceTypeId={serviceTypeId} />
@@ -66,11 +66,11 @@ export function AddServicePage({
   if (!serviceTypeId) return <Alert>{t('noService')}</Alert>;
   if (visit.error ?? vehicle.error) return <ApiErrorAlert error={visit.error ?? vehicle.error} />;
   if (!visit.data || !vehicle.data) {
-    return <p className="text-sm text-slate-500">{tCommon('loading')}</p>;
+    return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   }
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link href={`/visits/${visitId}`} className="text-sm text-slate-600 hover:text-slate-900">
+      <Link href={`/visits/${visitId}`} className="text-sm text-muted hover:text-ink">
         {t('backToVisit')}
       </Link>
       <ServiceForm vehicle={vehicle.data} serviceTypeId={serviceTypeId} visit={visit.data} />

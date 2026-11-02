@@ -14,15 +14,15 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
       <Card title={t('profile')}>
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between gap-2">
-            <dt className="text-slate-500">{t('name')}</dt>
+            <dt className="text-muted">{t('name')}</dt>
             <dd className="font-medium">{admin.data.name}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-slate-500">{t('email')}</dt>
+            <dt className="text-muted">{t('email')}</dt>
             <dd className="font-medium" dir="ltr">
               {admin.data.email}
             </dd>

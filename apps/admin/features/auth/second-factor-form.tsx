@@ -68,7 +68,7 @@ export function SecondFactorForm({
       {allowRecovery && (
         <button
           type="button"
-          className="w-full text-center text-sm text-slate-600 hover:text-slate-900"
+          className="w-full text-center text-sm text-muted hover:text-ink"
           onClick={() => {
             form.clearErrors();
             setUseRecovery((v) => !v);

@@ -4,10 +4,10 @@ import type { GarageStatus } from '@gearva/contracts';
 import { useTranslations } from 'next-intl';
 
 const STYLES: Record<GarageStatus, string> = {
-  TRIAL: 'bg-sky-100 text-sky-800',
-  ACTIVE: 'bg-emerald-100 text-emerald-800',
-  EXPIRED: 'bg-amber-100 text-amber-800',
-  SUSPENDED: 'bg-red-100 text-red-800',
+  TRIAL: 'bg-soft text-soft-ink',
+  ACTIVE: 'bg-ok text-ok-ink',
+  EXPIRED: 'bg-tint text-brand-ink',
+  SUSPENDED: 'bg-bad text-bad-ink',
 };
 
 export function StatusBadge({ status }: { status: GarageStatus }) {

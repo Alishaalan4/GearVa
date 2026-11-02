@@ -29,6 +29,10 @@ export const ERROR_CODES = {
   ODOMETER_CONFIRMATION_REQUIRED: 'ODOMETER_CONFIRMATION_REQUIRED',
   VISIT_ALREADY_FINISHED: 'VISIT_ALREADY_FINISHED',
   VISIT_HAS_NO_RECORDS: 'VISIT_HAS_NO_RECORDS',
+  /** A total of 0 must be confirmed as free work (flow.md 7.1). */
+  INVOICE_TOTAL_ZERO: 'INVOICE_TOTAL_ZERO',
+  INVOICE_CANCELLED: 'INVOICE_CANCELLED',
+  PAYMENT_EXCEEDS_REMAINING: 'PAYMENT_EXCEEDS_REMAINING',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */

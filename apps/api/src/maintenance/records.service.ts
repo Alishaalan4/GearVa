@@ -29,8 +29,8 @@ import { SuggestionsService } from '../suggestions/suggestions.service';
 import { ServiceTypesService, toServiceTypeItem } from './service-types.service';
 
 /** A YYYY-MM-DD date for a `date` column, and back. */
-const toDbDate = (date: string) => new Date(`${date}T00:00:00.000Z`);
-const fromDbDate = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : null);
+export const toDbDate = (date: string) => new Date(`${date}T00:00:00.000Z`);
+export const fromDbDate = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : null);
 
 /** Detail fields that feed autocomplete lists (flow.md 4.3). */
 const DETAIL_SUGGESTIONS: Record<string, Partial<Record<string, SuggestionField>>> = {

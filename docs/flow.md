@@ -191,7 +191,7 @@ flowchart LR
 Garage web (step 2.6): search → tap the car → tap a service button on the car page (owner, manager, mechanic) → the pre-filled form → **Confirm and finish** (visit summary with the next due values) or **Confirm and add another** (the visit stays open; its page offers the service buttons again, "Waiting for parts" and **Finish visit**). The odometer starts at today's estimate; the next due km follows it as it is typed. Price is typed in dollars and turned into cents as text, never through a float. An unusual odometer shows "Is this right?" with **Yes, save** (sent again with `confirmOdometer`) or **Fix it**. Photos are not in Phase 2 (files arrive in Phase 3).
 
 ### 4.2 API behavior
-- `POST /v1/visits/quick` accepts `{ vehicleId, odometer, odometerUnit, services: [...], finish: boolean }` and creates visit, records and reminders in **one transaction**; with `finish` the visit is also closed (`DONE`, `finishedAt` set). From Phase 3, `finish` also creates the invoice (section 7.1) in that same transaction.
+- `POST /v1/visits/quick` accepts `{ vehicleId, odometer, odometerUnit, services: [...], finish: boolean }` and creates visit, records and reminders in **one transaction**; with `finish` the visit is also closed (`DONE`, `finishedAt` set). `finish` also creates the invoice (section 7.1) in that same transaction, so the request also takes the finish options: `discount`, `confirmFree` and `payment`.
 - For longer jobs: `POST /v1/visits` (opens `IN_PROGRESS`), `POST /v1/visits/:id/records`, `PATCH /v1/visits/:id` (status), `POST /v1/visits/:id/finish`.
 - **Phase split (decision 2026-10-23):** invoices are Phase 3, so in Phase 2 "finish" (quick entry or `POST /v1/visits/:id/finish`) only closes the visit. Phase 3 adds the invoice to the same action; visits finished during Phase 2 development simply have no invoice.
 - **Implemented in step 2.4 (2026-10-26):**
@@ -279,7 +279,7 @@ Example: a car on KM, oil change at 5,500 km, default 5,000 km: `nextDueKm = 10,
 ## 7. Invoices (Phase 3)
 
 ### 7.1 Creating an invoice ("Finish visit")
-`POST /v1/visits/:id/finish`, all in one transaction:
+`POST /v1/visits/:id/finish` with optional `{ discount, confirmFree, payment: { method, amountCents? } }` (no `payment` = pay later; no `amountCents` = the whole total), all in one transaction:
 
 1. Lock the visit row, check it has at least one record and no active invoice.
 2. **Allocate the invoice number** (gap-free, per garage + branch + year):
@@ -318,7 +318,7 @@ stateDiagram-v2
 
 ### 7.4 Discounts and offers
 - A discount is an amount or a percentage entered on the invoice, and/or an offer picked from the active offers of the garage.
-- Choosing an offer stores `invoices.offerId` and applies the offer's discount. That link is how redemptions are counted. Applying a discount or offer on an invoice is built in Phase 3; the offer screens, targeting and broadcasts (section 10) come in Phase 7.
+- Choosing an offer stores `invoices.offerId` and applies the offer's discount. That link is how redemptions are counted. A typed discount is built in Phase 3. Picking an offer comes with the offer screens, targeting and broadcasts in Phase 7 (section 10), because no offer can exist before them; the `offers` table and `invoices.offerId` are ready for it.
 - The discount is computed in integer cents with documented rounding (round half up) and never makes the total negative.
 - VAT, when on, is charged on the amount after the discount, also in integer cents with halves rounding up.
 
@@ -337,7 +337,7 @@ Email PDF (if an email exists), in-app history for the owner (visible in the mob
 
 ### 8.1 Recording a payment
 `POST /v1/invoices/:id/payments` with amount, method (`CASH` or `WHISH`), date, note. In one transaction:
-1. Lock the invoice row. Reject if `CANCELLED` or the amount exceeds `remainingCents`.
+1. Lock the invoice row. Reject if `CANCELLED` (`INVOICE_CANCELLED`) or the amount exceeds `remainingCents` (`PAYMENT_EXCEEDS_REMAINING`). The date defaults to today; a past day is allowed, a future one is not.
 2. Insert the `payments` row.
 3. `paidCents += amount`, `remainingCents -= amount`, set status `PARTIALLY_PAID` or `PAID`.
 4. Write the audit row.

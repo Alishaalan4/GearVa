@@ -30,9 +30,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Design | D.2 Page layouts (login, tables, status pills) | ✅ Done | 2026-11-02 |
 | 3 | 3.0 Doc fixes and Phase 3 decisions | ✅ Done | 2026-11-02 |
 | 3 | 3.1 Database: invoices, payments, offers, files | ✅ Done | 2026-11-02 |
-| 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | 🔄 In progress | |
-| 3 | 3.3 API: finish creates the invoice, payments, free work | Next | |
-| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | | |
+| 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | ✅ Done | 2026-11-02 |
+| 3 | 3.3 API: finish creates the invoice, payments, free work | 🔄 In progress | |
+| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | Next | |
 | 3 | 3.5 PDF (Arabic + English) and file storage | | |
 | 3 | 3.6 garage-web: finish step, invoice page, payments | | |
 | 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | | |
@@ -801,7 +801,40 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Doc changes:** flow.md 7.1 (format rule; mechanics may record a payment at finish, decision 2026-11-02), permission matrix, 7.4 (VAT after discount).
 
-**Verified:** by me: 55 contracts tests, typecheck and lint of contracts, typecheck of the API. By the user: pending.
+**Verified:** by me: 55 contracts tests, typecheck and lint of contracts, typecheck of the API. By the user: `format:check`, `typecheck`, `npm test`.
+**Commit:** `f16bd7d` — `Phase 3.2: invoice calculations (totals, discount, VAT, numbers) with unit tests`
+
+---
+
+## Phase 3 · Step 3.3 — API: finish creates the invoice, payments, free work
+**When:** 2026-11-02 (~1.5 h of work)
+
+**Implements:** flow.md 7.1, 7.3, 8.1; database.md 4.5.
+
+**Summary:** "Finish visit" and quick entry with `finish` now issue the invoice in the same transaction: a gap-free number, lines and copies of the customer, car and garage, totals with an optional typed discount and VAT, and an optional payment. New `GET /v1/invoices/:id` and `POST /v1/invoices/:id/payments`. A visit's answer carries its invoice summary. No screens yet.
+
+**Decisions**
+- Picking an offer on an invoice moves to Phase 7, because no offer can exist before the offer screens. Typed discounts are built (README 6, flow.md 7.4).
+- Anyone who can finish a visit can type a discount, which matches the matrix (a mechanic may edit an invoice the same day). The invoice keeps who created it.
+- Paying more than the total, or a refused free invoice, rolls back the whole request: no visit, no record, no number used.
+
+**Until step 3.6:** garage-web sends no finish options, so finishing with a total of 0 shows an error, and every finish is Pay later.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/invoices/*` (new) | Service (issue, payments, detail), controller, module |
+| `apps/api/src/visits/visits.service.ts`, `visits.controller.ts`, `visits.module.ts`, `app.module.ts` | Finish issues the invoice; finish options; audit of a payment taken at finish |
+| `apps/api/src/maintenance/records.service.ts` | Date helpers exported |
+| `packages/contracts/src/invoices.ts`, `visits.ts`, `errors.ts` | Request schemas, answers, `INVOICE_TOTAL_ZERO`, `INVOICE_CANCELLED`, `PAYMENT_EXCEEDS_REMAINING` |
+| `apps/api/test/invoices.spec.ts` (new) | 21 tests, including 8 visits finishing at once and two payments at once |
+| `apps/api/test/tenancy.spec.ts`, `visits.spec.ts` | Isolation cases for the two routes, invoices and payments in garage B's snapshot; free-work confirmation in older cases |
+
+**Doc changes:** README 6; flow.md 4.2, 7.1, 7.4, 8.1.
+
+**Problems hit and fixed:** nested `items.createMany` is refused by Prisma when the foreign key includes `garageId` → lines are created in a second step of the same transaction.
+
+**Verified:** by me, on the test database: 138 API tests, 30 tenancy tests, all contracts and database tests, lint of the API, typecheck of the API and both web apps. By the user: pending.
 **Commit:** _(filled in at the next step)_
 
 ---

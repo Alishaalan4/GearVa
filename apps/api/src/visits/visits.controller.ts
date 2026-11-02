@@ -12,6 +12,7 @@ import {
 import {
   type VisitDetail,
   addRecordsSchema,
+  finishVisitSchema,
   openVisitSchema,
   quickVisitSchema,
   updateVisitSchema,
@@ -25,6 +26,7 @@ class QuickVisitDto extends createZodDto(quickVisitSchema) {}
 class OpenVisitDto extends createZodDto(openVisitSchema) {}
 class AddRecordsDto extends createZodDto(addRecordsSchema) {}
 class UpdateVisitDto extends createZodDto(updateVisitSchema) {}
+class FinishVisitDto extends createZodDto(finishVisitSchema) {}
 
 /**
  * flow.md 1: quick entry, visits and service records are for OWNER, MANAGER and
@@ -78,7 +80,10 @@ export class VisitsController {
   @HttpCode(HttpStatus.OK)
   @Roles('OWNER', 'MANAGER', 'MECHANIC')
   @Audit('visit.finish', 'visit')
-  finish(@Param('visitId', ParseUUIDPipe) visitId: string): Promise<VisitDetail> {
-    return this.visits.finish(visitId);
+  finish(
+    @Param('visitId', ParseUUIDPipe) visitId: string,
+    @Body() body: FinishVisitDto,
+  ): Promise<VisitDetail> {
+    return this.visits.finish(visitId, body);
   }
 }

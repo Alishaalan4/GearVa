@@ -39,6 +39,7 @@ interface Side {
   plate: string;
   make: string;
   openVisitId: string;
+  invoiceId: string;
   overrideTypeId: string;
 }
 
@@ -95,6 +96,14 @@ describe('Tenant isolation (test:tenancy)', () => {
     await as(`/v1/visits/${visit.id}/records`, {
       services: [{ serviceTypeId: oilChangeId, unitPriceCents: 2500 }],
     }).expect(201);
+    // A finished visit, so the garage has one invoice.
+    const done = (
+      await as('/v1/visits/quick', {
+        vehicleId: vehicle.id,
+        odometer: 1250,
+        services: [{ serviceTypeId: oilChangeId, unitPriceCents: 2500 }],
+      }).expect(201)
+    ).body;
     const override = await platform.serviceType.create({
       data: {
         garageId: garage.garageId,
@@ -116,6 +125,7 @@ describe('Tenant isolation (test:tenancy)', () => {
       plate,
       make,
       openVisitId: visit.id,
+      invoiceId: done.invoice.id,
       overrideTypeId: override.id,
     };
   }
@@ -137,9 +147,12 @@ describe('Tenant isolation (test:tenancy)', () => {
       platform.serviceRecord.findMany(where),
       platform.reminder.findMany(where),
       platform.serviceType.findMany(where),
+      platform.invoice.findMany(where),
+      platform.payment.findMany(where),
+      platform.invoiceCounter.findMany({ where: { garageId }, orderBy: { branchId: 'asc' } }),
     ]);
     const [garage, branches, users, notifications, customers, vehicles, suggestions] = rows;
-    const [visits, records, reminders, serviceTypes] = rows.slice(7);
+    const [visits, records, reminders, serviceTypes, invoices, payments, counters] = rows.slice(7);
     return {
       garage,
       branches,
@@ -152,6 +165,9 @@ describe('Tenant isolation (test:tenancy)', () => {
       records,
       reminders,
       serviceTypes,
+      invoices,
+      payments,
+      counters,
     };
   }
 
@@ -367,6 +383,19 @@ describe('Tenant isolation (test:tenancy)', () => {
 
     'GET /v1/vehicles/:vehicleId/history': async () => {
       await asA.get(`/v1/vehicles/${b.vehicleId}/history`).expect(404);
+    },
+
+    'GET /v1/invoices/:invoiceId': async () => {
+      await asA.get(`/v1/invoices/${b.invoiceId}`).expect(404);
+      await asA.get(`/v1/invoices/${a.invoiceId}`).expect(200);
+    },
+
+    'POST /v1/invoices/:invoiceId/payments': async () => {
+      await expectBUnchanged(async () => {
+        await asA
+          .post(`/v1/invoices/${b.invoiceId}/payments`, { amountCents: 100, method: 'CASH' })
+          .expect(404);
+      });
     },
 
     'POST /v1/visits/quick': async () => {

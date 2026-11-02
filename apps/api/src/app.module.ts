@@ -18,6 +18,7 @@ import { REDIS, RedisModule } from './common/redis/redis.module';
 import { ENV, type Env } from './config/env';
 import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
+import { InvoicesModule } from './invoices/invoices.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
@@ -61,6 +62,7 @@ import { VisitsModule } from './visits/visits.module';
     VehiclesModule,
     SuggestionsModule,
     MaintenanceModule,
+    InvoicesModule,
     VisitsModule,
     HealthModule,
   ],

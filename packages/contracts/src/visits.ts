@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CustomerSummary, VehicleItem } from './customers';
+import { type InvoiceSummary, finishOptions } from './invoices';
 import { quantityToHundredths } from './money';
 import type { OdometerCheck } from './odometer';
 
@@ -131,8 +132,9 @@ const visitStart = {
 export const quickVisitSchema = z.object({
   ...visitStart,
   services: z.array(serviceLineSchema).min(1).max(20),
-  /** close the visit (`DONE`); from Phase 3 this also issues the invoice */
+  /** close the visit (`DONE`) and issue the invoice */
   finish: z.boolean().default(true),
+  ...finishOptions,
 });
 export type QuickVisitInput = z.infer<typeof quickVisitSchema>;
 
@@ -204,6 +206,8 @@ export interface VisitDetail {
   records: ServiceRecordItem[];
   /** sum of the records, in cents */
   totalCents: number;
+  /** the active invoice; null while open, and for visits finished before Phase 3 */
+  invoice: InvoiceSummary | null;
 }
 
 /** One line of the service history timeline (flow.md 4, database.md 8). */

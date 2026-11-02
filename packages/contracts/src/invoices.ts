@@ -1,5 +1,7 @@
 // Invoice calculations (flow.md 7.1, 7.3, 7.4). Everything is integer cents with halves
 // rounding up, like line totals: no floating point ever touches an amount.
+import { z } from 'zod';
+import type { DistanceUnit } from './distance';
 
 export const INVOICE_STATUSES = ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
@@ -100,6 +102,117 @@ export function invoicePaymentStatus(
   if (paidCents === totalCents) return 'PAID';
   return paidCents > 0 ? 'PARTIALLY_PAID' : 'UNPAID';
 }
+
+// ---------------------------------------------------------------------------
+// Requests
+// ---------------------------------------------------------------------------
+
+const cents = z.number().int().min(0).max(100_000_000);
+
+const discountSchema = z
+  .object({ type: z.enum(DISCOUNT_TYPES), value: cents })
+  .refine((d) => d.type === 'AMOUNT' || d.value <= 100, {
+    message: 'A percent discount cannot be more than 100',
+  });
+
+/** What "Finish visit" takes (flow.md 7.1). Staying without `payment` means pay later. */
+export const finishOptions = {
+  discount: discountSchema.nullable().optional(),
+  /** a total of 0 needs this (decision 2026-11-02) */
+  confirmFree: z.boolean().default(false),
+  /** paid now; without `amountCents` the whole total is paid */
+  payment: z
+    .object({ method: z.enum(PAYMENT_METHODS), amountCents: cents.min(1).optional() })
+    .nullable()
+    .optional(),
+};
+
+export const finishVisitSchema = z.object(finishOptions).prefault({});
+export type FinishVisitInput = z.infer<typeof finishVisitSchema>;
+
+/** flow.md 8.1 */
+export const recordPaymentSchema = z.object({
+  amountCents: cents.min(1),
+  method: z.enum(PAYMENT_METHODS),
+  /** YYYY-MM-DD; left out = today */
+  date: z.iso.date().optional(),
+  note: z.string().trim().max(500).optional(),
+});
+export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
+
+// ---------------------------------------------------------------------------
+// Answers
+// ---------------------------------------------------------------------------
+
+export interface InvoiceSummary {
+  id: string;
+  number: string;
+  status: InvoiceStatus;
+  totalCents: number;
+  paidCents: number;
+  remainingCents: number;
+}
+
+export interface InvoiceDetail extends InvoiceSummary {
+  visitId: string;
+  issuedAt: string;
+  locale: string;
+  subtotalCents: number;
+  discountType: DiscountType | null;
+  discountValue: number | null;
+  discountCents: number;
+  vatCents: number;
+  laborCents: number | null;
+  partsCents: number | null;
+  nextServiceKm: number | null;
+  nextServiceDate: string | null;
+  warrantyText: string | null;
+  terms: string | null;
+  /** copies from the moment of issue: they never change with the customer or car */
+  customer: { name: string; phone: string };
+  vehicle: {
+    plate: string;
+    make: string;
+    model: string;
+    year: number | null;
+    odometerKm: number;
+    distanceUnit: DistanceUnit;
+  };
+  garage: {
+    name: string;
+    phone: string;
+    location: string;
+    branchName: string;
+    branchCode: string;
+    vatNumber: string | null;
+    brandColor: string;
+  };
+  items: {
+    id: string;
+    description: string;
+    brand: string | null;
+    grade: string | null;
+    /** e.g. "1.00", "4.50" */
+    quantity: string;
+    unitPriceCents: number;
+    totalCents: number;
+  }[];
+  payments: {
+    id: string;
+    amountCents: number;
+    method: PaymentMethod;
+    paidAt: string;
+    note: string | null;
+    receivedBy: { id: string; name: string };
+  }[];
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  replacesInvoiceId: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Invoice numbers
+// ---------------------------------------------------------------------------
 
 const SEQ_TOKEN = /\{SEQ:([1-9])\}/;
 

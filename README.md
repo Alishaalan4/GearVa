@@ -275,7 +275,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 
 ### Phase 3: Invoices and payments
 - `Invoice`, `InvoiceItem`, `InvoiceCounter`, `Payment`, `File` (logo, invoice PDFs), "Finish visit" creates the invoice
-- Create the `Offer` table in this phase's migration too, so `invoices.offerId` has a real foreign key and discounts can be applied on an invoice. Offer screens, targeting and broadcasts stay in Phase 7
+- Create the `Offer` table in this phase's migration too, so `invoices.offerId` has a real foreign key. A typed discount can be applied on an invoice; picking an offer comes with the offer screens, targeting and broadcasts in Phase 7
 - PDF generation (Arabic + English), print, cancel with reason, edit window, debt list, garage invoice settings
 - A simple income summary for owners and managers: today and this month, money received vs invoiced (decision 2026-11-02, flow.md 8.3). The full revenue screens stay in Phase 7
 - **Done when:** finishing a visit produces a correct sequential invoice PDF, partial payments update the remaining amount, and the debt list is right.
@@ -295,7 +295,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - Owner-scoped access (see `database.md`)
 
 ### Phase 7: Offers, revenue screens, polish
-- Offer screens, targeting, broadcasts and the redemption report (the `offers` table and invoice discounts already exist since Phase 3), the full revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen
+- Offer screens, targeting, broadcasts and the redemption report (the `offers` table and typed invoice discounts already exist since Phase 3), the full revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen
 
 ### Later (not in scope now)
 WhatsApp channel, appointment booking, parts and inventory, monthly report, customer approval for repairs, document expiry reminders, referral tracking, sales reps, fleet plan.

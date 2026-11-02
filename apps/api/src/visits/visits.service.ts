@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import {
   type AddRecordsInput,
   ERROR_CODES,
+  type FinishVisitInput,
   type OdometerConfirmationDetails,
   type OpenVisitInput,
   type QuickVisitInput,
@@ -11,12 +12,13 @@ import {
   checkOdometer,
   toKm,
 } from '@gearva/contracts';
-import type { Notification, TenantTx, Vehicle, Visit } from '@gearva/database';
+import type { Invoice, Notification, Payment, TenantTx, Vehicle, Visit } from '@gearva/database';
 import { AuditService } from '../audit/audit.service';
 import { RequestContext } from '../common/context/request-context';
 import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { toCustomerSummary, toVehicleItem } from '../customers/mappers';
+import { InvoicesService, toInvoiceSummary } from '../invoices/invoices.service';
 import { RecordsService, toRecordItem, vehicleNotFound } from '../maintenance/records.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -42,6 +44,13 @@ interface Opened {
   correction: { fromKm: number; toKm: number } | null;
 }
 
+/** What finishing a visit leaves for after the commit. */
+interface Finished {
+  carReady: Notification;
+  invoice: Invoice;
+  payment: Payment | null;
+}
+
 /**
  * Visits and quick entry (flow.md 4, 5). A visit and everything it creates (records,
  * next due values, reminders, the car's odometer and average) are saved in one
@@ -55,19 +64,23 @@ export class VisitsService {
     private readonly db: TenantDb,
     private readonly context: RequestContext,
     private readonly records: RecordsService,
+    private readonly invoices: InvoicesService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
   ) {}
 
   /** flow.md 4.2: POST /v1/visits/quick, in one transaction. */
   async quick(input: QuickVisitInput): Promise<VisitDetail> {
-    const { visitId, correction, carReady } = await this.db.run(async (tx) => {
+    const { visitId, correction, finished } = await this.db.run(async (tx) => {
       const opened = await this.open(tx, input);
       await this.records.saveLines(tx, this.saveContext(opened), input.services);
-      const notification = input.finish ? await this.close(tx, opened.visit, opened.vehicle) : null;
-      return { visitId: opened.visit.id, correction: opened.correction, carReady: notification };
+      return {
+        visitId: opened.visit.id,
+        correction: opened.correction,
+        finished: input.finish ? await this.close(tx, opened.visit, opened.vehicle, input) : null,
+      };
     });
-    await this.afterCommit(visitId, correction, carReady);
+    await this.afterCommit(visitId, correction, finished);
     return this.detail(visitId);
   }
 
@@ -109,12 +122,12 @@ export class VisitsService {
   }
 
   /**
-   * "Finish visit" (flow.md 4.4): DONE and finishedAt, with at least one record. The row
-   * lock makes a second, simultaneous finish answer VISIT_ALREADY_FINISHED (flow.md 13).
-   * From Phase 3 this is also where the invoice is created.
+   * "Finish visit" (flow.md 4.4, 7.1): DONE and finishedAt, with at least one record, and
+   * the invoice. The row lock makes a second, simultaneous finish answer
+   * VISIT_ALREADY_FINISHED (flow.md 13).
    */
-  async finish(visitId: string): Promise<VisitDetail> {
-    const carReady = await this.db.run(async (tx) => {
+  async finish(visitId: string, input: FinishVisitInput): Promise<VisitDetail> {
+    const finished = await this.db.run(async (tx) => {
       const visit = await this.lockOpenVisit(tx, visitId);
       const count = await tx.serviceRecord.count({ where: { visitId: visit.id } });
       if (count === 0) {
@@ -127,9 +140,9 @@ export class VisitsService {
       const vehicle = await tx.vehicle.findFirstOrThrow({
         where: { id: visit.vehicleId, garageId: visit.garageId },
       });
-      return this.close(tx, visit, vehicle);
+      return this.close(tx, visit, vehicle, input);
     });
-    await this.afterCommit(visitId, null, carReady);
+    await this.afterCommit(visitId, null, finished);
     return this.detail(visitId);
   }
 
@@ -142,6 +155,7 @@ export class VisitsService {
           vehicle: true,
           customer: { include: { owner: true } },
           mechanic: true,
+          invoices: { where: { status: { not: 'CANCELLED' } }, take: 1 },
           records: {
             include: { serviceType: true, mechanic: true },
             orderBy: [{ performedAt: 'asc' }, { createdAt: 'asc' }],
@@ -163,6 +177,7 @@ export class VisitsService {
       notes: visit.notes,
       records: visit.records.map(toRecordItem),
       totalCents: visit.records.reduce((sum, r) => sum + r.totalCents, 0),
+      invoice: visit.invoices[0] ? toInvoiceSummary(visit.invoices[0]) : null,
     };
   }
 
@@ -280,8 +295,14 @@ export class VisitsService {
     return visit;
   }
 
-  /** DONE + finishedAt, and the CAR_READY notification (flow.md 4.4). */
-  private async close(tx: TenantTx, visit: Visit, vehicle: Vehicle): Promise<Notification> {
+  /** The invoice, DONE + finishedAt, and the CAR_READY notification (flow.md 4.4, 7.1). */
+  private async close(
+    tx: TenantTx,
+    visit: Visit,
+    vehicle: Vehicle,
+    input: FinishVisitInput,
+  ): Promise<Finished> {
+    const issued = await this.invoices.issue(tx, visit, input);
     await tx.visit.update({
       where: { id: visit.id },
       data: { status: 'DONE', finishedAt: new Date() },
@@ -308,14 +329,14 @@ export class VisitsService {
       refType: 'visit',
       refId: visit.id,
     });
-    return notification;
+    return { carReady: notification, ...issued };
   }
 
-  /** Audit a confirmed odometer correction (flow.md 5.3) and queue CAR_READY. */
+  /** Audit an odometer correction (flow.md 5.3) and a payment, then queue CAR_READY. */
   private async afterCommit(
     visitId: string,
     correction: Opened['correction'],
-    carReady: Notification | null,
+    finished: Finished | null,
   ): Promise<void> {
     if (correction) {
       const visit = await this.db.run((tx) =>
@@ -329,12 +350,23 @@ export class VisitsService {
         after: { km: correction.toKm, visitId },
       });
     }
-    if (carReady) {
-      try {
-        await this.notifications.dispatch(carReady);
-      } catch (error) {
-        this.logger.error(`Could not queue CAR_READY ${carReady.id}`, error as Error);
-      }
+    if (!finished) return;
+    if (finished.payment) {
+      await this.audit.record({
+        action: 'payment.create',
+        entityType: 'invoice',
+        entityId: finished.invoice.id,
+        after: {
+          amountCents: finished.payment.amountCents,
+          method: finished.payment.method,
+          visitId,
+        },
+      });
+    }
+    try {
+      await this.notifications.dispatch(finished.carReady);
+    } catch (error) {
+      this.logger.error(`Could not queue CAR_READY ${finished.carReady.id}`, error as Error);
     }
   }
 

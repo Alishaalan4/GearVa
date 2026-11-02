@@ -56,7 +56,9 @@ describe('Quick entry, visits and history', () => {
     return car as { id: string; currentKm: number };
   }
 
-  const quick = (cookie: string, body: object) => as(cookie).post('/v1/visits/quick', body);
+  // Most cases here have no price: the invoice side is in invoices.spec.ts.
+  const quick = (cookie: string, body: object) =>
+    as(cookie).post('/v1/visits/quick', { confirmFree: true, ...body });
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -250,6 +252,7 @@ describe('Quick entry, visits and history', () => {
         vehicleId: car.id,
         odometer: 85100,
         services: [{ serviceTypeId: types.OTHER, customName: 'Headlight bulb', unitPriceCents: 0 }],
+        confirmFree: true,
       }).expect(201);
       expect(await platform.reminder.count({ where: { vehicleId: car.id } })).toBe(0);
       const names = await as(owner).get('/v1/suggestions?field=SERVICE_NAME&q=head').expect(200);
@@ -311,7 +314,9 @@ describe('Quick entry, visits and history', () => {
       expect(opened.body).toMatchObject({ status: 'IN_PROGRESS', records: [], finishedAt: null });
       const id = opened.body.id as string;
 
-      const empty = await as(owner).post(`/v1/visits/${id}/finish`).expect(409);
+      const empty = await as(owner)
+        .post(`/v1/visits/${id}/finish`, { confirmFree: true })
+        .expect(409);
       expect(empty.body.code).toBe('VISIT_HAS_NO_RECORDS');
 
       await as(owner)
@@ -329,8 +334,8 @@ describe('Quick entry, visits and history', () => {
 
       // Two staff finish at the same moment: one wins, the other is told (flow.md 13).
       const [first, second] = await Promise.all([
-        as(owner).post(`/v1/visits/${id}/finish`),
-        as(owner).post(`/v1/visits/${id}/finish`),
+        as(owner).post(`/v1/visits/${id}/finish`, { confirmFree: true }),
+        as(owner).post(`/v1/visits/${id}/finish`, { confirmFree: true }),
       ]);
       expect([first.status, second.status].sort()).toEqual([200, 409]);
       const loser = first.status === 409 ? first : second;

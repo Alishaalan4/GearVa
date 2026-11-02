@@ -14,6 +14,11 @@ const envSchema = z
     // Only the console adapter exists until the first deployment (Phase 3).
     EMAIL_ADAPTER: z.enum(['console']).default('console'),
     EMAIL_FROM: z.string().min(1),
+    // Only the local adapter exists until the first deployment (step 3.8).
+    FILES_ADAPTER: z.enum(['local']).default('local'),
+    FILES_LOCAL_DIR: z.string().min(1).default('.storage'),
+    // `stub` is for tests, which have no Chrome.
+    PDF_ADAPTER: z.enum(['puppeteer', 'stub']).default('puppeteer'),
     // Base URL of garage-web: invite and password-reset links point there.
     APP_URL_GARAGE: z.url(),
     // Signs the 15-minute access tokens (and the 5-minute 2FA challenge).

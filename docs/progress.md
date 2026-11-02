@@ -32,9 +32,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.1 Database: invoices, payments, offers, files | ✅ Done | 2026-11-02 |
 | 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | ✅ Done | 2026-11-02 |
 | 3 | 3.3 API: finish creates the invoice, payments, free work | ✅ Done | 2026-11-02 |
-| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | 🔄 In progress | |
-| 3 | 3.5 PDF (Arabic + English) and file storage | Next | |
-| 3 | 3.6 garage-web: finish step, invoice page, payments | | |
+| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | ✅ Done | 2026-11-02 |
+| 3 | 3.5 PDF (Arabic + English) and file storage | 🔄 In progress | |
+| 3 | 3.6 garage-web: finish step, invoice page, payments | Next | |
 | 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | | |
 | 3 | 3.8 First deployment to Render (README 9) | | |
 
@@ -867,7 +867,43 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Doc changes:** database.md 4.5; flow.md 7.5.
 
-**Verified:** by me, on the test database: full `npm test`, `test:tenancy`, typecheck and lint of everything, no difference between the migrated database and the schema. By the user: pending (`prisma migrate dev`).
+**Verified:** by me, on the test database: full `npm test`, `test:tenancy`, typecheck and lint of everything, no difference between the migrated database and the schema. By the user: `prisma migrate dev`, `format:check`, `typecheck`, `npm test`, `test:tenancy`.
+**Commit:** `eb06257` — `Phase 3.4: invoice edit, cancel, reissue, debt list, income summary and settings API`
+
+---
+
+## Phase 3 · Step 3.5 — PDF (Arabic + English) and file storage
+**When:** 2026-11-02 (~2 h of work)
+
+**Implements:** flow.md 7.2; database.md 4.6; README 3 (Puppeteer in a BullMQ worker, local disk in development).
+
+**Summary:** A BullMQ job renders each invoice to an A4 PDF with Puppeteer, in the customer's language, and keeps it as one file per invoice. It renders again after an edit, payment or cancel. `GET /v1/invoices/:id/pdf` sends it after the role and branch checks and logs the reprint. Owners can upload a logo (PNG or JPEG, up to 1 MB), which is printed on invoices. No screens yet.
+
+**Decisions**
+- **New packages:** `puppeteer`, and `@fontsource/plus-jakarta-sans` and `@fontsource/ibm-plex-sans-arabic`. The fonts are embedded in the page, so a server with no Arabic font still prints Arabic correctly.
+- **The PDF page has no scripts and no network;** text from people is escaped.
+- **The API sends the bytes itself** instead of signed storage links: the role and branch check stays in one place (database.md 4.6 changed).
+- **Local storage only for now;** the object storage adapter comes with the deployment, in step 3.8.
+- **Left for later:** the optional QR code, and emailing the PDF (`autoSendInvoice`), which needs the real email adapter and owner emails.
+- **A small known limit:** a download right after a change can show the previous PDF for a second or two, until the job finishes.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/invoices/pdf/*` (new) | Template, Chrome renderer and stub, queue, service |
+| `apps/api/src/files/*` (new) | `FileStorage` and the local adapter |
+| `apps/api/src/invoices/*`, `apps/api/src/visits/visits.service.ts` | PDF and logo routes; a render is queued after every change |
+| `apps/api/src/common/errors/all-exceptions.filter.ts`, `packages/contracts/src/errors.ts`, `invoices.ts` | `FILE_TOO_LARGE`, `INVOICE_PDF_NOT_READY`, `hasLogo` |
+| `apps/api/src/config/env.ts`, `.env.example`, `packages/database/src/test-environment.ts`, `.gitignore`, `.github/workflows/ci.yml` | `FILES_LOCAL_DIR`, `PDF_ADAPTER`; tests use a stub renderer and CI skips the Chrome download |
+| `apps/api/test/invoice-html.spec.ts`, `invoice-pdf.spec.ts` (new), `tenancy.spec.ts` | Template, job, download, logo; 3 isolation cases |
+
+**Doc changes:** flow.md 7.2; database.md 4.6.
+
+**Problems hit and fixed**
+- A logo above the limit answered 500 → `413 FILE_TOO_LARGE`.
+- Seen only by looking at a real Arabic PDF: the odometer read in the wrong order, unit before number. A left-to-right wrapper was removed, and a test now holds it.
+
+**Verified:** by me: 181 API tests, 41 tenancy tests, typecheck and lint of everything, `format:check`; real English and Arabic PDFs rendered with real Chrome and read page by page. Tests use the stub, so real rendering is not covered by CI. By the user: pending.
 **Commit:** _(filled in at the next step)_
 
 ---

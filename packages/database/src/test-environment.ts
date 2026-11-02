@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 // Tests run on their own database and Redis database (README section 8), so a test run
 // never touches development data and a running `npm run dev` never picks up test jobs.
 
@@ -36,5 +39,8 @@ export function useTestEnvironment(env: NodeJS.ProcessEnv = process.env): void {
     redis.pathname = `/${TEST_REDIS_DB}`;
     env.REDIS_URL = redis.toString();
   }
+  // Tests have no Chrome, and their files stay out of the development folder.
+  env.PDF_ADAPTER = 'stub';
+  env.FILES_LOCAL_DIR = join(tmpdir(), 'gearva-test-files');
   env.NODE_ENV = 'test';
 }

@@ -189,6 +189,9 @@ export const incomeQuerySchema = z.object({
 });
 export type IncomeQuery = z.infer<typeof incomeQuerySchema>;
 
+/** Invoice logo: PNG or JPEG, because the file is shown back and printed. */
+export const LOGO_MAX_BYTES = 1024 * 1024;
+
 export const updateInvoiceSettingsSchema = z.object({
   brandColor: z
     .string()
@@ -325,6 +328,7 @@ export interface IncomeSummary {
 
 export interface InvoiceSettings {
   brandColor: string;
+  hasLogo: boolean;
   invoiceNumberFormat: string;
   termsText: string | null;
   vatEnabled: boolean;

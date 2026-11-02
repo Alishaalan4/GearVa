@@ -9,7 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import {
   type DebtItem,
@@ -17,6 +21,7 @@ import {
   type InvoiceDetail,
   type InvoiceListItem,
   type InvoiceSettings,
+  LOGO_MAX_BYTES,
   type Paginated,
   cancelInvoiceSchema,
   editInvoiceSchema,
@@ -26,6 +31,7 @@ import {
   recordPaymentSchema,
   updateInvoiceSettingsSchema,
 } from '@gearva/contracts';
+import type { Response } from 'express';
 import { createZodDto } from 'nestjs-zod';
 import { Audit } from '../audit/audit.decorator';
 import { Roles } from '../auth/staff-access.decorators';
@@ -34,6 +40,7 @@ import { InvoiceChangesService } from './invoice-changes.service';
 import { InvoiceReportsService } from './invoice-reports.service';
 import { InvoiceSettingsService } from './invoice-settings.service';
 import { InvoicesService } from './invoices.service';
+import { InvoicePdfService } from './pdf/invoice-pdf.service';
 
 class RecordPaymentDto extends createZodDto(recordPaymentSchema) {}
 class EditInvoiceDto extends createZodDto(editInvoiceSchema) {}
@@ -50,6 +57,7 @@ export class InvoicesController {
     private readonly invoices: InvoicesService,
     private readonly changes: InvoiceChangesService,
     private readonly reports: InvoiceReportsService,
+    private readonly pdf: InvoicePdfService,
   ) {}
 
   @Get()
@@ -62,6 +70,22 @@ export class InvoicesController {
   @Get(':invoiceId')
   detail(@Param('invoiceId', ParseUUIDPipe) invoiceId: string): Promise<InvoiceDetail> {
     return this.invoices.detail(invoiceId);
+  }
+
+  /** The bytes only ever come through here, after the role and branch checks (flow.md 7.2). */
+  @Get(':invoiceId/pdf')
+  async downloadPdf(
+    @Param('invoiceId', ParseUUIDPipe) invoiceId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { number, pdf } = await this.pdf.download(invoiceId);
+    res
+      .set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${number.replace(/[^\w.-]/g, '-')}.pdf"`,
+        'X-Content-Type-Options': 'nosniff',
+      })
+      .send(pdf);
   }
 
   /** flow.md 7.5; who may edit when is decided in the service. */
@@ -100,11 +124,13 @@ export class InvoicesController {
   @Post(':invoiceId/payments')
   @Roles('OWNER', 'MANAGER', 'RECEPTIONIST')
   @Audit('payment.create', 'invoice')
-  recordPayment(
+  async recordPayment(
     @Param('invoiceId', ParseUUIDPipe) invoiceId: string,
     @Body() body: RecordPaymentDto,
   ): Promise<InvoiceDetail> {
-    return this.invoices.recordPayment(invoiceId, body);
+    const invoice = await this.invoices.recordPayment(invoiceId, body);
+    await this.pdf.queueRender(invoiceId);
+    return invoice;
   }
 }
 
@@ -141,6 +167,22 @@ export class InvoiceSettingsController {
   @Roles('OWNER')
   get(): Promise<InvoiceSettings> {
     return this.settings.get();
+  }
+
+  @Get('logo')
+  @Roles('OWNER')
+  async logo(@Res() res: Response): Promise<void> {
+    const { bytes, mimeType } = await this.settings.logo();
+    res.set({ 'Content-Type': mimeType, 'X-Content-Type-Options': 'nosniff' }).send(bytes);
+  }
+
+  @Post('logo')
+  @HttpCode(HttpStatus.OK)
+  @Roles('OWNER')
+  @Audit('invoice_settings.logo', 'garage_settings')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: LOGO_MAX_BYTES } }))
+  saveLogo(@UploadedFile() file: { buffer: Buffer } | undefined): Promise<InvoiceSettings> {
+    return this.settings.saveLogo(file?.buffer ?? Buffer.alloc(0));
   }
 
   @Patch()

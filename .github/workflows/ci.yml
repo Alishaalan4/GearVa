@@ -44,7 +44,10 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Tests use a stub PDF renderer, so CI needs no Chrome.
       - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
       # The same environment as local development (.env.example), with a fresh 2FA key.
       - name: Create .env

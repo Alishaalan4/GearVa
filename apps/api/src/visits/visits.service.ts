@@ -19,6 +19,7 @@ import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { toCustomerSummary, toVehicleItem } from '../customers/mappers';
 import { InvoicesService, toInvoiceSummary } from '../invoices/invoices.service';
+import { InvoicePdfService } from '../invoices/pdf/invoice-pdf.service';
 import { RecordsService, toRecordItem, vehicleNotFound } from '../maintenance/records.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -65,6 +66,7 @@ export class VisitsService {
     private readonly context: RequestContext,
     private readonly records: RecordsService,
     private readonly invoices: InvoicesService,
+    private readonly pdf: InvoicePdfService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
   ) {}
@@ -351,6 +353,7 @@ export class VisitsService {
       });
     }
     if (!finished) return;
+    await this.pdf.queueRender(finished.invoice.id);
     if (finished.payment) {
       await this.audit.record({
         action: 'payment.create',

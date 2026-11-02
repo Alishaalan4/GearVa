@@ -16,6 +16,7 @@ import { RequestContext } from '../common/context/request-context';
 import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { InvoicesService } from './invoices.service';
+import { InvoicePdfService } from './pdf/invoice-pdf.service';
 
 function cancelledError(): AppException {
   return new AppException(
@@ -33,6 +34,7 @@ export class InvoiceChangesService {
     private readonly context: RequestContext,
     private readonly invoices: InvoicesService,
     private readonly audit: AuditService,
+    private readonly pdf: InvoicePdfService,
   ) {}
 
   /**
@@ -147,6 +149,7 @@ export class InvoiceChangesService {
       entityId: invoiceId,
       ...change,
     });
+    await this.pdf.queueRender(invoiceId);
     return this.invoices.detail(invoiceId);
   }
 
@@ -165,6 +168,7 @@ export class InvoiceChangesService {
         },
       });
     });
+    await this.pdf.queueRender(invoiceId);
     return this.invoices.detail(invoiceId);
   }
 
@@ -211,6 +215,7 @@ export class InvoiceChangesService {
         after: { amountCents: issued.payment.amountCents, method: issued.payment.method },
       });
     }
+    await this.pdf.queueRender(issued.invoice.id);
     return this.invoices.detail(issued.invoice.id);
   }
 

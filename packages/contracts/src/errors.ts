@@ -38,10 +38,12 @@ export const ERROR_CODES = {
   INVOICE_EDIT_WINDOW_CLOSED: 'INVOICE_EDIT_WINDOW_CLOSED',
   INVOICE_NOT_CANCELLED: 'INVOICE_NOT_CANCELLED',
   INVOICE_ALREADY_REISSUED: 'INVOICE_ALREADY_REISSUED',
+  INVOICE_PDF_NOT_READY: 'INVOICE_PDF_NOT_READY',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */
   BRANCH_INACTIVE: 'BRANCH_INACTIVE',
+  FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;

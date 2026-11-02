@@ -419,7 +419,7 @@ Dedupe key examples: `SERVICE_REMINDER:{reminderId}:{notifyCount}`, `MONTHLY_REM
 Invite and password-reset emails use type `INVITE` with templates `staff-invite` and `password-reset`. **Their `payload` holds the one-time set-password link**, so no screen may show `payload` (the Phase 4 notification log shows type, channel, recipient, status and error only); otherwise a manager could open the owner's reset link.
 
 #### `files`
-`id`, `garageId`, `kind` (`LOGO`, `SERVICE_PHOTO`, `INVOICE_PDF`, `OFFER_IMAGE`), `storageKey`, `mimeType`, `sizeBytes`, `serviceRecordId?`, `createdById`. Photos belong to a service record. Access is always through the API (signed, short-lived URLs).
+`id`, `garageId`, `kind` (`LOGO`, `SERVICE_PHOTO`, `INVOICE_PDF`, `OFFER_IMAGE`), `storageKey`, `mimeType`, `sizeBytes`, `serviceRecordId?`, `createdById`. Photos belong to a service record. Access is always through the API, which checks the staff member's role and branch and sends the bytes itself; a storage link is never given out. An invoice keeps one PDF file, overwritten when regenerated.
 
 #### `audit_logs` (append-only, `createdAt` only, no `updatedAt`)
 | Column | Type | Notes |

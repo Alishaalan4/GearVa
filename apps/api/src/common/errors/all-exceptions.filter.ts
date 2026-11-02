@@ -21,6 +21,7 @@ function hasIssues(error: unknown): error is { issues: unknown[] } {
 }
 
 const CODE_BY_STATUS: Partial<Record<number, ErrorCode>> = {
+  [HttpStatus.PAYLOAD_TOO_LARGE]: ERROR_CODES.FILE_TOO_LARGE,
   [HttpStatus.BAD_REQUEST]: ERROR_CODES.BAD_REQUEST,
   [HttpStatus.UNAUTHORIZED]: ERROR_CODES.UNAUTHORIZED,
   [HttpStatus.FORBIDDEN]: ERROR_CODES.FORBIDDEN,

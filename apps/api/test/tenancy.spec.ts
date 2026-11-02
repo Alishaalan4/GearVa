@@ -20,6 +20,9 @@ import {
   staffLogin,
 } from './helpers/staff';
 
+/** The start of a PNG: enough for the logo type check. */
+const PNG = Buffer.from('89504e470d0a1a0a0000', 'hex');
+
 /** Routes that carry no tenant data: the token or session alone decides who is acting. */
 const NO_TENANT_DATA: Record<string, string> = {
   'POST /v1/auth/login': 'email + password; the user row decides the garage',
@@ -186,6 +189,11 @@ describe('Tenant isolation (test:tenancy)', () => {
     ).id;
     a = await createSide();
     b = await createSide();
+    await http()
+      .post('/v1/invoice-settings/logo')
+      .set('Cookie', b.cookie)
+      .attach('file', PNG, 'logo.png')
+      .expect(200);
   });
 
   afterAll(async () => {
@@ -443,6 +451,31 @@ describe('Tenant isolation (test:tenancy)', () => {
         where: { garageId: b.garage.garageId },
       });
       expect(row.termsText).toBeNull();
+    },
+
+    'GET /v1/invoices/:invoiceId/pdf': async () => {
+      await asA.get(`/v1/invoices/${b.invoiceId}/pdf`).expect(404);
+    },
+
+    'GET /v1/invoice-settings/logo': async () => {
+      // B has a logo and A does not: A's request never reaches B's.
+      await asA.get('/v1/invoice-settings/logo').expect(404);
+      await http().get('/v1/invoice-settings/logo').set('Cookie', b.cookie).expect(200);
+    },
+
+    'POST /v1/invoice-settings/logo': async () => {
+      const before = await platform.file.count({
+        where: { garageId: b.garage.garageId, kind: 'LOGO' },
+      });
+      await http()
+        .post('/v1/invoice-settings/logo')
+        .set('Cookie', a.cookie)
+        .field('garageId', b.garage.garageId)
+        .attach('file', PNG, 'logo.png')
+        .expect(200);
+      expect(
+        await platform.file.count({ where: { garageId: b.garage.garageId, kind: 'LOGO' } }),
+      ).toBe(before);
     },
 
     'POST /v1/invoices/:invoiceId/payments': async () => {

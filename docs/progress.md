@@ -674,6 +674,6 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 **Phase 2 Done when:** a mechanic can add a customer, car and service on a phone with correct next due km/date. The user tested the flow and confirmed it works; the next due values were checked (above). Stopwatch times were not reported.
 
 **Verified:** by me: typecheck and lint (garage-web), `next build` of garage-web (the three new routes), en/ar key check. By the user: the browser test of quick entry, add another, visit page and history.
-**Commit:** _(filled in at the next step)_
+**Commit:** `7305e63` — `Phase 2.6: garage-web quick entry, visit page and service buttons (Phase 2 done)`
 
 ---

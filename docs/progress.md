@@ -29,9 +29,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Design | D.1 Colours, dark mode, fonts, shared components, sidebar | ✅ Done | 2026-11-02 |
 | Design | D.2 Page layouts (login, tables, status pills) | ✅ Done | 2026-11-02 |
 | 3 | 3.0 Doc fixes and Phase 3 decisions | ✅ Done | 2026-11-02 |
-| 3 | 3.1 Database: invoices, payments, offers, files | 🔄 In progress | |
-| 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | Next | |
-| 3 | 3.3 API: finish creates the invoice, payments, free work | | |
+| 3 | 3.1 Database: invoices, payments, offers, files | ✅ Done | 2026-11-02 |
+| 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | 🔄 In progress | |
+| 3 | 3.3 API: finish creates the invoice, payments, free work | Next | |
 | 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | | |
 | 3 | 3.5 PDF (Arabic + English) and file storage | | |
 | 3 | 3.6 garage-web: finish step, invoice page, payments | | |
@@ -747,13 +747,13 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - **VAT off by default,** with a garage setting (README 7).
 
 **Filled in by me, for the user to overrule**
-- The permission matrix lets mechanics finish a visit but not record a payment, so "Paid now?" shows only to roles that may record one. A mechanic finishes as Pay later.
+- ~~The permission matrix lets mechanics finish a visit but not record a payment, so "Paid now?" shows only to roles that may record one.~~ Changed by the user the same day: mechanics may record a payment while finishing, but not later (flow.md matrix, 7.1).
 - A confirmed free invoice is `PAID` at once with no `payments` row, because a payment must be above 0.
 
 **Doc changes:** README 6, 7. flow.md permission matrix, 7.1, new 8.3 (old 8.3 is now 8.4). database.md 4.4 ("one payment per visit" corrected: item 9 of the first docs review), 4.5, 5, 6.1, 7, 10.
 
 **Verified:** docs only.
-**Commit:** _(with step 3.1)_
+**Commit:** `ee179a2` (with step 3.1)
 
 ---
 
@@ -779,7 +779,29 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Doc changes:** in step 3.0.
 
-**Verified:** by me, on the test database: 23 database tests, 115 API tests, 28 tenancy tests, typecheck of database and API, `format:check`, and no difference between the migrated database and the schema. By the user: pending (`prisma migrate dev` on the dev database).
+**Verified:** by me, on the test database: 23 database tests, 115 API tests, 28 tenancy tests, typecheck of database and API, `format:check`, and no difference between the migrated database and the schema. By the user: `prisma migrate dev`, `typecheck`, `npm test`, `test:tenancy`.
+**Commit:** `ee179a2` — `Phase 3.0 + 3.1: decisions in docs, invoices, payments, offers and files tables`
+
+---
+
+## Phase 3 · Step 3.2 — Calculations: totals, discount, VAT, invoice number
+**When:** 2026-11-02 (~20 min of work)
+
+**Implements:** flow.md 7.1, 7.3, 7.4; README 5.4 (money in cents), 8 (unit tests for pure logic).
+
+**Summary:** Pure functions in `contracts`, shared by the API and the screens: discount, VAT, invoice totals, payment status, invoice number formatting and its validity check, and the earliest next due of a visit. All integer cents with halves rounding up. No API or screens yet.
+
+**Decisions:** VAT is charged after the discount. A discount above the subtotal stops at the subtotal, so a total is never negative. A number format must hold branch, year and sequence, because the number is unique across the garage.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/invoices.ts` (new), `index.ts` | The calculations; invoice status, payment method and discount type lists |
+| `packages/contracts/test/invoices.test.ts` (new) | 20 tests |
+
+**Doc changes:** flow.md 7.1 (format rule; mechanics may record a payment at finish, decision 2026-11-02), permission matrix, 7.4 (VAT after discount).
+
+**Verified:** by me: 55 contracts tests, typecheck and lint of contracts, typecheck of the API. By the user: pending.
 **Commit:** _(filled in at the next step)_
 
 ---

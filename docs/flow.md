@@ -21,7 +21,8 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Add / edit customers and vehicles | yes | yes | yes | yes |
 | Quick entry, create visits and service records | yes | yes | yes | no |
 | Finish visit (creates invoice) | yes | yes | yes | no |
-| Record a payment | yes | yes | no | yes |
+| Record a payment later | yes | yes | no | yes |
+| Record a payment while finishing a visit | yes | yes | yes | n/a (cannot finish) |
 | Edit an invoice the same day | yes | yes | yes (own visits) | no |
 | Edit an invoice after the same day | yes | no | no | no |
 | Cancel an invoice | yes | yes | no | no |
@@ -289,13 +290,13 @@ Example: a car on KM, oil change at 5,500 km, default 5,000 km: `nextDueKm = 10,
    DO UPDATE SET last_number = invoice_counters.last_number + 1
    RETURNING last_number;
    ```
-   The row lock serializes concurrent requests. The number is formatted with the garage's `invoiceNumberFormat`, e.g. `BR1-2026-0001`. If the transaction rolls back, the counter update rolls back too, so no gaps.
+   The row lock serializes concurrent requests. The number is formatted with the garage's `invoiceNumberFormat`, e.g. `BR1-2026-0001`. A format must hold `{BRANCH}`, `{YYYY}` and `{SEQ:n}`; without all three, two invoices could get the same text. If the transaction rolls back, the counter update rolls back too, so no gaps.
 3. Copy the records into `invoice_items`, snapshot customer, vehicle and garage header, snapshot the garage terms.
 4. Apply the offer or discount if present (section 7.4), compute subtotal, discount, VAT (only if enabled), total, `paidCents = 0`, `remainingCents = total`, status `UNPAID`.
 5. Set `visit.finishedAt` and `status = DONE`.
 6. Commit, then queue jobs: PDF generation, then (if `autoSendInvoice`) the `INVOICE` notification.
 
-**Paid now? (decision 2026-11-02).** The finish step offers **Paid in full**, **Part** (an amount) or **Pay later**, plus the method (Cash or Whish). A payment entered here is created in the same transaction right after the invoice, which makes it `PAID` or `PARTIALLY_PAID`. The choice is shown only to roles that may record a payment (permission matrix): a mechanic finishes the visit as **Pay later**, and a receptionist, manager or owner records the payment afterwards.
+**Paid now? (decision 2026-11-02).** The finish step offers **Paid in full**, **Part** (an amount) or **Pay later**, plus the method (Cash or Whish). A payment entered here is created in the same transaction right after the invoice, which makes it `PAID` or `PARTIALLY_PAID`. Mechanics get this choice too (decision 2026-11-02), because they often take the money when they hand over the car. It applies only while finishing: recording a payment later stays with the receptionist, manager and owner. Every payment stores who received it (`receivedById`) and cannot be changed or deleted.
 
 **Free work (decision 2026-11-02).** If the total is 0, the API refuses to finish with `409 INVOICE_TOTAL_ZERO` until the request confirms it, and the screen asks "No price. Save as free?". This stops a forgotten price becoming a numbered invoice that cannot be deleted. A confirmed free invoice is `PAID` straight away, with no `payments` row (a payment must be above 0).
 
@@ -319,6 +320,7 @@ stateDiagram-v2
 - A discount is an amount or a percentage entered on the invoice, and/or an offer picked from the active offers of the garage.
 - Choosing an offer stores `invoices.offerId` and applies the offer's discount. That link is how redemptions are counted. Applying a discount or offer on an invoice is built in Phase 3; the offer screens, targeting and broadcasts (section 10) come in Phase 7.
 - The discount is computed in integer cents with documented rounding (round half up) and never makes the total negative.
+- VAT, when on, is charged on the amount after the discount, also in integer cents with halves rounding up.
 
 ### 7.5 Editing and cancelling
 - **Edit window:** same day (garage timezone) the mechanic/manager can edit; after that only the OWNER. Every edit stores `before` and `after` in `audit_logs`, recalculates totals, regenerates the PDF.

@@ -4,6 +4,7 @@ export * from './distance';
 export * from './errors';
 export * from './garages';
 export * from './health';
+export * from './invoices';
 export * from './money';
 export * from './next-due';
 export * from './odometer';

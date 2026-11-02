@@ -99,6 +99,40 @@ enum ReminderStatus {
   CANCELLED
 }
 
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  WHISH
+}
+
+enum DiscountType {
+  AMOUNT
+  PERCENT
+}
+
+enum InvoiceEditWindow {
+  SAME_DAY
+}
+
+enum FileKind {
+  LOGO
+  SERVICE_PHOTO
+  INVOICE_PDF
+  OFFER_IMAGE
+}
+
+enum OfferTarget {
+  ALL
+  OVERDUE
+  INACTIVE_6M
+}
+
 enum SuggestionField {
   OIL_BRAND
   OIL_GRADE
@@ -172,6 +206,7 @@ model Owner {
   serviceRecords  ServiceRecord[]
   reminders       Reminder[]
   notifications   Notification[]
+  invoices        Invoice[]
 
   @@map("owners")
 }
@@ -200,46 +235,53 @@ model Garage {
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  createdByAdmin AdminUser        @relation(fields: [createdByAdminId], references: [id])
-  settings       GarageSettings?
-  branches       Branch[]
-  users          User[]
-  auditLogs      AuditLog[]
-  notifications  Notification[]
-  customers      GarageCustomer[]
-  vehicles       Vehicle[]
-  serviceTypes   ServiceType[]
-  suggestions    Suggestion[]
-  visits         Visit[]
-  serviceRecords ServiceRecord[]
-  reminders      Reminder[]
+  createdByAdmin  AdminUser        @relation(fields: [createdByAdminId], references: [id])
+  settings        GarageSettings?
+  branches        Branch[]
+  users           User[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  customers       GarageCustomer[]
+  vehicles        Vehicle[]
+  serviceTypes    ServiceType[]
+  suggestions     Suggestion[]
+  visits          Visit[]
+  serviceRecords  ServiceRecord[]
+  reminders       Reminder[]
+  files           File[]
+  offers          Offer[]
+  invoiceCounters InvoiceCounter[]
+  invoices        Invoice[]
+  invoiceItems    InvoiceItem[]
+  payments        Payment[]
 
   @@index([status, expiresAt])
   @@map("garages")
 }
 
 model GarageSettings {
-  garageId            String   @id @map("garage_id") @db.Uuid
-  // FK to files is added in the Phase 3 migration (forward reference, section 10)
-  logoFileId          String?  @map("logo_file_id") @db.Uuid
-  brandColor          String   @default("#111827") @map("brand_color")
-  invoiceNumberFormat String   @default("{BRANCH}-{YYYY}-{SEQ:4}") @map("invoice_number_format")
-  termsText           String?  @map("terms_text")
-  autoSendInvoice     Boolean  @default(false) @map("auto_send_invoice")
-  showLbp             Boolean  @default(false) @map("show_lbp")
+  garageId            String            @id @map("garage_id") @db.Uuid
+  logoFileId          String?           @map("logo_file_id") @db.Uuid
+  brandColor          String            @default("#111827") @map("brand_color")
+  invoiceNumberFormat String            @default("{BRANCH}-{YYYY}-{SEQ:4}") @map("invoice_number_format")
+  termsText           String?           @map("terms_text")
+  autoSendInvoice     Boolean           @default(false) @map("auto_send_invoice")
+  showLbp             Boolean           @default(false) @map("show_lbp")
   // display-only rate: LBP per 1 USD
-  lbpRate             Int?     @map("lbp_rate")
-  vatEnabled          Boolean  @default(false) @map("vat_enabled")
-  vatRatePercent      Decimal? @map("vat_rate_percent") @db.Decimal(5, 2)
-  vatNumber           String?  @map("vat_number")
-  paymentReminderDays Int?     @map("payment_reminder_days")
-  reminderLeadKm      Int      @default(500) @map("reminder_lead_km")
-  reminderLeadDays    Int      @default(7) @map("reminder_lead_days")
-  defaultDailyKm      Int?     @map("default_daily_km")
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  lbpRate             Int?              @map("lbp_rate")
+  vatEnabled          Boolean           @default(false) @map("vat_enabled")
+  vatRatePercent      Decimal?          @map("vat_rate_percent") @db.Decimal(5, 2)
+  vatNumber           String?           @map("vat_number")
+  paymentReminderDays Int?              @map("payment_reminder_days")
+  reminderLeadKm      Int               @default(500) @map("reminder_lead_km")
+  reminderLeadDays    Int               @default(7) @map("reminder_lead_days")
+  defaultDailyKm      Int?              @map("default_daily_km")
+  invoiceEditWindow   InvoiceEditWindow @default(SAME_DAY) @map("invoice_edit_window")
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   garage Garage @relation(fields: [garageId], references: [id])
+  logo   File?  @relation("GarageLogo", fields: [garageId, logoFileId], references: [garageId, id], onDelete: Restrict)
 
   @@map("garage_settings")
 }
@@ -256,10 +298,12 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage         Garage          @relation(fields: [garageId], references: [id])
-  users          User[]
-  visits         Visit[]
-  serviceRecords ServiceRecord[]
+  garage          Garage           @relation(fields: [garageId], references: [id])
+  users           User[]
+  visits          Visit[]
+  serviceRecords  ServiceRecord[]
+  invoiceCounters InvoiceCounter[]
+  invoices        Invoice[]
 
   @@unique([garageId, code])
   // Target of the garage-scoped foreign keys (section 6.6): a row can only point to a
@@ -286,11 +330,17 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage         Garage          @relation(fields: [garageId], references: [id])
-  branch         Branch?         @relation(fields: [branchId], references: [id])
-  notifications  Notification[]
-  visits         Visit[]
-  serviceRecords ServiceRecord[]
+  garage            Garage          @relation(fields: [garageId], references: [id])
+  branch            Branch?         @relation(fields: [branchId], references: [id])
+  notifications     Notification[]
+  visits            Visit[]
+  serviceRecords    ServiceRecord[]
+  filesCreated      File[]
+  offersCreated     Offer[]
+  invoicesCreated   Invoice[]       @relation("InvoiceCreatedBy")
+  invoicesEdited    Invoice[]       @relation("InvoiceLastEditedBy")
+  invoicesCancelled Invoice[]       @relation("InvoiceCancelledBy")
+  paymentsReceived  Payment[]
 
   // Target of the garage-scoped foreign keys (section 6.6).
   @@unique([garageId, id])
@@ -325,6 +375,7 @@ model GarageCustomer {
   owner    Owner     @relation(fields: [ownerId], references: [id])
   vehicles Vehicle[]
   visits   Visit[]
+  invoices Invoice[]
 
   @@unique([garageId, ownerId])
   @@unique([garageId, id])
@@ -362,6 +413,7 @@ model Vehicle {
   visits         Visit[]
   serviceRecords ServiceRecord[]
   reminders      Reminder[]
+  invoices       Invoice[]
 
   @@unique([garageId, id])
   @@index([garageId, garageCustomerId])
@@ -446,6 +498,7 @@ model Visit {
   owner    Owner           @relation(fields: [ownerId], references: [id])
   mechanic User            @relation(fields: [garageId, mechanicId], references: [garageId, id])
   records  ServiceRecord[]
+  invoices Invoice[]
 
   @@unique([garageId, id])
   @@index([garageId, branchId, openedAt(sort: Desc)])
@@ -487,14 +540,16 @@ model ServiceRecord {
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage      Garage      @relation(fields: [garageId], references: [id])
-  branch      Branch      @relation(fields: [garageId, branchId], references: [garageId, id])
-  visit       Visit       @relation(fields: [garageId, visitId], references: [garageId, id])
-  vehicle     Vehicle     @relation(fields: [garageId, vehicleId], references: [garageId, id])
-  owner       Owner       @relation(fields: [ownerId], references: [id])
-  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
-  mechanic    User        @relation(fields: [garageId, mechanicId], references: [garageId, id])
-  reminders   Reminder[]
+  garage       Garage        @relation(fields: [garageId], references: [id])
+  branch       Branch        @relation(fields: [garageId, branchId], references: [garageId, id])
+  visit        Visit         @relation(fields: [garageId, visitId], references: [garageId, id])
+  vehicle      Vehicle       @relation(fields: [garageId, vehicleId], references: [garageId, id])
+  owner        Owner         @relation(fields: [ownerId], references: [id])
+  serviceType  ServiceType   @relation(fields: [serviceTypeId], references: [id])
+  mechanic     User          @relation(fields: [garageId, mechanicId], references: [garageId, id])
+  reminders    Reminder[]
+  invoiceItems InvoiceItem[]
+  files        File[]
 
   @@unique([garageId, id])
   @@index([vehicleId, serviceTypeId, performedAt(sort: Desc)])
@@ -531,6 +586,189 @@ model Reminder {
   @@index([garageId, status, nextDueDate])
   @@index([vehicleId, serviceTypeId, status])
   @@map("reminders")
+}
+
+// ---------------------------------------------------------------------------
+// Invoices and payments (section 4.5), offers and files (section 4.6)
+// ---------------------------------------------------------------------------
+
+model File {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  garageId        String   @map("garage_id") @db.Uuid
+  kind            FileKind
+  storageKey      String   @map("storage_key")
+  mimeType        String   @map("mime_type")
+  sizeBytes       Int      @map("size_bytes")
+  serviceRecordId String?  @map("service_record_id") @db.Uuid
+  createdById     String   @map("created_by_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  garage        Garage           @relation(fields: [garageId], references: [id])
+  serviceRecord ServiceRecord?   @relation(fields: [garageId, serviceRecordId], references: [garageId, id], onDelete: Restrict)
+  createdBy     User             @relation(fields: [garageId, createdById], references: [garageId, id])
+  logoOf        GarageSettings[] @relation("GarageLogo")
+  offers        Offer[]
+  invoices      Invoice[]
+
+  @@unique([garageId, id])
+  @@map("files")
+}
+
+// Rows are switched off with isActive, never deleted.
+model Offer {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  garageId      String       @map("garage_id") @db.Uuid
+  title         String
+  body          String
+  imageFileId   String?      @map("image_file_id") @db.Uuid
+  discountType  DiscountType @map("discount_type")
+  // cents or percent
+  discountValue Int          @map("discount_value")
+  startsAt      DateTime     @map("starts_at") @db.Timestamptz(3)
+  expiresAt     DateTime?    @map("expires_at") @db.Timestamptz(3)
+  target        OfferTarget
+  isActive      Boolean      @default(true) @map("is_active")
+  createdById   String       @map("created_by_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage    Garage    @relation(fields: [garageId], references: [id])
+  image     File?     @relation(fields: [garageId, imageFileId], references: [garageId, id], onDelete: Restrict)
+  createdBy User      @relation(fields: [garageId, createdById], references: [garageId, id])
+  invoices  Invoice[]
+
+  @@unique([garageId, id])
+  @@map("offers")
+}
+
+// Gap-free numbering (flow.md 7.1): the row lock serializes concurrent invoices.
+model InvoiceCounter {
+  branchId   String @map("branch_id") @db.Uuid
+  year       Int
+  garageId   String @map("garage_id") @db.Uuid
+  lastNumber Int    @map("last_number")
+
+  garage Garage @relation(fields: [garageId], references: [id])
+  branch Branch @relation(fields: [garageId, branchId], references: [garageId, id])
+
+  @@id([branchId, year])
+  @@map("invoice_counters")
+}
+
+// Never deleted: a mistake is cancelled with a reason (flow.md 7.5). The partial unique
+// index "one active invoice per visit" is in the migration; Prisma cannot express it.
+model Invoice {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  garageId          String        @map("garage_id") @db.Uuid
+  branchId          String        @map("branch_id") @db.Uuid
+  visitId           String        @map("visit_id") @db.Uuid
+  garageCustomerId  String        @map("garage_customer_id") @db.Uuid
+  // denormalized, for the owner app (Phase 6)
+  ownerId           String        @map("owner_id") @db.Uuid
+  vehicleId         String        @map("vehicle_id") @db.Uuid
+  number            String
+  seq               Int
+  year              Int
+  status            InvoiceStatus @default(UNPAID)
+  issuedAt          DateTime      @map("issued_at") @db.Timestamptz(3)
+  locale            String
+  subtotalCents     Int           @map("subtotal_cents")
+  discountType      DiscountType? @map("discount_type")
+  // cents or percent
+  discountValue     Int?          @map("discount_value")
+  discountCents     Int           @default(0) @map("discount_cents")
+  vatCents          Int           @default(0) @map("vat_cents")
+  totalCents        Int           @map("total_cents")
+  paidCents         Int           @default(0) @map("paid_cents")
+  remainingCents    Int           @map("remaining_cents")
+  laborCents        Int?          @map("labor_cents")
+  partsCents        Int?          @map("parts_cents")
+  offerId           String?       @map("offer_id") @db.Uuid
+  // the earliest due of the visit
+  nextServiceKm     Int?          @map("next_service_km")
+  nextServiceDate   DateTime?     @map("next_service_date") @db.Date
+  warrantyText      String?       @map("warranty_text")
+  termsSnapshot     String?       @map("terms_snapshot")
+  customerSnapshot  Json          @map("customer_snapshot")
+  vehicleSnapshot   Json          @map("vehicle_snapshot")
+  garageSnapshot    Json          @map("garage_snapshot")
+  qrToken           String?       @unique @map("qr_token")
+  pdfFileId         String?       @map("pdf_file_id") @db.Uuid
+  cancelledAt       DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason      String?       @map("cancel_reason")
+  cancelledById     String?       @map("cancelled_by_id") @db.Uuid
+  replacesInvoiceId String?       @map("replaces_invoice_id") @db.Uuid
+  createdById       String        @map("created_by_id") @db.Uuid
+  lastEditedById    String?       @map("last_edited_by_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  garage       Garage         @relation(fields: [garageId], references: [id])
+  branch       Branch         @relation(fields: [garageId, branchId], references: [garageId, id])
+  visit        Visit          @relation(fields: [garageId, visitId], references: [garageId, id])
+  customer     GarageCustomer @relation(fields: [garageId, garageCustomerId], references: [garageId, id])
+  owner        Owner          @relation(fields: [ownerId], references: [id])
+  vehicle      Vehicle        @relation(fields: [garageId, vehicleId], references: [garageId, id])
+  offer        Offer?         @relation(fields: [garageId, offerId], references: [garageId, id], onDelete: Restrict)
+  pdfFile      File?          @relation(fields: [garageId, pdfFileId], references: [garageId, id], onDelete: Restrict)
+  cancelledBy  User?          @relation("InvoiceCancelledBy", fields: [garageId, cancelledById], references: [garageId, id], onDelete: Restrict)
+  createdBy    User           @relation("InvoiceCreatedBy", fields: [garageId, createdById], references: [garageId, id])
+  lastEditedBy User?          @relation("InvoiceLastEditedBy", fields: [garageId, lastEditedById], references: [garageId, id], onDelete: Restrict)
+  replaces     Invoice?       @relation("InvoiceReplaces", fields: [garageId, replacesInvoiceId], references: [garageId, id], onDelete: Restrict)
+  replacedBy   Invoice[]      @relation("InvoiceReplaces")
+  items        InvoiceItem[]
+  payments     Payment[]
+
+  @@unique([garageId, id])
+  @@unique([garageId, number])
+  @@unique([branchId, year, seq])
+  @@index([garageId, status])
+  @@index([garageCustomerId])
+  @@index([garageId, issuedAt(sort: Desc)])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String  @id @default(uuid(7)) @db.Uuid
+  garageId        String  @map("garage_id") @db.Uuid
+  invoiceId       String  @map("invoice_id") @db.Uuid
+  serviceRecordId String? @map("service_record_id") @db.Uuid
+  // service name in the invoice language
+  description     String
+  brand           String?
+  grade           String?
+  quantity        Decimal @db.Decimal(8, 2)
+  unitPriceCents  Int     @map("unit_price_cents")
+  totalCents      Int     @map("total_cents")
+  position        Int
+
+  garage        Garage         @relation(fields: [garageId], references: [id])
+  invoice       Invoice        @relation(fields: [garageId, invoiceId], references: [garageId, id])
+  serviceRecord ServiceRecord? @relation(fields: [garageId, serviceRecordId], references: [garageId, id], onDelete: Restrict)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// Append-only: the runtime roles have INSERT and SELECT only.
+model Payment {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  garageId     String        @map("garage_id") @db.Uuid
+  invoiceId    String        @map("invoice_id") @db.Uuid
+  amountCents  Int           @map("amount_cents")
+  method       PaymentMethod
+  paidAt       DateTime      @map("paid_at") @db.Timestamptz(3)
+  receivedById String        @map("received_by_id") @db.Uuid
+  note         String?
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  garage     Garage  @relation(fields: [garageId], references: [id])
+  invoice    Invoice @relation(fields: [garageId, invoiceId], references: [garageId, id])
+  receivedBy User    @relation(fields: [garageId, receivedById], references: [garageId, id])
+
+  @@index([invoiceId])
+  @@index([garageId, paidAt])
+  @@map("payments")
 }
 
 // ---------------------------------------------------------------------------

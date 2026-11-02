@@ -345,3 +345,232 @@ describe('Phase 2 tables', () => {
     }
   });
 });
+
+describe('Phase 3 tables', () => {
+  const adminId = randomUUID();
+  const garageA = randomUUID();
+  const garageB = randomUUID();
+  const branchA = randomUUID();
+  const branchB = randomUUID();
+  const staffA = randomUUID();
+  let invoiceSeq = 0;
+
+  /** A visit in garage A, plus the fields every invoice of it needs. */
+  async function newInvoiceData() {
+    const phone = `+96171${String(Math.floor(Math.random() * 1e6)).padStart(6, '0')}`;
+    return asGarage(garageA, async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`
+        SELECT find_or_create_owner(${phone}, 'Invoice Owner', 'en') AS id`;
+      const ownerId = rows[0]?.id as string;
+      const customer = await tx.garageCustomer.create({
+        data: { garageId: garageA, ownerId, name: 'Invoice Owner' },
+      });
+      const vehicle = await tx.vehicle.create({
+        data: {
+          garageId: garageA,
+          garageCustomerId: customer.id,
+          ownerId,
+          plate: 'I 1',
+          plateNormalized: `I${randomUUID().slice(0, 8).toUpperCase()}`,
+          make: 'Kia',
+          model: 'Rio',
+          currentKm: 1000,
+        },
+      });
+      const visit = await tx.visit.create({
+        data: {
+          garageId: garageA,
+          branchId: branchA,
+          vehicleId: vehicle.id,
+          garageCustomerId: customer.id,
+          ownerId,
+          mechanicId: staffA,
+          odometerKm: 1000,
+        },
+      });
+      return {
+        garageId: garageA,
+        branchId: branchA,
+        visitId: visit.id,
+        garageCustomerId: customer.id,
+        ownerId,
+        vehicleId: vehicle.id,
+        issuedAt: new Date(),
+        locale: 'en',
+        subtotalCents: 1000,
+        totalCents: 1000,
+        remainingCents: 1000,
+        customerSnapshot: {},
+        vehicleSnapshot: {},
+        garageSnapshot: {},
+        createdById: staffA,
+      };
+    });
+  }
+
+  function numbered() {
+    invoiceSeq += 1;
+    return { number: `BR1-2026-${invoiceSeq}`, seq: invoiceSeq, year: 2026 };
+  }
+
+  beforeAll(async () => {
+    await platform.adminUser.create({
+      data: {
+        id: adminId,
+        email: `p3-${adminId}@test.local`,
+        passwordHash: 'x',
+        name: 'P3',
+        role: 'ADMIN',
+      },
+    });
+    for (const [id, branchId] of [
+      [garageA, branchA],
+      [garageB, branchB],
+    ] as const) {
+      await platform.garage.create({
+        data: {
+          id,
+          name: `Garage ${id}`,
+          email: `${id}@test.local`,
+          phone: '+9611000000',
+          locationText: 'Test',
+          defaultLocale: 'en',
+          status: 'ACTIVE',
+          createdByAdminId: adminId,
+          branches: { create: { id: branchId, name: 'Main', code: 'BR1', isMain: true } },
+        },
+      });
+    }
+    await platform.user.create({
+      data: {
+        id: staffA,
+        garageId: garageA,
+        email: `p3-${staffA}@test.local`,
+        name: 'Staff',
+        role: 'OWNER',
+        locale: 'en',
+      },
+    });
+  });
+
+  it('a visit has one active invoice; a cancelled one allows the reissue', async () => {
+    const data = await newInvoiceData();
+    const first = await asGarage(garageA, (tx) =>
+      tx.invoice.create({ data: { ...data, ...numbered() } }),
+    );
+    await expect(
+      asGarage(garageA, (tx) => tx.invoice.create({ data: { ...data, ...numbered() } })),
+    ).rejects.toThrow();
+    await asGarage(garageA, (tx) =>
+      tx.invoice.update({
+        where: { id: first.id },
+        data: { status: 'CANCELLED', cancelReason: 'Typed the wrong price' },
+      }),
+    );
+    await asGarage(garageA, (tx) =>
+      tx.invoice.create({ data: { ...data, ...numbered(), replacesInvoiceId: first.id } }),
+    );
+  });
+
+  it('an invoice number is used once per branch and year', async () => {
+    const data = await newInvoiceData();
+    const other = await newInvoiceData();
+    const number = numbered();
+    await asGarage(garageA, (tx) => tx.invoice.create({ data: { ...data, ...number } }));
+    await expect(
+      asGarage(garageA, (tx) =>
+        tx.invoice.create({ data: { ...other, ...number, number: 'DIFFERENT-TEXT' } }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('the database refuses totals that do not add up', async () => {
+    const data = await newInvoiceData();
+    const bad: Record<string, unknown>[] = [
+      { totalCents: 900, remainingCents: 900 }, // not subtotal - discount + vat
+      { remainingCents: 999 }, // not total - paid
+      { paidCents: 1100, remainingCents: -100 }, // paid more than the total
+      { discountCents: 1100, totalCents: -100, remainingCents: -100 }, // negative total
+      { discountType: 'PERCENT', discountValue: 101 }, // more than 100%
+      { status: 'CANCELLED' }, // cancelled with no reason
+    ];
+    for (const fields of bad) {
+      await expect(
+        asGarage(garageA, (tx) =>
+          tx.invoice.create({ data: { ...data, ...numbered(), ...fields } as never }),
+        ),
+        JSON.stringify(fields),
+      ).rejects.toThrow();
+    }
+  });
+
+  it('payments are positive and append-only; invoices are never deleted', async () => {
+    const data = await newInvoiceData();
+    const invoice = await asGarage(garageA, (tx) =>
+      tx.invoice.create({ data: { ...data, ...numbered() } }),
+    );
+    const payment = {
+      garageId: garageA,
+      invoiceId: invoice.id,
+      method: 'CASH' as const,
+      paidAt: new Date(),
+      receivedById: staffA,
+    };
+    await expect(
+      asGarage(garageA, (tx) => tx.payment.create({ data: { ...payment, amountCents: 0 } })),
+    ).rejects.toThrow();
+    await asGarage(garageA, (tx) => tx.payment.create({ data: { ...payment, amountCents: 100 } }));
+    for (const sql of [
+      'UPDATE "payments" SET "amount_cents" = 1',
+      'DELETE FROM "payments"',
+      'DELETE FROM "invoices"',
+      'DELETE FROM "invoice_counters"',
+      'DELETE FROM "offers"',
+    ]) {
+      await expect(
+        asGarage(garageA, (tx) => tx.$executeRawUnsafe(sql)),
+        sql,
+      ).rejects.toThrow(/permission denied/);
+    }
+  });
+
+  it("a garage cannot see or point to another garage's invoice", async () => {
+    const data = await newInvoiceData();
+    const invoice = await asGarage(garageA, (tx) =>
+      tx.invoice.create({ data: { ...data, ...numbered() } }),
+    );
+    expect(
+      await asGarage(garageB, (tx) => tx.invoice.findUnique({ where: { id: invoice.id } })),
+    ).toBeNull();
+    await expect(
+      platform.payment.create({
+        data: {
+          garageId: garageB,
+          invoiceId: invoice.id,
+          amountCents: 100,
+          method: 'CASH',
+          paidAt: new Date(),
+          receivedById: staffA,
+        },
+      }),
+    ).rejects.toThrow(/Foreign key constraint/);
+  });
+
+  it('the invoice counter counts up per branch and year and stays per garage', async () => {
+    const next = (garageId: string, branchId: string) =>
+      asGarage(garageId, async (tx) => {
+        const rows = await tx.$queryRaw<{ last_number: number }[]>`
+          INSERT INTO invoice_counters (branch_id, year, garage_id, last_number)
+          VALUES (${branchId}::uuid, 2031, ${garageId}::uuid, 1)
+          ON CONFLICT (branch_id, year)
+          DO UPDATE SET last_number = invoice_counters.last_number + 1
+          RETURNING last_number`;
+        return rows[0]?.last_number;
+      });
+    expect(await next(garageA, branchA)).toBe(1);
+    expect(await next(garageA, branchA)).toBe(2);
+    expect(await next(garageB, branchB)).toBe(1);
+    // A counter row of garage A is out of reach for garage B.
+    await expect(next(garageB, branchA)).rejects.toThrow();
+  });
+});

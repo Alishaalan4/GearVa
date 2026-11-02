@@ -154,7 +154,7 @@ Key/value (`key` PK, `value` jsonb). Examples: `reminder.sendTimeLocal`, `remind
 The branch count is derived from active `branches` rows (extra branches are billed separately, so the admin sees `COUNT(branches) - 1`).
 
 #### `garage_settings` (1:1 with garage, `garageId` is PK)
-`logoFileId?` (FK to `files` added in the Phase 3 migration), `brandColor` (default `#111827`), `invoiceNumberFormat` (default `{BRANCH}-{YYYY}-{SEQ:4}`), `termsText?`, `autoSendInvoice` bool (default false), `showLbp` bool (default false), `lbpRate` int? (LBP per 1 USD, display only), `vatEnabled` bool (default false), `vatRatePercent` numeric(5,2)?, `vatNumber?`, `paymentReminderDays` int?, `reminderLeadKm` int (default 500), `reminderLeadDays` int (default 7), `defaultDailyKm` int?, `invoiceEditWindow` (default `SAME_DAY`).
+`logoFileId?` (FK to `files`, added in the Phase 3 migration), `brandColor` (default `#111827`), `invoiceNumberFormat` (default `{BRANCH}-{YYYY}-{SEQ:4}`), `termsText?`, `autoSendInvoice` bool (default false), `showLbp` bool (default false), `lbpRate` int? (LBP per 1 USD, display only), `vatEnabled` bool (default false), `vatRatePercent` numeric(5,2)?, `vatNumber?`, `paymentReminderDays` int?, `reminderLeadKm` int (default 500), `reminderLeadDays` int (default 7), `defaultDailyKm` int?, `invoiceEditWindow` (default `SAME_DAY`).
 
 `invoiceEditWindow` is added in the Phase 3 migration, together with its enum, because its possible values are defined by the invoice edit rules (flow.md section 7.5). All other columns exist from Phase 1.
 
@@ -312,7 +312,7 @@ A finished visit is locked: its records can only change through the invoice edit
 - `brakes`: `{ position: "FRONT" | "REAR", part: "PADS" | "DISCS", padBrand }`
 - `ac`: `{ gasRefill, filterChanged, compressor }`
 
-Paid / not paid is **not** stored here. Payment lives on the invoice (one payment per visit), and the UI derives the paid state from the invoice.
+Paid / not paid is **not** stored here. Payment lives on the invoice (one active invoice per visit, which can have several payments), and the UI derives the paid state from the invoice.
 
 #### `reminders`
 | Column | Type | Notes |
@@ -367,7 +367,7 @@ Saving a new record for the same vehicle and service type marks the previous `AC
 | pdfFileId | uuid? FK | cached PDF |
 | cancelledAt / cancelReason / cancelledById | timestamptz? / text? / uuid? | reason is required to cancel |
 | replacesInvoiceId | uuid? FK | the cancelled invoice this one replaces |
-| createdById / lastEditedById | uuid FK | |
+| createdById / lastEditedById | uuid FK / uuid? FK | `lastEditedById` stays empty until the first edit |
 
 `visitId` uniqueness: to allow reissue after cancel, make the unique index **partial**: `UNIQUE (visitId) WHERE status <> 'CANCELLED'`.
 
@@ -449,6 +449,8 @@ VisitStatus         IN_PROGRESS | WAITING_FOR_PARTS | DONE
 InvoiceStatus       UNPAID | PARTIALLY_PAID | PAID | CANCELLED
 PaymentMethod       CASH | WHISH
 DiscountType        AMOUNT | PERCENT
+InvoiceEditWindow   SAME_DAY
+FileKind            LOGO | SERVICE_PHOTO | INVOICE_PDF | OFFER_IMAGE
 ReminderKind        SERVICE_DUE | WARRANTY_END | RECOMMENDED_NEXT
 ReminderStatus      ACTIVE | SENT | COMPLETED | CANCELLED
 NotificationChannel EMAIL | IN_APP | PUSH | WHATSAPP
@@ -469,7 +471,7 @@ Enum values are mirrored in `packages/contracts` so the API, web and mobile apps
 | Role | Used by | Rights |
 |---|---|---|
 | `gearva_migrator` | `prisma migrate` only | Owns the schema, runs DDL |
-| `gearva_app` | The API at runtime (`DATABASE_URL`) | `NOSUPERUSER NOBYPASSRLS`. CRUD on tables, except **INSERT + SELECT only** on `audit_logs` and `payments` (no UPDATE or DELETE), **no DELETE** on tables whose rows are never deleted (`garage_customers`, `vehicles`, `visits`, `service_records`, `reminders`, `service_types`; soft delete or a status instead), and **SELECT only** on `owners` (section 6.6) |
+| `gearva_app` | The API at runtime (`DATABASE_URL`) | `NOSUPERUSER NOBYPASSRLS`. CRUD on tables, except **INSERT + SELECT only** on `audit_logs` and `payments` (no UPDATE or DELETE), **no DELETE** on tables whose rows are never deleted (`garage_customers`, `vehicles`, `visits`, `service_records`, `reminders`, `service_types`, `invoices`, `invoice_counters`, `offers`; soft delete or a status instead), and **SELECT only** on `owners` (section 6.6) |
 | `gearva_platform` | Admin module and auth credential lookups (`PLATFORM_DATABASE_URL`) | `BYPASSRLS`. Used only for: admin usage counts, login lookups, daily jobs that iterate garages. Any use that reads garage records must write an `admin_access_logs` row |
 
 **Creating the roles.** Roles are cluster-level and need a superuser (or `CREATEROLE`), which `gearva_migrator` must not have, so they are **not** created in a Prisma migration. Instead:
@@ -554,10 +556,10 @@ visits             (garageId, branchId, openedAt DESC); (vehicleId, openedAt DES
 service_records    (vehicleId, serviceTypeId, performedAt DESC); (garageId, performedAt DESC); (visitId)
 suggestions        U(garageId, field, valueNormalized) (also serves prefix search, see 4.4)
 service_types      U(code) WHERE garageId IS NULL; U(garageId, code) WHERE garageId IS NOT NULL
-branches, users, garage_customers, vehicles, visits, service_records
+branches, users, garage_customers, vehicles, visits, service_records, invoices, offers, files
                    U(garageId, id): targets of the garage-scoped foreign keys (section 6.6)
 reminders          (garageId, status, nextDueDate); (vehicleId, serviceTypeId, status)
-invoices           U(garageId, number); U(visitId) WHERE status <> 'CANCELLED'; (garageId, status); (garageCustomerId); (garageId, issuedAt DESC)
+invoices           U(garageId, number); U(branchId, year, seq); U(visitId) WHERE status <> 'CANCELLED'; (garageId, status); (garageCustomerId); (garageId, issuedAt DESC)
 invoice_items      (invoiceId)
 payments           (invoiceId); (garageId, paidAt)
 notifications      U(garageId, dedupeKey); (garageId, status, scheduledFor); (ownerId, readAt)
@@ -569,6 +571,8 @@ CHECK constraints:
 - `payments.amountCents > 0`
 - `invoices.paidCents >= 0 AND invoices.paidCents <= invoices.totalCents`
 - `invoices.remainingCents = invoices.totalCents - invoices.paidCents`
+- `invoices.totalCents = subtotalCents - discountCents + vatCents`; `invoices` money columns `>= 0`; `discountCents <= subtotalCents`; a percent discount is 0 to 100
+- `invoice_items.quantity > 0`, money columns `>= 0`; `offers.discountValue >= 0`; `files.sizeBytes >= 0`
 - `vehicles.currentKm >= 0`, `service_records.odometerKm >= 0`
 - `vehicles.avgDailyKm >= 0`, `visits.odometerKm >= 0`; `service_records.quantity > 0`; money columns of `service_records` `>= 0`; `service_types` intervals `> 0` when set (step 2.1)
 - `invoices.status = 'CANCELLED'` requires `cancelReason IS NOT NULL`
@@ -606,5 +610,5 @@ The seed is `packages/database/src/seed.ts`, compiled with the package. It only 
 - Change `schema.prisma`, then from `packages/database` run `npx prisma migrate dev --create-only --name <what_changed>`, add the hand-written SQL (grants, RLS, partial indexes, CHECKs) to the generated file, then `npx prisma migrate dev` to apply it. Run Prisma directly like this rather than `npm run db:migrate -- --name ...`: Windows PowerShell drops the `--`, so the flags never reach Prisma.
 - Prisma cannot express RLS policies, partial unique indexes or CHECK constraints. Add them as raw SQL in the same migration folder.
 - Never edit a migration that has already been applied anywhere. Create a new one.
-- Forward references (section 1): when a migration creates a table that an earlier table already points to, the same migration adds the missing FK. Known cases: `notifications.ownerId` → `owners` (added in Phase 2, step 2.1), `garage_settings.logoFileId` → `files` (Phase 3).
+- Forward references (section 1): when a migration creates a table that an earlier table already points to, the same migration adds the missing FK. Known cases: `notifications.ownerId` → `owners` (added in Phase 2, step 2.1), `garage_settings.logoFileId` → `files` (added in Phase 3, step 3.1).
 - Production: `prisma migrate deploy` runs as a separate deploy step using `MIGRATION_DATABASE_URL`.

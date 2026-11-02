@@ -277,6 +277,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - `Invoice`, `InvoiceItem`, `InvoiceCounter`, `Payment`, `File` (logo, invoice PDFs), "Finish visit" creates the invoice
 - Create the `Offer` table in this phase's migration too, so `invoices.offerId` has a real foreign key and discounts can be applied on an invoice. Offer screens, targeting and broadcasts stay in Phase 7
 - PDF generation (Arabic + English), print, cancel with reason, edit window, debt list, garage invoice settings
+- A simple income summary for owners and managers: today and this month, money received vs invoiced (decision 2026-11-02, flow.md 8.3). The full revenue screens stay in Phase 7
 - **Done when:** finishing a visit produces a correct sequential invoice PDF, partial payments update the remaining amount, and the debt list is right.
 - **Deploy a first version to Render now (section 9).**
 
@@ -294,7 +295,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - Owner-scoped access (see `database.md`)
 
 ### Phase 7: Offers, revenue screens, polish
-- Offer screens, targeting, broadcasts and the redemption report (the `offers` table and invoice discounts already exist since Phase 3), revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen
+- Offer screens, targeting, broadcasts and the redemption report (the `offers` table and invoice discounts already exist since Phase 3), the full revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen
 
 ### Later (not in scope now)
 WhatsApp channel, appointment booking, parts and inventory, monthly report, customer approval for repairs, document expiry reminders, referral tracking, sales reps, fleet plan.
@@ -311,7 +312,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Default daily km for a car with no history | **Confirmed 2026-10-23:** 35 km/day, a constant in `contracts` until `system_settings` exists (Phase 5); a garage can override it with `garage_settings.defaultDailyKm` | Phase 2 |
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |
 | Fair-use message cap per garage | set later, from real cost data | Phase 5 |
-| VAT on invoices | off by default, toggle only after accountant confirms | Phase 3 |
+| VAT on invoices | **Decided 2026-11-02:** off by default; a garage setting turns it on after its accountant confirms | Phase 3 |
 | Owner app login | **Decided 2026-10-29:** email + password given by the garage (from the design prototype), not phone + one-time code. To settle in Phase 6: who sets the password (typed by staff, or an invite link like staff accounts), reset, and an owner who is a customer at two garages | Phase 6 |
 
 ---

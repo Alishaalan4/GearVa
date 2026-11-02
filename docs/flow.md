@@ -25,7 +25,7 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Edit an invoice the same day | yes | yes | yes (own visits) | no |
 | Edit an invoice after the same day | yes | no | no | no |
 | Cancel an invoice | yes | yes | no | no |
-| See revenue screens, debt list | yes | yes | no | debt list only |
+| See income summary, revenue screens, debt list | yes | yes | no | debt list only |
 | Offers and broadcasts | yes | yes | no | no |
 | Staff, branches, garage settings | yes | no | no | no |
 | Switch branch view (all branches) | yes | yes | no, own branch only | no, own branch only |
@@ -295,7 +295,9 @@ Example: a car on KM, oil change at 5,500 km, default 5,000 km: `nextDueKm = 10,
 5. Set `visit.finishedAt` and `status = DONE`.
 6. Commit, then queue jobs: PDF generation, then (if `autoSendInvoice`) the `INVOICE` notification.
 
-If a payment is entered at the same time as finishing ("paid in cash now"), the payment is created in the same transaction right after the invoice, which makes the invoice `PAID`.
+**Paid now? (decision 2026-11-02).** The finish step offers **Paid in full**, **Part** (an amount) or **Pay later**, plus the method (Cash or Whish). A payment entered here is created in the same transaction right after the invoice, which makes it `PAID` or `PARTIALLY_PAID`. The choice is shown only to roles that may record a payment (permission matrix): a mechanic finishes the visit as **Pay later**, and a receptionist, manager or owner records the payment afterwards.
+
+**Free work (decision 2026-11-02).** If the total is 0, the API refuses to finish with `409 INVOICE_TOTAL_ZERO` until the request confirms it, and the screen asks "No price. Save as free?". This stops a forgotten price becoming a numbered invoice that cannot be deleted. A confirmed free invoice is `PAID` straight away, with no `payments` row (a payment must be above 0).
 
 ### 7.2 PDF
 A BullMQ job renders an HTML template with Puppeteer, in the customer's locale (Arabic RTL or English), using the garage's logo and brand color. The PDF is stored in `files` (`INVOICE_PDF`) and linked as `invoices.pdfFileId`. Contents follow the product spec: garage header, number, date and time, customer, car, line items (service, brand and grade, quantity, unit price, total), labor/parts split if entered, discount and offer, total, paid, remaining, payment method, next service km and date, warranty, terms, optional QR code, footer "Powered by Gearva". The PDF is regenerated when the invoice is edited.
@@ -341,7 +343,10 @@ Email PDF (if an email exists), in-app history for the owner (visible in the mob
 ### 8.2 Debt list
 Customers with at least one `UNPAID` or `PARTIALLY_PAID` invoice, with the total remaining per customer and each invoice listed. Optional payment reminder (garage setting, "after X days") sends a `PAYMENT_REMINDER` notification once per invoice per interval.
 
-### 8.3 Revenue screens (Phase 7)
+### 8.3 Income summary (Phase 3, decision 2026-11-02)
+For owners and managers: today and this month in the garage's timezone, each showing **received** (`payments` by `paidAt`) and **invoiced** (`invoices` by `issuedAt`, without `CANCELLED`). Payments on a cancelled invoice stay in received, because the money really came in; they also appear as "refund needed" (section 7.5). Branch scoping follows the permission matrix.
+
+### 8.4 Revenue screens (Phase 7)
 Income per day, month, year, per service type and per branch, plus total invoiced per customer. Each screen must state whether it shows money **received** (from `payments`) or **invoiced** (from `invoices`). Role and branch scoping apply.
 
 ---

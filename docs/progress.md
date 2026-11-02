@@ -27,7 +27,16 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.5 garage-web: search, customers, cars | ✅ Done | 2026-10-29 |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ✅ Done | 2026-11-01 |
 | Design | D.1 Colours, dark mode, fonts, shared components, sidebar | ✅ Done | 2026-11-02 |
-| Design | D.2 Page layouts (login, tables, status pills) | 🔄 In progress | |
+| Design | D.2 Page layouts (login, tables, status pills) | ✅ Done | 2026-11-02 |
+| 3 | 3.0 Doc fixes and Phase 3 decisions | ✅ Done | 2026-11-02 |
+| 3 | 3.1 Database: invoices, payments, offers, files | 🔄 In progress | |
+| 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | Next | |
+| 3 | 3.3 API: finish creates the invoice, payments, free work | | |
+| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | | |
+| 3 | 3.5 PDF (Arabic + English) and file storage | | |
+| 3 | 3.6 garage-web: finish step, invoice page, payments | | |
+| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | | |
+| 3 | 3.8 First deployment to Render (README 9) | | |
 
 ---
 
@@ -723,7 +732,54 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Differences from the prototype, on purpose:** the admin sign-in text says "Create garages and invite their owners" (the prototype's "create the email and password" is not how accounts work: flow.md uses invite links) and leaves out WhatsApp volume (a later feature). Staff sign-in has no Garage/Admin switch: they are separate apps.
 
-**Verified:** by me: typecheck and lint (ui, garage-web, admin), `format:check`, `next build` of both apps, en/ar key check. Browser check by the user: pending.
+**Verified:** by me: typecheck and lint (ui, garage-web, admin), `format:check`, `next build` of both apps, en/ar key check. By the user: browser check of both apps.
+**Commit:** `ec3450c` — `Design D.2: sign-in split screen, status labels and page layouts`
+
+---
+
+## Phase 3 · Step 3.0 — Doc fixes and Phase 3 decisions
+**When:** 2026-11-02 (~20 min, docs only)
+
+**Decisions (user, 2026-11-02)**
+- **Simple income summary in Phase 3:** today and this month, received vs invoiced, owners and managers only (README 6, flow.md 8.3). The full revenue screens stay in Phase 7.
+- **"Paid now?" at finish:** Paid in full, Part or Pay later, with Cash or Whish (flow.md 7.1).
+- **Free work asks first:** a total of 0 needs confirming ("No price. Save as free?"), so a forgotten price does not become a numbered invoice (flow.md 7.1).
+- **VAT off by default,** with a garage setting (README 7).
+
+**Filled in by me, for the user to overrule**
+- The permission matrix lets mechanics finish a visit but not record a payment, so "Paid now?" shows only to roles that may record one. A mechanic finishes as Pay later.
+- A confirmed free invoice is `PAID` at once with no `payments` row, because a payment must be above 0.
+
+**Doc changes:** README 6, 7. flow.md permission matrix, 7.1, new 8.3 (old 8.3 is now 8.4). database.md 4.4 ("one payment per visit" corrected: item 9 of the first docs review), 4.5, 5, 6.1, 7, 10.
+
+**Verified:** docs only.
+**Commit:** _(with step 3.1)_
+
+---
+
+## Phase 3 · Step 3.1 — Database: invoices, payments, offers, files
+**When:** 2026-11-02 (~1 h of work)
+
+**Implements:** database.md 4.2 (`invoiceEditWindow`, logo FK), 4.5, 4.6, 5, 6.1, 6.2, 7, 10; README 5.1, 5.4.
+
+**Summary:** One migration adds `files`, `offers`, `invoice_counters`, `invoices`, `invoice_items`, `payments` and six enums, with RLS on all six tables. The `offers` table exists now so `invoices.offerId` has a real foreign key; offer screens stay in Phase 7. No API or screens yet.
+
+**Decisions**
+- Beyond the docs: `U(branchId, year, seq)` as a last guard against a repeated number, a CHECK that `total = subtotal - discount + vat`, and garage-scoped foreign keys on every link, like Phase 2.
+- `invoices`, `invoice_counters` and `offers` have no DELETE for the runtime roles. `invoice_items` keeps DELETE, because an edit replaces the lines.
+- `InvoiceEditWindow` has one value today (`SAME_DAY`): the only rule the docs define.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma` | 6 models, 6 enums, `invoiceEditWindow`, logo relation |
+| `packages/database/prisma/migrations/20261102092321_phase3_invoices_payments/migration.sql` (new) | Prisma's tables plus the partial unique index, CHECKs, grants, RLS |
+| `packages/database/src/tenant-tables.ts` | Phase 3 tenant tables |
+| `packages/database/test/rls.test.ts` | 6 new tests: one active invoice per visit and reissue, repeated number, totals that do not add up, append-only payments, cross-garage refusal, counter per branch and garage |
+
+**Doc changes:** in step 3.0.
+
+**Verified:** by me, on the test database: 23 database tests, 115 API tests, 28 tenancy tests, typecheck of database and API, `format:check`, and no difference between the migrated database and the schema. By the user: pending (`prisma migrate dev` on the dev database).
 **Commit:** _(filled in at the next step)_
 
 ---

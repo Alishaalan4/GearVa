@@ -22,6 +22,13 @@ export const TENANT_TABLES = [
   'visits',
   'service_records',
   'reminders',
+  // Phase 3
+  'files',
+  'offers',
+  'invoice_counters',
+  'invoices',
+  'invoice_items',
+  'payments',
 ] as const;
 
 export type TenantTable = (typeof TENANT_TABLES)[number];

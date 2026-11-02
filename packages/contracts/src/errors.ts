@@ -33,6 +33,11 @@ export const ERROR_CODES = {
   INVOICE_TOTAL_ZERO: 'INVOICE_TOTAL_ZERO',
   INVOICE_CANCELLED: 'INVOICE_CANCELLED',
   PAYMENT_EXCEEDS_REMAINING: 'PAYMENT_EXCEEDS_REMAINING',
+  INVOICE_TOTAL_BELOW_PAID: 'INVOICE_TOTAL_BELOW_PAID',
+  /** After the day of issue only the owner can edit (flow.md 7.5). */
+  INVOICE_EDIT_WINDOW_CLOSED: 'INVOICE_EDIT_WINDOW_CLOSED',
+  INVOICE_NOT_CANCELLED: 'INVOICE_NOT_CANCELLED',
+  INVOICE_ALREADY_REISSUED: 'INVOICE_ALREADY_REISSUED',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */

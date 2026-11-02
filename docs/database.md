@@ -353,6 +353,7 @@ Saving a new record for the same vehicle and service type marks the previous `AC
 | discountType | DiscountType? | `AMOUNT`, `PERCENT` |
 | discountValue | int? | cents or percent |
 | discountCents | int | resulting discount |
+| vatRatePercent | numeric(5,2)? | the rate at issue time; an edit keeps it even if the garage's rate changed |
 | vatCents | int | 0 unless VAT is on |
 | totalCents | int | |
 | paidCents | int | maintained inside the payment transaction |

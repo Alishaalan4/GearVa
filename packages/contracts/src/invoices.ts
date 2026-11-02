@@ -1,7 +1,10 @@
 // Invoice calculations (flow.md 7.1, 7.3, 7.4). Everything is integer cents with halves
 // rounding up, like line totals: no floating point ever touches an amount.
 import { z } from 'zod';
+import type { CustomerSummary } from './customers';
 import type { DistanceUnit } from './distance';
+import { quantityToHundredths } from './money';
+import { paginationQuerySchema } from './pagination';
 
 export const INVOICE_STATUSES = ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
@@ -140,6 +143,86 @@ export const recordPaymentSchema = z.object({
 });
 export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
 
+/** flow.md 7.5: changes quantities, prices and the discount; null removes the discount. */
+export const editInvoiceSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        quantity: z
+          .union([z.number(), z.string()])
+          .refine(
+            (q) => {
+              try {
+                quantityToHundredths(q);
+                return true;
+              } catch {
+                return false;
+              }
+            },
+            { message: 'More than 0, at most 2 decimals' },
+          )
+          .optional(),
+        unitPriceCents: cents.optional(),
+      }),
+    )
+    .max(50)
+    .optional(),
+  discount: discountSchema.nullable().optional(),
+  confirmFree: z.boolean().default(false),
+});
+export type EditInvoiceInput = z.infer<typeof editInvoiceSchema>;
+
+export const cancelInvoiceSchema = z.object({ reason: z.string().trim().min(3).max(500) });
+export type CancelInvoiceInput = z.infer<typeof cancelInvoiceSchema>;
+
+export const invoiceListQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(INVOICE_STATUSES).optional(),
+  /** cancelled invoices that still hold money (flow.md 7.5) */
+  refundNeeded: z.stringbool().optional(),
+});
+export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>;
+
+export const incomeQuerySchema = z.object({
+  /** owners and managers may choose; staff of one branch always get theirs */
+  branchId: z.uuid().optional(),
+});
+export type IncomeQuery = z.infer<typeof incomeQuerySchema>;
+
+export const updateInvoiceSettingsSchema = z.object({
+  brandColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+  invoiceNumberFormat: z
+    .string()
+    .trim()
+    .max(40)
+    .refine((f) => isValidInvoiceNumberFormat(f), {
+      message: 'Must hold {BRANCH}, {YYYY} and {SEQ:n}',
+    })
+    .optional(),
+  termsText: z.string().trim().max(2000).nullable().optional(),
+  vatEnabled: z.boolean().optional(),
+  vatRatePercent: z
+    .string()
+    .refine(
+      (rate) => {
+        try {
+          vatRateToHundredths(rate);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'A rate from 0 to 100, at most 2 decimals' },
+    )
+    .nullable()
+    .optional(),
+  vatNumber: z.string().trim().max(40).nullable().optional(),
+});
+export type UpdateInvoiceSettingsInput = z.infer<typeof updateInvoiceSettingsSchema>;
+
 // ---------------------------------------------------------------------------
 // Answers
 // ---------------------------------------------------------------------------
@@ -208,6 +291,45 @@ export interface InvoiceDetail extends InvoiceSummary {
   cancelledAt: string | null;
   cancelReason: string | null;
   replacesInvoiceId: string | null;
+}
+
+export interface InvoiceListItem extends InvoiceSummary {
+  issuedAt: string;
+  customerName: string;
+  plate: string;
+}
+
+/** One customer on the debt list (flow.md 8.2). */
+export interface DebtItem {
+  customer: CustomerSummary;
+  remainingCents: number;
+  invoices: (InvoiceSummary & { issuedAt: string; plate: string })[];
+}
+
+export interface IncomePeriod {
+  /** money that came in (`payments`) */
+  receivedCents: number;
+  /** invoices issued, without cancelled ones */
+  invoicedCents: number;
+}
+
+/** flow.md 8.3 */
+export interface IncomeSummary {
+  /** today in the garage's timezone, YYYY-MM-DD */
+  date: string;
+  today: IncomePeriod;
+  month: IncomePeriod;
+  /** paid on invoices that were later cancelled */
+  refundNeededCents: number;
+}
+
+export interface InvoiceSettings {
+  brandColor: string;
+  invoiceNumberFormat: string;
+  termsText: string | null;
+  vatEnabled: boolean;
+  vatRatePercent: string | null;
+  vatNumber: string | null;
 }
 
 // ---------------------------------------------------------------------------

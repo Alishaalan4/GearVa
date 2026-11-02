@@ -31,9 +31,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.0 Doc fixes and Phase 3 decisions | ✅ Done | 2026-11-02 |
 | 3 | 3.1 Database: invoices, payments, offers, files | ✅ Done | 2026-11-02 |
 | 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | ✅ Done | 2026-11-02 |
-| 3 | 3.3 API: finish creates the invoice, payments, free work | 🔄 In progress | |
-| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | Next | |
-| 3 | 3.5 PDF (Arabic + English) and file storage | | |
+| 3 | 3.3 API: finish creates the invoice, payments, free work | ✅ Done | 2026-11-02 |
+| 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | 🔄 In progress | |
+| 3 | 3.5 PDF (Arabic + English) and file storage | Next | |
 | 3 | 3.6 garage-web: finish step, invoice page, payments | | |
 | 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | | |
 | 3 | 3.8 First deployment to Render (README 9) | | |
@@ -834,7 +834,40 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Problems hit and fixed:** nested `items.createMany` is refused by Prisma when the foreign key includes `garageId` → lines are created in a second step of the same transaction.
 
-**Verified:** by me, on the test database: 138 API tests, 30 tenancy tests, all contracts and database tests, lint of the API, typecheck of the API and both web apps. By the user: pending.
+**Verified:** by me, on the test database: 138 API tests, 30 tenancy tests, all contracts and database tests, lint of the API, typecheck of the API and both web apps. By the user: `format:check`, `typecheck`, `npm test`, `test:tenancy`.
+**Commit:** `c95a4b2` — `Phase 3.3: finishing a visit issues the invoice, payments and free work API`
+
+---
+
+## Phase 3 · Step 3.4 — API: edit, cancel, reissue, debt list, income summary, settings
+**When:** 2026-11-02 (~1.5 h of work)
+
+**Implements:** flow.md 7.5, 8.2, 8.3; database.md 4.2, 4.5, 8.
+
+**Summary:** The rest of the invoice API. `PATCH /v1/invoices/:id` edits quantities, prices and the discount; `POST .../cancel` and `POST .../reissue` fix a mistake without deleting anything; `GET /v1/invoices` lists them, including `refundNeeded`; `GET /v1/debts` groups what customers owe; `GET /v1/income` gives today and this month, received vs invoiced; `GET` and `PATCH /v1/invoice-settings` hold the number format, terms, VAT and brand colour. No screens yet.
+
+**Decisions**
+- **New column `invoices.vat_rate_percent` (beyond the docs):** without it, editing an old invoice would use the garage's current VAT rate and change a past tax amount.
+- An edit changes quantities, prices and the discount only. Adding or removing a line is cancel and reissue.
+- A reissue does not carry payments over: the cancelled invoice stays "refund needed", and the new one starts unpaid unless a payment is entered. The docs left this open.
+- Mechanics do not get the invoice list, only their visit's invoice.
+- `autoSendInvoice`, LBP display and payment reminder settings wait for the features that use them.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/invoices/invoice-changes.service.ts` (new) | Edit, cancel, reissue, who may edit when |
+| `apps/api/src/invoices/invoice-reports.service.ts` (new) | Invoice list, debt list, income summary |
+| `apps/api/src/invoices/invoice-settings.service.ts` (new) | Invoice settings |
+| `apps/api/src/invoices/invoices.controller.ts`, `invoices.module.ts`, `invoices.service.ts` | Routes; the VAT rate is saved; reissue link |
+| `packages/database/prisma/schema.prisma`, migration `*_invoice_vat_rate` (new) | `vatRatePercent` |
+| `packages/contracts/src/invoices.ts`, `errors.ts` | Schemas, answers, 4 error codes |
+| `apps/api/test/invoice-changes.spec.ts` (new) | 18 tests |
+| `apps/api/test/tenancy.spec.ts` | 8 isolation cases |
+
+**Doc changes:** database.md 4.5; flow.md 7.5.
+
+**Verified:** by me, on the test database: full `npm test`, `test:tenancy`, typecheck and lint of everything, no difference between the migrated database and the schema. By the user: pending (`prisma migrate dev`).
 **Commit:** _(filled in at the next step)_
 
 ---

@@ -390,6 +390,61 @@ describe('Tenant isolation (test:tenancy)', () => {
       await asA.get(`/v1/invoices/${a.invoiceId}`).expect(200);
     },
 
+    'GET /v1/invoices': async () => {
+      const res = await asA.get('/v1/invoices').expect(200);
+      expect(res.body.items.length).toBeGreaterThan(0);
+      for (const item of res.body.items) expect(item.id).not.toBe(b.invoiceId);
+    },
+
+    'PATCH /v1/invoices/:invoiceId': async () => {
+      await expectBUnchanged(async () => {
+        await asA.patch(`/v1/invoices/${b.invoiceId}`, { discount: null }).expect(404);
+      });
+    },
+
+    'POST /v1/invoices/:invoiceId/cancel': async () => {
+      await expectBUnchanged(async () => {
+        await asA.post(`/v1/invoices/${b.invoiceId}/cancel`, { reason: 'Not mine' }).expect(404);
+      });
+    },
+
+    'POST /v1/invoices/:invoiceId/reissue': async () => {
+      await expectBUnchanged(async () => {
+        await asA.post(`/v1/invoices/${b.invoiceId}/reissue`, {}).expect(404);
+      });
+    },
+
+    'GET /v1/debts': async () => {
+      const res = await asA.get('/v1/debts').expect(200);
+      expect(res.body.items.map((d: { customer: { id: string } }) => d.customer.id)).toEqual([
+        a.customerId,
+      ]);
+    },
+
+    'GET /v1/income': async () => {
+      // Each garage has one invoice of 2500; B's never counts for A, even when asked for.
+      const res = await asA.get(`/v1/income?branchId=${b.branchId}`).expect(200);
+      expect(res.body.month.invoicedCents).toBe(0);
+      const own = await asA.get('/v1/income').expect(200);
+      expect(own.body.month.invoicedCents).toBe(2500);
+    },
+
+    'GET /v1/invoice-settings': async () => {
+      await asA.get('/v1/invoice-settings').expect(200);
+    },
+
+    'PATCH /v1/invoice-settings': async () => {
+      await expectBUnchanged(async () => {
+        await asA
+          .patch('/v1/invoice-settings', { termsText: 'A only', garageId: b.garage.garageId })
+          .expect(200);
+      });
+      const row = await platform.garageSettings.findUniqueOrThrow({
+        where: { garageId: b.garage.garageId },
+      });
+      expect(row.termsText).toBeNull();
+    },
+
     'POST /v1/invoices/:invoiceId/payments': async () => {
       await expectBUnchanged(async () => {
         await asA

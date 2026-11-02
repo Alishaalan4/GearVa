@@ -323,8 +323,8 @@ stateDiagram-v2
 - VAT, when on, is charged on the amount after the discount, also in integer cents with halves rounding up.
 
 ### 7.5 Editing and cancelling
-- **Edit window:** same day (garage timezone) the mechanic/manager can edit; after that only the OWNER. Every edit stores `before` and `after` in `audit_logs`, recalculates totals, regenerates the PDF.
-- **No deleting.** To fix a mistake: cancel with a required reason, then create a new invoice from the same visit. The new invoice gets the next number and `replacesInvoiceId` points to the cancelled one.
+- **Edit window:** same day (garage timezone) the mechanic (own visits) or manager can edit; after that only the OWNER. An edit changes quantities, prices and the discount, and the service records move with their lines. Adding or removing a line is cancel and reissue. A total below what was already paid is refused (`INVOICE_TOTAL_BELOW_PAID`), and a total of 0 needs confirming like at finish. Every edit stores `before` and `after` in `audit_logs`, recalculates totals with the invoice's own VAT rate, regenerates the PDF.
+- **No deleting.** To fix a mistake: cancel with a required reason, then create a new invoice from the same visit (`POST /v1/invoices/:id/reissue`, owners and managers). The new invoice gets the next number and `replacesInvoiceId` points to the cancelled one. Money already paid does not move to it: the cancelled invoice stays "refund needed", and the new one starts unpaid unless a payment is entered.
 - Cancelled invoices stay in lists, marked clearly, and keep their number. Recorded payments on a cancelled invoice stay in the table and are shown as "refund needed" in the debt/revenue screens (no automatic refund logic).
 - Reprinting or re-sending is audit logged.
 

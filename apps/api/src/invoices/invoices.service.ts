@@ -88,6 +88,7 @@ export class InvoicesService {
     tx: TenantTx,
     visit: Visit,
     input: FinishVisitInput,
+    replacesInvoiceId: string | null = null,
   ): Promise<{ invoice: Invoice; payment: Payment | null }> {
     const garageId = visit.garageId;
     const staffId = this.requireActorId();
@@ -154,6 +155,7 @@ export class InvoicesService {
         ...totals,
         discountType: input.discount?.type ?? null,
         discountValue: input.discount?.value ?? null,
+        vatRatePercent: settings.vatEnabled ? settings.vatRatePercent : null,
         remainingCents: totals.totalCents,
         laborCents: optionalSum(records.map((r) => r.laborCents)),
         partsCents: optionalSum(records.map((r) => r.partsCents)),
@@ -179,6 +181,7 @@ export class InvoicesService {
           vatNumber: settings.vatEnabled ? settings.vatNumber : null,
           brandColor: settings.brandColor,
         },
+        replacesInvoiceId,
         createdById: staffId,
       },
     });
@@ -319,7 +322,7 @@ export class InvoicesService {
   }
 
   /** An invoice of this garage; staff of one branch see only that branch (flow.md 1). */
-  private invoiceScope(invoiceId: string) {
+  invoiceScope(invoiceId: string) {
     const branchId = this.context.actor?.branchId;
     return { id: invoiceId, garageId: this.db.garageId, ...(branchId ? { branchId } : {}) };
   }
@@ -330,7 +333,7 @@ export class InvoicesService {
     return id;
   }
 
-  private notFound(): AppException {
+  notFound(): AppException {
     return new AppException(HttpStatus.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Invoice not found');
   }
 

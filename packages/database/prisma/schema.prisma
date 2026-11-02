@@ -677,6 +677,8 @@ model Invoice {
   // cents or percent
   discountValue     Int?          @map("discount_value")
   discountCents     Int           @default(0) @map("discount_cents")
+  // the rate at issue time: an edit must not pick up a later rate
+  vatRatePercent    Decimal?      @map("vat_rate_percent") @db.Decimal(5, 2)
   vatCents          Int           @default(0) @map("vat_cents")
   totalCents        Int           @map("total_cents")
   paidCents         Int           @default(0) @map("paid_cents")

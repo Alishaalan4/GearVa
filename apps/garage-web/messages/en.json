@@ -45,6 +45,12 @@
     "switchLanguage": "العربية",
     "customers": "Customers"
   },
+  "authSide": {
+    "heading": "Know when every customer is due.",
+    "point1": "Your customer database, protected and private",
+    "point2": "Reminders that bring customers back",
+    "point3": "Offers sent to your own customers"
+  },
   "login": {
     "title": "Sign in",
     "subtitle": "Gearva for garages",

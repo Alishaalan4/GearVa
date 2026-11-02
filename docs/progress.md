@@ -26,8 +26,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 2 | 2.4 API: quick entry, visits, history | ✅ Done | 2026-10-26 |
 | 2 | 2.5 garage-web: search, customers, cars | ✅ Done | 2026-10-29 |
 | 2 | 2.6 garage-web: quick entry, history timeline (Done-when check) | ✅ Done | 2026-11-01 |
-| Design | D.1 Colours, dark mode, fonts, shared components, sidebar | 🔄 In progress | |
-| Design | D.2 Page layouts (login, cards, tables, status pills) | Next | |
+| Design | D.1 Colours, dark mode, fonts, shared components, sidebar | ✅ Done | 2026-11-02 |
+| Design | D.2 Page layouts (login, tables, status pills) | 🔄 In progress | |
 
 ---
 
@@ -699,7 +699,31 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 **Decisions:** inputs use 16 px text on phones (the prototype's 14 px makes iPhones zoom in on tap). Dark mode follows the device; no switch in the app yet.
 
-**Verified:** by me: typecheck and lint (ui, garage-web, admin), `format:check`, `next build` of both apps, tokens present in the compiled CSS, en/ar keys match (garage-web 265, admin 150). Not seen in a browser yet: waiting for the user's check.
+**Verified:** by me: typecheck and lint (ui, garage-web, admin), `format:check`, `next build` of both apps, tokens present in the compiled CSS, en/ar keys match (garage-web 265, admin 150). By the user: browser check of both apps.
+**Commit:** `3ab5972` — `Design D.1: colours, dark mode, fonts, shared components and sidebar`
+
+---
+
+## Design · Step D.2 — page layouts
+**When:** 2026-11-02 (~45 min of work)
+
+**Summary:** Second half of the design step. Sign-in pages use the prototype's split screen (dark pitch panel beside the form, stacked on a phone). Status labels are one `Pill` component with the prototype's four tones. Next due values sit in the orange-tinted box on the form and the visit page. The admin garage table, plates and customer names follow the prototype's type. Prototype screens that need later data (dashboard stat cards, invoices, reminders, offers, revenue) are built in their own phases, in this same style.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/ui/src/index.tsx` | New `Pill`, `AuthFrame` |
+| `apps/*/features/auth/auth-layout.tsx` | Split-screen sign-in |
+| `apps/*/messages/en.json`, `ar.json` | `authSide` texts |
+| `apps/garage-web/features/{branches,customers,staff,vehicles,visits}/*`, `apps/admin/features/garages/status-badge.tsx` | Labels use `Pill` |
+| `apps/garage-web/features/quick-entry/*`, `visits/visit-page.tsx` | Next due box, service buttons |
+| `apps/admin/features/garages/garage-list.tsx`, `apps/garage-web/features/{customers,search,vehicles}/*` | Table header, plates and names |
+
+**Doc changes:** none (README 5.7 covers it).
+
+**Differences from the prototype, on purpose:** the admin sign-in text says "Create garages and invite their owners" (the prototype's "create the email and password" is not how accounts work: flow.md uses invite links) and leaves out WhatsApp volume (a later feature). Staff sign-in has no Garage/Admin switch: they are separate apps.
+
+**Verified:** by me: typecheck and lint (ui, garage-web, admin), `format:check`, `next build` of both apps, en/ar key check. Browser check by the user: pending.
 **Commit:** _(filled in at the next step)_
 
 ---

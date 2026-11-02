@@ -1,7 +1,7 @@
 'use client';
 
 import type { VisitDetail } from '@gearva/contracts';
-import { Alert, Button, Card } from '@gearva/ui';
+import { Alert, Button, Card, Pill } from '@gearva/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { ApiErrorAlert } from '@/components/api-error';
@@ -65,7 +65,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-mono text-2xl font-extrabold" dir="ltr">
+            <h1 className="text-2xl font-extrabold" dir="ltr">
               {v.vehicle.plate}
             </h1>
             <p className="text-sm text-muted">
@@ -76,11 +76,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
               {tHistory('branch', { code: v.branch.code })} · {v.mechanic.name}
             </p>
           </div>
-          <span
-            className={`rounded px-2 py-1 text-xs font-medium ${open ? 'bg-tint text-brand-ink' : 'bg-ok text-ok-ink'}`}
-          >
-            {tHistory(`status.${v.status}`)}
-          </span>
+          <Pill tone={open ? 'brand' : 'ok'}>{tHistory(`status.${v.status}`)}</Pill>
         </div>
 
         <ul className="mt-4 divide-y divide-line">
@@ -99,7 +95,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
                 <span>{money(r.totalCents)}</span>
               </div>
               {(r.nextDueKm !== null || r.nextDueDate) && (
-                <p className="text-sm text-muted">
+                <p className="mt-2 rounded-[10px] bg-tint px-3 py-2 text-sm font-semibold">
                   {tHistory('nextDue', {
                     value: [
                       r.nextDueKm !== null ? distance(r.nextDueKm, unit) : null,

@@ -67,7 +67,7 @@ export function CustomerList() {
               className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-soft"
             >
               <div>
-                <p className="font-medium">{c.name}</p>
+                <p className="font-bold">{c.name}</p>
                 <p className="text-sm text-muted" dir="ltr">
                   {c.phone}
                 </p>

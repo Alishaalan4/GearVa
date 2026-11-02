@@ -75,7 +75,7 @@ export function SearchPanel() {
                   <div className="space-y-0.5">
                     {r.vehicle ? (
                       <>
-                        <p className="font-mono text-lg font-semibold" dir="ltr">
+                        <p className="text-lg font-extrabold" dir="ltr">
                           {r.vehicle.plate}
                         </p>
                         <p className="text-sm text-soft-ink">
@@ -88,7 +88,7 @@ export function SearchPanel() {
                     )}
                   </div>
                   <div className="text-end text-sm">
-                    <p className="font-medium">{r.customer.name}</p>
+                    <p className="font-bold">{r.customer.name}</p>
                     <p className="text-muted" dir="ltr">
                       {r.customer.phone}
                     </p>

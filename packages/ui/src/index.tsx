@@ -165,3 +165,66 @@ export function AppFrame({
     </div>
   );
 }
+
+const PILL_STYLES = {
+  brand: 'bg-tint text-brand-ink',
+  ok: 'bg-ok text-ok-ink',
+  bad: 'bg-bad text-bad-ink',
+  soft: 'bg-soft text-soft-ink',
+} as const;
+
+/** A small status label. */
+export function Pill({
+  tone = 'soft',
+  children,
+}: {
+  tone?: keyof typeof PILL_STYLES;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={`inline-block whitespace-nowrap rounded-[10px] px-2.5 py-0.5 text-xs font-bold ${PILL_STYLES[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Sign-in pages: a dark panel with the pitch beside the form, stacked on a phone. */
+export function AuthFrame({
+  heading,
+  points,
+  language,
+  title,
+  children,
+}: {
+  heading: string;
+  points: string[];
+  language: ReactNode;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <main className="grid min-h-dvh min-[820px]:grid-cols-2">
+      <div className="flex flex-col justify-center gap-5 bg-sidebar p-8 text-white min-[820px]:p-16">
+        <Logo />
+        <h2 className="text-3xl font-extrabold leading-tight min-[820px]:text-[42px]">{heading}</h2>
+        <ul className="space-y-2 text-[#E5EAE9]">
+          {points.map((point) => (
+            <li key={point} className="flex items-baseline gap-3">
+              <span className="size-2.5 shrink-0 bg-brand" aria-hidden="true" />
+              {point}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex flex-col items-center justify-center gap-3 p-6 min-[820px]:p-8">
+        <div className="flex w-full max-w-110 justify-end">{language}</div>
+        <div className="w-full max-w-110 rounded-xl border border-line bg-card p-6 sm:p-8">
+          <h1 className="mb-5 text-2xl font-extrabold">{title}</h1>
+          {children}
+        </div>
+      </div>
+    </main>
+  );
+}

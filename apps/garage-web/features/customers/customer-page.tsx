@@ -6,7 +6,7 @@ import {
   type UpdateCustomerInput,
   updateCustomerSchema,
 } from '@gearva/contracts';
-import { Alert, Button, buttonClass, Card, Field, Input, Textarea } from '@gearva/ui';
+import { Alert, Button, buttonClass, Card, Field, Input, Pill, Textarea } from '@gearva/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -57,16 +57,8 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
               </p>
               {c.notes && <p className="whitespace-pre-line text-sm text-muted">{c.notes}</p>}
               <div className="flex flex-wrap gap-2 pt-1 text-xs">
-                {c.remindersOptOut && (
-                  <span className="rounded bg-tint px-2 py-0.5 text-brand-ink">
-                    {t('remindersOptOut')}
-                  </span>
-                )}
-                {c.marketingOptOut && (
-                  <span className="rounded bg-tint px-2 py-0.5 text-brand-ink">
-                    {t('marketingOptOut')}
-                  </span>
-                )}
+                {c.remindersOptOut && <Pill tone="brand">{t('remindersOptOut')}</Pill>}
+                {c.marketingOptOut && <Pill tone="brand">{t('marketingOptOut')}</Pill>}
               </div>
             </div>
             <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
@@ -92,7 +84,7 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card p-4 hover:border-ink"
               >
                 <div>
-                  <p className="font-mono text-lg font-semibold" dir="ltr">
+                  <p className="text-lg font-extrabold" dir="ltr">
                     {v.plate}
                   </p>
                   <p className="text-sm text-soft-ink">

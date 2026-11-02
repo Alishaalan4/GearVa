@@ -45,7 +45,7 @@ export function ServicePicker({ href }: { href: (type: ServiceTypeItem) => strin
           <Link
             key={type.id}
             href={href(type)}
-            className="flex min-h-14 items-center justify-center rounded-xl border border-line bg-card px-3 py-3 text-center font-medium hover:border-brand hover:bg-soft"
+            className="flex min-h-14 items-center justify-center rounded-xl border-[1.5px] border-line bg-card px-3 py-3 text-center font-bold hover:border-brand hover:bg-soft"
           >
             {name(type)}
           </Link>

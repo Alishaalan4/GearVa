@@ -37,6 +37,12 @@
     "signOut": "Sign out",
     "switchLanguage": "العربية"
   },
+  "authSide": {
+    "heading": "Run every garage from one place.",
+    "point1": "Create garages and invite their owners",
+    "point2": "Track subscriptions and payments",
+    "point3": "Monitor usage"
+  },
   "login": {
     "title": "Sign in",
     "subtitle": "Gearva platform administration",

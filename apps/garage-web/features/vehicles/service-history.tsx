@@ -1,7 +1,7 @@
 'use client';
 
 import type { DistanceUnit, HistoryItem, Paginated } from '@gearva/contracts';
-import { Button } from '@gearva/ui';
+import { Button, Pill } from '@gearva/ui';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -70,9 +70,7 @@ export function ServiceHistory({ vehicleId, unit }: { vehicleId: string; unit: D
                   {t('branch', { code: r.visit.branchCode })} · {r.mechanic.name}
                 </span>
                 {r.visit.status !== 'DONE' && (
-                  <span className="rounded bg-tint px-2 text-xs text-brand-ink">
-                    {t(`status.${r.visit.status}`)}
-                  </span>
+                  <Pill tone="brand">{t(`status.${r.visit.status}`)}</Pill>
                 )}
               </div>
               {r.notes && <p className="mt-1 text-sm text-muted">{r.notes}</p>}

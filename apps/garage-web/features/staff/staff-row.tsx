@@ -7,7 +7,7 @@ import {
   type UpdateStaffInput,
   updateStaffSchema,
 } from '@gearva/contracts';
-import { Button, Field, Input } from '@gearva/ui';
+import { Button, Field, Input, Pill } from '@gearva/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -62,17 +62,11 @@ export function StaffRow({
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{member.name}</span>
-            <span className="rounded bg-soft px-2 py-0.5 text-xs">{tRoles(member.role)}</span>
+            <Pill>{tRoles(member.role)}</Pill>
             {!member.isActive ? (
-              <span className="rounded bg-bad px-2 py-0.5 text-xs text-bad-ink">
-                {t('inactive')}
-              </span>
+              <Pill tone="bad">{t('inactive')}</Pill>
             ) : (
-              !member.hasPassword && (
-                <span className="rounded bg-tint px-2 py-0.5 text-xs text-brand-ink">
-                  {t('invitePending')}
-                </span>
-              )
+              !member.hasPassword && <Pill tone="brand">{t('invitePending')}</Pill>
             )}
           </div>
           <p className="text-sm text-muted" dir="ltr">

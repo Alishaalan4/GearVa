@@ -402,7 +402,7 @@ function LoadedForm({
             })}
           </p>
         )}
-        <div className="mt-4 rounded-md bg-soft px-3 py-2 text-sm">
+        <div className="mt-4 rounded-[10px] bg-tint px-3.5 py-3 text-sm font-semibold">
           {noReminder
             ? t('noReminderSet')
             : nextKm === null && !nextDate

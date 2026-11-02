@@ -89,16 +89,16 @@ export function GarageList() {
 
       <div className="overflow-x-auto rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-soft text-start text-xs uppercase text-muted">
+          <thead className="text-xs text-muted">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('columns.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('columns.status')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('columns.access')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('columns.branches')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('columns.created')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('columns.name')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('columns.status')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('columns.access')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('columns.branches')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('columns.created')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-line">
+          <tbody className="divide-y divide-line border-t border-line">
             {garages.data?.items.map((g) => (
               <tr
                 key={g.id}
@@ -106,7 +106,7 @@ export function GarageList() {
                 onClick={() => router.push(`/garages/${g.id}`)}
               >
                 <td className="px-4 py-3">
-                  <Link href={`/garages/${g.id}`} className="font-medium hover:underline">
+                  <Link href={`/garages/${g.id}`} className="font-bold hover:underline">
                     {g.name}
                   </Link>
                   <div className="text-xs text-muted" dir="ltr">

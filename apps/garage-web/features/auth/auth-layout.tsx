@@ -1,21 +1,19 @@
-import { Logo } from '@gearva/ui';
+import { AuthFrame } from '@gearva/ui';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { LanguageToggle } from '@/components/language-toggle';
 
-/** Centered card used by every sign-in step. */
+/** The frame of every sign-in step. */
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
+  const t = useTranslations('authSide');
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md space-y-4">
-        <div className="flex items-center justify-between">
-          <Logo />
-          <LanguageToggle />
-        </div>
-        <div className="rounded-xl border border-line bg-card p-6">
-          <h1 className="mb-5 text-2xl font-extrabold">{title}</h1>
-          {children}
-        </div>
-      </div>
-    </main>
+    <AuthFrame
+      heading={t('heading')}
+      points={[t('point1'), t('point2'), t('point3')]}
+      language={<LanguageToggle />}
+      title={title}
+    >
+      {children}
+    </AuthFrame>
   );
 }

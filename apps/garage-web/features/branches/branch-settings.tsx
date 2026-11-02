@@ -1,7 +1,7 @@
 'use client';
 
 import type { BranchItem, CreateBranchInput, UpdateBranchInput } from '@gearva/contracts';
-import { Alert, Button, Card } from '@gearva/ui';
+import { Alert, Button, Card, Pill } from '@gearva/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -113,14 +113,8 @@ function BranchRow({
               <span className="text-xs text-muted" dir="ltr">
                 {branch.code}
               </span>
-              {branch.isMain && (
-                <span className="rounded bg-soft px-2 py-0.5 text-xs">{t('main')}</span>
-              )}
-              {!branch.isActive && (
-                <span className="rounded bg-tint px-2 py-0.5 text-xs text-brand-ink">
-                  {t('inactive')}
-                </span>
-              )}
+              {branch.isMain && <Pill>{t('main')}</Pill>}
+              {!branch.isActive && <Pill tone="brand">{t('inactive')}</Pill>}
             </div>
             {branch.address && <p className="text-sm text-muted">{branch.address}</p>}
             {branch.phone && (

@@ -36,6 +36,7 @@ export function toStaffProfile(user: UserWithGarage): StaffProfile {
       name: user.garage.name,
       status: user.garage.status,
       defaultLocale: user.garage.defaultLocale === 'ar' ? 'ar' : 'en',
+      timezone: user.garage.timezone,
     },
   };
 }

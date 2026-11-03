@@ -89,6 +89,30 @@ describe('Changing invoices, debts and income', () => {
     await app?.close();
   });
 
+  describe('what a visit shows', () => {
+    it('keeps the cancelled invoice until a new one replaces it', async () => {
+      const { id, visit } = await invoice();
+      await as(owner).post(`/v1/invoices/${id}/cancel`, { reason: 'Wrong car' }).expect(200);
+      const cancelled = await as(owner).get(`/v1/visits/${visit.id}`).expect(200);
+      expect(cancelled.body.invoice).toMatchObject({ id, status: 'CANCELLED' });
+
+      const next = await as(owner).post(`/v1/invoices/${id}/reissue`, {}).expect(201);
+      const reissued = await as(owner).get(`/v1/visits/${visit.id}`).expect(200);
+      expect(reissued.body.invoice).toMatchObject({ id: next.body.id, status: 'UNPAID' });
+    });
+
+    it('gives the rate only when the garage has VAT on', async () => {
+      const { visit } = await invoice();
+      expect(visit.vatRatePercent).toBeNull();
+      await as(owner)
+        .patch('/v1/invoice-settings', { vatEnabled: true, vatRatePercent: '11' })
+        .expect(200);
+      const res = await as(owner).get(`/v1/visits/${visit.id}`).expect(200);
+      expect(Number(res.body.vatRatePercent)).toBe(11);
+      await as(owner).patch('/v1/invoice-settings', { vatEnabled: false }).expect(200);
+    });
+  });
+
   describe('editing (flow.md 7.5)', () => {
     it('recalculates totals, moves the service record and logs before and after', async () => {
       const { id, lineId, visit } = await invoice();

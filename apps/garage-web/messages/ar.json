@@ -11,7 +11,8 @@
     "cancel": "إلغاء",
     "ownerOnly": "هذه الصفحة لمالك الكراج فقط.",
     "edit": "تعديل",
-    "backToSearch": "→ البحث"
+    "backToSearch": "→ البحث",
+    "back": "رجوع"
   },
   "errors": {
     "BAD_REQUEST": "الطلب غير صالح.",
@@ -35,7 +36,16 @@
     "VEHICLE_PLATE_EXISTS": "سيارة بهذه اللوحة مسجّلة بالفعل في هذا الكراج.",
     "ODOMETER_CONFIRMATION_REQUIRED": "قراءة العدّاد غير معتادة. تحقّق منها ثم أكّد.",
     "VISIT_ALREADY_FINISHED": "هذه الزيارة منتهية بالفعل.",
-    "VISIT_HAS_NO_RECORDS": "أضف خدمة واحدة على الأقل قبل الإنهاء."
+    "VISIT_HAS_NO_RECORDS": "أضف خدمة واحدة على الأقل قبل الإنهاء.",
+    "INVOICE_TOTAL_ZERO": "المجموع 0. أكّد أن هذا العمل مجاني.",
+    "INVOICE_CANCELLED": "هذه الفاتورة ملغاة.",
+    "PAYMENT_EXCEEDS_REMAINING": "الدفعة أكبر من المبلغ المتبقي.",
+    "INVOICE_TOTAL_BELOW_PAID": "المجموع الجديد أقل مما دُفع.",
+    "INVOICE_EDIT_WINDOW_CLOSED": "بعد يوم الإصدار، يستطيع المالك فقط تعديل الفاتورة.",
+    "INVOICE_NOT_CANCELLED": "ألغِ الفاتورة قبل إصدار فاتورة جديدة.",
+    "INVOICE_ALREADY_REISSUED": "لهذه الزيارة فاتورة أحدث.",
+    "INVOICE_PDF_NOT_READY": "ملف PDF قيد التحضير. حاول بعد قليل.",
+    "FILE_TOO_LARGE": "الملف كبير جدًا."
   },
   "nav": {
     "home": "بحث",
@@ -333,5 +343,61 @@
     "finish": "إنهاء الزيارة",
     "waitingForParts": "بانتظار القطع",
     "partsArrived": "وصلت القطع"
+  },
+  "invoice": {
+    "notFound": "هذه الفاتورة غير موجودة.",
+    "backToVisit": "→ الزيارة",
+    "open": "فتح الفاتورة",
+    "totalAndRemaining": "المجموع {total} · المتبقي {remaining}",
+    "subtotal": "المجموع الفرعي",
+    "discount": "الحسم",
+    "vat": "الضريبة",
+    "total": "المجموع",
+    "paid": "المدفوع",
+    "remaining": "المتبقي",
+    "quantity": "الكمية",
+    "unitPrice": "سعر الوحدة ($)",
+    "addDiscount": "إضافة حسم",
+    "discountType": "نوع الحسم",
+    "discountAmount": "مبلغ ($)",
+    "discountPercent": "نسبة (%)",
+    "paidNow": "هل دفع الآن؟",
+    "paidFull": "دفع كامل",
+    "paidPart": "جزء",
+    "payLater": "يدفع لاحقًا",
+    "amount": "المبلغ ($)",
+    "partInvalid": "أدخل مبلغًا أكبر من 0 وضمن المستحق.",
+    "freeQuestion": "لا يوجد سعر. هل تحفظها مجانًا؟",
+    "freeHint": "تُحفظ الفاتورة بمجموع $0 ولا يمكن حذفها.",
+    "saveFree": "نعم، احفظها مجانًا",
+    "payments": "الدفعات",
+    "addPayment": "تسجيل دفعة",
+    "savePayment": "حفظ الدفعة",
+    "paymentMethod": "طريقة الدفع",
+    "paymentDate": "التاريخ",
+    "paymentDateHint": "اتركه فارغًا لتاريخ اليوم.",
+    "paymentNote": "ملاحظة (اختياري)",
+    "paymentFinal": "لا يمكن تعديل الدفعة أو حذفها بعد حفظها.",
+    "nextService": "الخدمة القادمة: {value}",
+    "printPdf": "طباعة / PDF",
+    "editTitle": "تعديل الفاتورة",
+    "cancelInvoice": "إلغاء الفاتورة",
+    "cancelTitle": "إلغاء الفاتورة {number}",
+    "cancelReason": "السبب",
+    "cancelHint": "تحتفظ الفاتورة برقمها وتبقى في سجلاتك.",
+    "cancelledBecause": "ملغاة: {reason}",
+    "refundNeeded": "يجب ردّ مبلغ: {amount}",
+    "issueNew": "إصدار فاتورة جديدة",
+    "replacedBy": "حلّت محلها الفاتورة {number}",
+    "method": {
+      "CASH": "نقدًا",
+      "WHISH": "Whish"
+    },
+    "status": {
+      "UNPAID": "غير مدفوعة",
+      "PARTIALLY_PAID": "مدفوعة جزئيًا",
+      "PAID": "مدفوعة",
+      "CANCELLED": "ملغاة"
+    }
   }
 }

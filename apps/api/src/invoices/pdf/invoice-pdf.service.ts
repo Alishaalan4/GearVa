@@ -61,9 +61,20 @@ export class InvoicePdfService implements OnApplicationBootstrap {
     }
   }
 
+  /**
+   * Jobs for one invoice can overlap. The version is read before the content, and the file
+   * is saved under the row lock only if that version is still current: otherwise this job
+   * rendered old content, and the change that made it old queued its own render.
+   */
   async generate(invoiceId: string): Promise<void> {
-    const invoice = await this.invoices.detail(invoiceId);
     const garageId = this.db.garageId;
+    const { updatedAt } = await this.db.run((tx) =>
+      tx.invoice.findFirstOrThrow({
+        where: { id: invoiceId, garageId },
+        select: { updatedAt: true },
+      }),
+    );
+    const invoice = await this.invoices.detail(invoiceId);
     const pdf = await this.renderer.render(
       renderInvoiceHtml({
         invoice,
@@ -72,9 +83,14 @@ export class InvoicePdfService implements OnApplicationBootstrap {
       }),
     );
     const storageKey = `garages/${garageId}/invoices/${invoiceId}.pdf`;
-    await this.storage.put(storageKey, pdf, 'application/pdf');
     await this.db.run(async (tx) => {
+      await tx.$queryRaw`
+        SELECT "id" FROM "invoices"
+        WHERE "id" = ${invoiceId}::uuid AND "garage_id" = ${garageId}::uuid
+        FOR UPDATE`;
       const row = await tx.invoice.findFirstOrThrow({ where: { id: invoiceId, garageId } });
+      if (row.updatedAt.getTime() !== updatedAt.getTime()) return;
+      await this.storage.put(storageKey, pdf, 'application/pdf');
       if (row.pdfFileId) {
         await tx.file.update({ where: { id: row.pdfFileId }, data: { sizeBytes: pdf.length } });
         return;

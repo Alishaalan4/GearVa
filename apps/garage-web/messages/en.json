@@ -11,7 +11,8 @@
     "cancel": "Cancel",
     "ownerOnly": "Only the garage owner can open this page.",
     "edit": "Edit",
-    "backToSearch": "← Search"
+    "backToSearch": "← Search",
+    "back": "Back"
   },
   "errors": {
     "BAD_REQUEST": "The request was not valid.",
@@ -35,7 +36,16 @@
     "VEHICLE_PLATE_EXISTS": "A car with this plate is already registered in this garage.",
     "ODOMETER_CONFIRMATION_REQUIRED": "The odometer looks unusual. Check it and confirm.",
     "VISIT_ALREADY_FINISHED": "This visit is already finished.",
-    "VISIT_HAS_NO_RECORDS": "Add at least one service before finishing."
+    "VISIT_HAS_NO_RECORDS": "Add at least one service before finishing.",
+    "INVOICE_TOTAL_ZERO": "The total is 0. Confirm that this work is free.",
+    "INVOICE_CANCELLED": "This invoice is cancelled.",
+    "PAYMENT_EXCEEDS_REMAINING": "The payment is more than the amount remaining.",
+    "INVOICE_TOTAL_BELOW_PAID": "The new total is less than what was already paid.",
+    "INVOICE_EDIT_WINDOW_CLOSED": "After the day of issue, only the owner can edit an invoice.",
+    "INVOICE_NOT_CANCELLED": "Cancel the invoice before issuing a new one.",
+    "INVOICE_ALREADY_REISSUED": "This visit already has a newer invoice.",
+    "INVOICE_PDF_NOT_READY": "The PDF is still being prepared. Try again in a moment.",
+    "FILE_TOO_LARGE": "The file is too large."
   },
   "nav": {
     "home": "Search",
@@ -333,5 +343,61 @@
     "finish": "Finish visit",
     "waitingForParts": "Waiting for parts",
     "partsArrived": "Parts arrived"
+  },
+  "invoice": {
+    "notFound": "This invoice does not exist.",
+    "backToVisit": "← Visit",
+    "open": "Open invoice",
+    "totalAndRemaining": "Total {total} · Remaining {remaining}",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "vat": "VAT",
+    "total": "Total",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price ($)",
+    "addDiscount": "Add a discount",
+    "discountType": "Discount type",
+    "discountAmount": "Amount ($)",
+    "discountPercent": "Percent (%)",
+    "paidNow": "Paid now?",
+    "paidFull": "Paid in full",
+    "paidPart": "Part",
+    "payLater": "Pay later",
+    "amount": "Amount ($)",
+    "partInvalid": "Enter an amount above 0, up to what is owed.",
+    "freeQuestion": "No price. Save as free?",
+    "freeHint": "The invoice is saved with a total of $0 and cannot be deleted.",
+    "saveFree": "Yes, save as free",
+    "payments": "Payments",
+    "addPayment": "Record a payment",
+    "savePayment": "Save payment",
+    "paymentMethod": "Paid by",
+    "paymentDate": "Date",
+    "paymentDateHint": "Leave empty for today.",
+    "paymentNote": "Note (optional)",
+    "paymentFinal": "A saved payment cannot be changed or deleted.",
+    "nextService": "Next service: {value}",
+    "printPdf": "Print / PDF",
+    "editTitle": "Edit invoice",
+    "cancelInvoice": "Cancel invoice",
+    "cancelTitle": "Cancel invoice {number}",
+    "cancelReason": "Reason",
+    "cancelHint": "The invoice keeps its number and stays in your records.",
+    "cancelledBecause": "Cancelled: {reason}",
+    "refundNeeded": "Refund needed: {amount}",
+    "issueNew": "Issue a new invoice",
+    "replacedBy": "Replaced by invoice {number}",
+    "method": {
+      "CASH": "Cash",
+      "WHISH": "Whish"
+    },
+    "status": {
+      "UNPAID": "Unpaid",
+      "PARTIALLY_PAID": "Partly paid",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled"
+    }
   }
 }

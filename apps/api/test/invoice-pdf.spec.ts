@@ -4,8 +4,12 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import type { VisitDetail } from '@gearva/contracts';
 import type { PrismaClient } from '@gearva/database';
+import { ClsService } from 'nestjs-cls';
 import request from 'supertest';
+import { RequestContext } from '../src/common/context/request-context';
 import { PlatformDb } from '../src/common/db/platform-db';
+import { InvoicePdfService } from '../src/invoices/pdf/invoice-pdf.service';
+import { PDF_RENDERER, type PdfRenderer } from '../src/invoices/pdf/pdf-renderer';
 import { createTestApp } from './helpers/app';
 import { waitFor } from './helpers/garages';
 import {
@@ -124,6 +128,52 @@ describe('Invoice PDFs', () => {
       where: { garageId: g.garageId, kind: 'INVOICE_PDF', storageKey: { contains: id } },
     });
     expect(files).toBe(1);
+  });
+
+  describe('renders that overlap', () => {
+    /** Runs the job's work directly, as the worker does. */
+    const generate = (id: string) =>
+      app.get(ClsService).run(async () => {
+        app.get(RequestContext).setActor({
+          type: 'SYSTEM',
+          id: null,
+          garageId: g.garageId,
+          role: null,
+          branchId: null,
+        });
+        await app.get(InvoicePdfService).generate(id);
+      });
+    const fileCount = (id: string) =>
+      platform.file.count({
+        where: { garageId: g.garageId, kind: 'INVOICE_PDF', storageKey: { contains: id } },
+      });
+
+    it('keeps one file when several run together', async () => {
+      const id = await finished();
+      await pdfShowing(id, 'Pdf Customer');
+      await platform.invoice.update({ where: { id }, data: { pdfFileId: null } });
+      const before = await fileCount(id);
+      await Promise.all([generate(id), generate(id), generate(id), generate(id)]);
+      expect((await fileCount(id)) - before).toBeLessThanOrEqual(1);
+    });
+
+    it('an older render never replaces a newer one', async () => {
+      const id = await finished();
+      await pdfShowing(id, 'Unpaid');
+      const renderer = app.get<PdfRenderer>(PDF_RENDERER);
+      const render = renderer.render.bind(renderer);
+      // A payment arrives while this render is in Chrome, with the old content already read.
+      const spy = jest.spyOn(renderer, 'render').mockImplementationOnce(async (html) => {
+        spy.mockRestore();
+        await as(owner)
+          .post(`/v1/invoices/${id}/payments`, { amountCents: 4000, method: 'WHISH' })
+          .expect(201);
+        await pdfShowing(id, 'Whish');
+        return render(html);
+      });
+      await generate(id);
+      expect(await pdfShowing(id, 'Whish')).toContain('Whish');
+    });
   });
 
   it('answers "not ready" when the file is missing, and renders it again', async () => {

@@ -149,22 +149,26 @@ export class VisitsService {
   }
 
   async detail(visitId: string): Promise<VisitDetail> {
-    const visit = await this.db.run((tx) =>
-      tx.visit.findFirst({
+    const { visit, settings } = await this.db.run(async (tx) => ({
+      visit: await tx.visit.findFirst({
         where: this.visitScope(visitId),
         include: {
           branch: true,
           vehicle: true,
           customer: { include: { owner: true } },
           mechanic: true,
-          invoices: { where: { status: { not: 'CANCELLED' } }, take: 1 },
+          // Newest first: a reissued invoice comes before the one it replaces.
+          invoices: { orderBy: { issuedAt: 'desc' }, take: 1 },
           records: {
             include: { serviceType: true, mechanic: true },
             orderBy: [{ performedAt: 'asc' }, { createdAt: 'asc' }],
           },
         },
       }),
-    );
+      settings: await tx.garageSettings.findUniqueOrThrow({
+        where: { garageId: this.db.garageId },
+      }),
+    }));
     if (!visit) throw visitNotFound();
     return {
       id: visit.id,
@@ -180,6 +184,7 @@ export class VisitsService {
       records: visit.records.map(toRecordItem),
       totalCents: visit.records.reduce((sum, r) => sum + r.totalCents, 0),
       invoice: visit.invoices[0] ? toInvoiceSummary(visit.invoices[0]) : null,
+      vatRatePercent: settings.vatEnabled ? (settings.vatRatePercent?.toString() ?? '0') : null,
     };
   }
 

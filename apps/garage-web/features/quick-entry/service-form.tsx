@@ -201,7 +201,8 @@ function LoadedForm({
             vehicleId: vehicle.id,
             odometer: digits(odometerText),
             services: [body.line],
-            finish: body.finish,
+            // "Paid now?" comes next, on the visit page, so the visit stays open until then.
+            finish: false,
             confirmOdometer: body.confirmOdometer,
           }),
     onSuccess: (saved, body) => {
@@ -216,7 +217,7 @@ function LoadedForm({
       void queryClient.invalidateQueries({ queryKey: ['customer', vehicle.customer.id] });
       router.push(
         !visit && body.finish
-          ? { pathname: `/visits/${saved.id}`, query: { done: '1' } }
+          ? { pathname: `/visits/${saved.id}`, query: { finish: '1' } }
           : `/visits/${saved.id}`,
       );
     },

@@ -16,7 +16,12 @@ export function useMoney(): (cents: number) => string {
   const locale = useLocale();
   return useCallback(
     (cents: number) =>
-      new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(
+      // narrowSymbol: "$" in Arabic too, as on the PDF, not "US$".
+      new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: 'USD',
+        currencyDisplay: 'narrowSymbol',
+      }).format(
         // Intl accepts an exact decimal string (ES2023), so no float is involved.
         centsToDecimal(cents) as Intl.StringNumericLiteral,
       ),

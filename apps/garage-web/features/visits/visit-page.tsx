@@ -1,22 +1,26 @@
 'use client';
 
-import type { VisitDetail } from '@gearva/contracts';
-import { Alert, Button, Card, Pill } from '@gearva/ui';
+import type { FinishVisitInput, VisitDetail } from '@gearva/contracts';
+import { Alert, Button, Card, Pill, buttonClass } from '@gearva/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
 import { useStaff } from '@/features/auth/use-staff';
+import { FinishStep } from '@/features/invoices/finish-step';
+import { InvoiceStatusPill } from '@/features/invoices/invoice-status';
 import { ServicePicker, canRecordServices } from '@/features/quick-entry/service-picker';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPatch, apiPost } from '@/lib/api';
 import { calendarDate, useDistance, useMoney } from '@/lib/format';
 
 /**
- * One visit (flow.md 4.2, 4.4). Open: add another service, wait for parts, finish.
- * Done: the summary with each service's next due values.
+ * One visit (flow.md 4.2, 4.4). Open: add another service, wait for parts, finish with
+ * "Paid now?". Done: the summary with each service's next due values, and the invoice.
  */
-export function VisitPage({ visitId, justDone }: { visitId: string; justDone: boolean }) {
+export function VisitPage({ visitId, startFinish }: { visitId: string; startFinish: boolean }) {
   const t = useTranslations('visit');
+  const tInvoice = useTranslations('invoice');
   const tCommon = useTranslations('common');
   const tHistory = useTranslations('history');
   const locale = useLocale();
@@ -25,6 +29,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
   const distance = useDistance();
   const queryClient = useQueryClient();
   const { data: me } = useStaff();
+  const [finishing, setFinishing] = useState(startFinish);
 
   const visit = useQuery({
     queryKey: ['visit', visitId],
@@ -36,7 +41,8 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
     void queryClient.invalidateQueries({ queryKey: ['vehicle', saved.vehicle.id] });
   };
   const finish = useMutation({
-    mutationFn: () => apiPost<VisitDetail>(`/v1/visits/${visitId}/finish`),
+    mutationFn: (input: Partial<FinishVisitInput>) =>
+      apiPost<VisitDetail>(`/v1/visits/${visitId}/finish`, input),
     onSuccess: onSaved,
   });
   const status = useMutation({
@@ -60,7 +66,7 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
       <Link href={`/vehicles/${v.vehicle.id}`} className="text-sm text-muted hover:text-ink">
         {t('backToCar', { plate: v.vehicle.plate })}
       </Link>
-      {(justDone || finish.isSuccess) && !open && <Alert tone="success">{t('saved')}</Alert>}
+      {finish.isSuccess && !open && <Alert tone="success">{t('saved')}</Alert>}
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -118,15 +124,48 @@ export function VisitPage({ visitId, justDone }: { visitId: string; justDone: bo
         </div>
       </Card>
 
-      <ApiErrorAlert error={finish.error ?? status.error} />
-      {canEdit && (
+      {v.invoice && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-bold" dir="ltr">
+                {v.invoice.number}
+              </p>
+              <p className="text-sm text-muted">
+                {tInvoice('totalAndRemaining', {
+                  total: money(v.invoice.totalCents),
+                  remaining: money(v.invoice.remainingCents),
+                })}
+              </p>
+            </div>
+            <InvoiceStatusPill status={v.invoice.status} />
+          </div>
+          <Link href={`/invoices/${v.invoice.id}`} className={`${buttonClass()} mt-3 w-full`}>
+            {tInvoice('open')}
+          </Link>
+        </Card>
+      )}
+
+      {canEdit && finishing && (
+        <FinishStep
+          subtotalCents={v.totalCents}
+          vatRatePercent={v.vatRatePercent}
+          pending={finish.isPending}
+          error={finish.error}
+          submitLabel={t('finish')}
+          onSubmit={(input) => finish.mutate(input)}
+          onBack={() => setFinishing(false)}
+        />
+      )}
+      <ApiErrorAlert error={status.error} />
+      {canEdit && !finishing && (
         <>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
               className="py-3 text-base"
-              disabled={finish.isPending || v.records.length === 0}
-              onClick={() => finish.mutate()}
+              disabled={v.records.length === 0}
+              onClick={() => setFinishing(true)}
             >
               {t('finish')}
             </Button>

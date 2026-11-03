@@ -29,7 +29,7 @@ const NO_REFRESH = [
   '/v1/auth/logout',
 ];
 
-async function send<T>(path: string, init?: RequestInit): Promise<T> {
+async function send<T>(path: string, init?: RequestInit, asFile = false): Promise<T> {
   let res: Response;
   try {
     // Same origin: next.config.ts forwards /v1/* to the API with the cookies.
@@ -42,6 +42,7 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(0, 'NETWORK_ERROR', 'Network error');
   }
   if (res.status === 204) return undefined as T;
+  if (asFile && res.ok) return (await res.blob()) as T;
   const body = (await res.json().catch(() => null)) as T | ApiErrorBody | null;
   if (!res.ok) {
     const error = body as Partial<ApiErrorBody> | null;
@@ -75,9 +76,9 @@ function refreshSession(): Promise<ApiError | null> {
  * 401, so this refreshes the session once and retries the call. A refresh refused with
  * GARAGE_LOCKED is passed on, so the lock screen shows instead of the login page.
  */
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+export async function api<T>(path: string, init?: RequestInit, asFile = false): Promise<T> {
   try {
-    return await send<T>(path, init);
+    return await send<T>(path, init, asFile);
   } catch (error) {
     const canRefresh =
       error instanceof ApiError &&
@@ -85,10 +86,15 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
       !NO_REFRESH.some((p) => path.startsWith(p));
     if (!canRefresh) throw error;
     const failed = await refreshSession();
-    if (!failed) return send<T>(path, init);
+    if (!failed) return send<T>(path, init, asFile);
     if (failed.code === 'GARAGE_LOCKED') throw failed;
     throw error;
   }
+}
+
+/** A file from the API, such as an invoice PDF. */
+export function apiFile(path: string): Promise<Blob> {
+  return api<Blob>(path, undefined, true);
 }
 
 function withBody<T>(method: string, path: string, body?: unknown): Promise<T> {

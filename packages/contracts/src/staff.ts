@@ -49,6 +49,7 @@ export interface StaffProfile {
     name: string;
     status: GarageStatus;
     defaultLocale: Locale;
+    timezone: string;
   };
 }
 

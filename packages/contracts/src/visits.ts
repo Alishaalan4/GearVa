@@ -206,8 +206,13 @@ export interface VisitDetail {
   records: ServiceRecordItem[];
   /** sum of the records, in cents */
   totalCents: number;
-  /** the active invoice; null while open, and for visits finished before Phase 3 */
+  /**
+   * The newest invoice, which is the active one unless it was cancelled and not reissued.
+   * Null while open, and for visits finished before Phase 3.
+   */
   invoice: InvoiceSummary | null;
+  /** the garage's rate today, for the totals shown while finishing; null = VAT off */
+  vatRatePercent: string | null;
 }
 
 /** One line of the service history timeline (flow.md 4, database.md 8). */

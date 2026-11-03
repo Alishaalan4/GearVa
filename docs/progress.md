@@ -33,9 +33,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.2 Calculations (totals, discount, VAT, invoice number) | ✅ Done | 2026-11-02 |
 | 3 | 3.3 API: finish creates the invoice, payments, free work | ✅ Done | 2026-11-02 |
 | 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | ✅ Done | 2026-11-02 |
-| 3 | 3.5 PDF (Arabic + English) and file storage | 🔄 In progress | |
-| 3 | 3.6 garage-web: finish step, invoice page, payments | Next | |
-| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | | |
+| 3 | 3.5 PDF (Arabic + English) and file storage | ✅ Done | 2026-11-02 |
+| 3 | 3.6 garage-web: finish step, invoice page, payments | 🔄 In progress | |
+| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | Next | |
 | 3 | 3.8 First deployment to Render (README 9) | | |
 
 ---
@@ -903,7 +903,45 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - A logo above the limit answered 500 → `413 FILE_TOO_LARGE`.
 - Seen only by looking at a real Arabic PDF: the odometer read in the wrong order, unit before number. A left-to-right wrapper was removed, and a test now holds it.
 
-**Verified:** by me: 181 API tests, 41 tenancy tests, typecheck and lint of everything, `format:check`; real English and Arabic PDFs rendered with real Chrome and read page by page. Tests use the stub, so real rendering is not covered by CI. By the user: pending.
+**Verified:** by me: 181 API tests, 41 tenancy tests, typecheck and lint of everything, `format:check`; real English and Arabic PDFs rendered with real Chrome and read page by page. Tests use the stub, so real rendering is not covered by CI. By the user: `npm install`, `format:check`, `typecheck`, `npm test`, `test:tenancy`.
+**Commit:** `462f4c1` — `Phase 3.5: invoice PDFs in Arabic and English, file storage and logo`
+
+---
+
+## Phase 3 · Step 3.6 — garage-web: finish step, invoice page, payments
+**When:** 2026-11-02 (~2 h of work)
+
+**Implements:** flow.md 1 (permission matrix), 4.1, 7.1, 7.4, 7.5, 7.6, 8.1.
+
+**Summary:** Finishing a visit now opens "Paid now?": Paid in full, Part or Pay later, Cash or Whish, an optional discount, and "No price. Save as free?" when the total is 0. A new invoice page shows the lines, totals and payments, and offers Print / PDF, Record a payment, Edit, Cancel and Issue a new invoice, each only for the roles allowed. All new error codes are translated into English and Arabic.
+
+**Decisions**
+- **One finish step:** in the web app, Confirm and finish saves the service first, then opens the step on the visit page. If staff leave the step, the visit stays open and can be finished later. `POST /v1/visits/quick` still accepts `finish` and its options.
+- **Nothing is chosen at the start of "Paid now?"**, because a payment cannot be undone. This costs one tap against the 20-second target, which is still not timed on a phone.
+- **The total in the step is the real one:** it uses the same calculation as the API. `VisitDetail` gained `vatRatePercent`, because invoice settings are owner-only and a mechanic must still see the VAT.
+- **A visit now shows its newest invoice,** not only an active one, so a cancelled invoice stays reachable (flow.md 7.5 changed). The invoice page uses this to link to the replacement and to hide a second reissue.
+- **`StaffProfile.garage` gained `timezone`,** so the screen can hide Edit after the day of issue. The API stays the real check.
+- **Print opens the PDF in a new tab,** where the browser prints it. It is fetched as a file so an expired session refreshes first.
+- **Money in Arabic shows `$`,** not `US$`, matching the PDF.
+- **Left for 3.7:** the invoice list, debt list, income summary, invoice settings and logo screens.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/features/invoices/*`, `app/[locale]/(app)/invoices/[invoiceId]/page.tsx` (new) | Finish step, invoice page, payment, edit and cancel forms, status pill, discount fields |
+| `apps/garage-web/features/visits/visit-page.tsx`, `app/[locale]/(app)/visits/[visitId]/page.tsx`, `features/quick-entry/service-form.tsx` | Finish step and invoice card; quick entry goes to the step |
+| `apps/garage-web/lib/api.ts`, `lib/format.ts`, `messages/*.json` | `apiFile`, `$` in Arabic, translations |
+| `apps/api/src/visits/visits.service.ts`, `apps/api/src/auth/staff-auth.service.ts`, `packages/contracts/src/visits.ts`, `staff.ts` | `vatRatePercent`, newest invoice on a visit, `timezone` |
+| `apps/api/test/invoice-changes.spec.ts` | 2 tests for what a visit shows |
+| `apps/api/src/invoices/pdf/invoice-pdf.service.ts`, `apps/api/test/invoice-pdf.spec.ts` | Overlapping renders; 2 tests |
+
+**Doc changes:** flow.md 4.1, 7.1, 7.2, 7.5.
+
+**Problems hit and fixed**
+- Seen only in a screenshot: Arabic money read `$US 60.00` → `$`.
+- **A bug from step 3.5, found by the user's test run:** `invoice-pdf.spec.ts` failed with 2 files for one invoice. Two render jobs can overlap, and both saw no file yet. The same overlap could be worse: an older job finishing last would replace a newer PDF, so an invoice could print without its latest payment. Now a job remembers the invoice version, then saves under a short row lock only if that version is still current. Chrome runs outside the lock, so payments are not blocked. Two tests hold this.
+
+**Verified:** by me: 185 API tests (the full suite 5 times in a row, after your run caught the bug; both new tests fail on the old code), 41 tenancy tests, all other tests, typecheck and lint of everything, `format:check`. Real Chrome on a phone-size screen against the test database, with real PDF rendering: 22 checks as owner (finish, discount, part payment, invoice page, PDF through garage-web, payment, edit, cancel, reissue, free work, Arabic) and 10 checks on mechanic and receptionist rights and VAT, all passing, with no browser errors. These browser checks are not in the repo and do not run in CI; the Arabic `$` fix came after them and is covered by typecheck only. By the user: pending.
 **Commit:** _(filled in at the next step)_
 
 ---

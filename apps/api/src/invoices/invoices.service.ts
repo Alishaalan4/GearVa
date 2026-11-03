@@ -68,7 +68,9 @@ export function toInvoiceSummary(invoice: Invoice): InvoiceSummary {
 }
 
 type InvoiceWithRelations = Invoice & {
-  items: Prisma.InvoiceItemGetPayload<object>[];
+  items: Prisma.InvoiceItemGetPayload<{
+    include: { serviceRecord: { include: { serviceType: true } } };
+  }>[];
   payments: (Payment & { receivedBy: User })[];
 };
 
@@ -246,7 +248,10 @@ export class InvoicesService {
       tx.invoice.findFirst({
         where: this.invoiceScope(invoiceId),
         include: {
-          items: { orderBy: { position: 'asc' } },
+          items: {
+            include: { serviceRecord: { include: { serviceType: true } } },
+            orderBy: { position: 'asc' },
+          },
           payments: { include: { receivedBy: true }, orderBy: { paidAt: 'asc' } },
         },
       }),
@@ -360,6 +365,13 @@ export class InvoicesService {
       items: invoice.items.map((item) => ({
         id: item.id,
         description: item.description,
+        serviceName:
+          item.serviceRecord && !item.serviceRecord.customName
+            ? {
+                en: item.serviceRecord.serviceType.nameEn,
+                ar: item.serviceRecord.serviceType.nameAr,
+              }
+            : null,
         brand: item.brand,
         grade: item.grade,
         quantity: item.quantity.toFixed(2),

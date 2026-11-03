@@ -11,20 +11,23 @@ export function centsToDecimal(cents: number): string {
   return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
 }
 
-/** Formats integer cents as USD in the page language (README 5.4). */
+/**
+ * Formats integer cents as USD in the page language (README 5.4): "$1,234.50", as on the
+ * PDF. The "$" is added by hand, because Arabic currency formatting prints "US$" even with
+ * narrowSymbol. In Arabic the amount is isolated left to right, so "$" stays in front.
+ */
 export function useMoney(): (cents: number) => string {
   const locale = useLocale();
   return useCallback(
-    (cents: number) =>
-      // narrowSymbol: "$" in Arabic too, as on the PDF, not "US$".
-      new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency: 'USD',
-        currencyDisplay: 'narrowSymbol',
-      }).format(
+    (cents: number) => {
+      const digits = new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
         // Intl accepts an exact decimal string (ES2023), so no float is involved.
-        centsToDecimal(cents) as Intl.StringNumericLiteral,
-      ),
+      }).format(centsToDecimal(Math.abs(cents)) as Intl.StringNumericLiteral);
+      const amount = `${cents < 0 ? '-' : ''}$${digits}`;
+      return locale === 'ar' ? `⁦${amount}⁩` : amount;
+    },
     [locale],
   );
 }

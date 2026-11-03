@@ -17,7 +17,7 @@ import { ApiError, api, apiFile, apiPost } from '@/lib/api';
 import { calendarDate, useDistance, useMoney } from '@/lib/format';
 import { FinishStep } from './finish-step';
 import { CancelForm, EditForm, PaymentForm } from './invoice-forms';
-import { InvoiceStatusPill } from './invoice-status';
+import { InvoiceStatusPill, useLineName } from './invoice-status';
 
 type Panel = 'payment' | 'edit' | 'cancel' | 'reissue' | null;
 
@@ -61,6 +61,7 @@ export function InvoicePage({ invoiceId }: { invoiceId: string }) {
   const { data: me } = useStaff();
   const [panel, setPanel] = useState<Panel>(null);
   const pdf = usePdf(invoiceId);
+  const lineName = useLineName();
 
   const invoice = useQuery({
     queryKey: ['invoice', invoiceId],
@@ -177,7 +178,7 @@ export function InvoicePage({ invoiceId }: { invoiceId: string }) {
           {inv.items.map((item) => (
             <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3">
               <span className="font-medium">
-                {item.description}
+                {lineName(item)}
                 {item.quantity !== '1.00' && (
                   <span className="text-muted" dir="ltr">
                     {' '}

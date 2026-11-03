@@ -275,7 +275,13 @@ export interface InvoiceDetail extends InvoiceSummary {
   };
   items: {
     id: string;
+    /** the service name in the invoice's language, as printed */
     description: string;
+    /**
+     * The service type's names, so staff read the line in their own language. Null for a
+     * custom name (OTHER), which has only the text that was typed.
+     */
+    serviceName: { en: string; ar: string } | null;
     brand: string | null;
     grade: string | null;
     /** e.g. "1.00", "4.50" */

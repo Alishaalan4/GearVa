@@ -12,7 +12,8 @@
     "ownerOnly": "هذه الصفحة لمالك الكراج فقط.",
     "edit": "تعديل",
     "backToSearch": "→ البحث",
-    "back": "رجوع"
+    "back": "رجوع",
+    "notAllowed": "دورك لا يسمح بفتح هذه الصفحة."
   },
   "errors": {
     "BAD_REQUEST": "الطلب غير صالح.",
@@ -53,7 +54,11 @@
     "staff": "الموظفون",
     "signOut": "تسجيل الخروج",
     "switchLanguage": "English",
-    "customers": "الزبائن"
+    "customers": "الزبائن",
+    "invoices": "الفواتير",
+    "debts": "الديون",
+    "income": "المداخيل",
+    "invoiceSettings": "إعدادات الفواتير"
   },
   "authSide": {
     "heading": "اعرف متى تحين خدمة كل زبون.",
@@ -399,5 +404,61 @@
       "PAID": "مدفوعة",
       "CANCELLED": "ملغاة"
     }
+  },
+  "invoiceList": {
+    "title": "الفواتير",
+    "filter": "عرض",
+    "empty": "لا توجد فواتير هنا.",
+    "refund": "يجب ردّ مبلغ: {amount}",
+    "filters": {
+      "ALL": "الكل",
+      "UNPAID": "غير مدفوعة",
+      "PARTIALLY_PAID": "مدفوعة جزئيًا",
+      "PAID": "مدفوعة",
+      "CANCELLED": "ملغاة",
+      "REFUND": "يجب ردّ مبلغ"
+    }
+  },
+  "debts": {
+    "title": "الديون",
+    "count": "{count, plural, one {زبون واحد عليه دين} other {# زبائن عليهم ديون}}",
+    "empty": "لا أحد عليه دين. 🎉",
+    "owes": "عليه",
+    "remainingOf": "{remaining} من {total}"
+  },
+  "income": {
+    "title": "المداخيل",
+    "today": "اليوم",
+    "month": "هذا الشهر",
+    "received": "المقبوض",
+    "invoiced": "المفوتر",
+    "branch": "الفرع",
+    "allBranches": "كل الفروع",
+    "refundNeeded": "مبالغ يجب ردّها على فواتير ملغاة: {amount}",
+    "explain": "المقبوض هو المال الذي دُفع فعلًا (الدفعات)، في يوم دفعه. المفوتر هو مجموع الفواتير الصادرة، من دون الملغاة. المال المدفوع على فاتورة أُلغيت لاحقًا يبقى في المقبوض."
+  },
+  "invoiceSettings": {
+    "title": "إعدادات الفواتير",
+    "brandColor": "لون العلامة",
+    "brandColorHint": "الخط في أعلى الفاتورة.",
+    "numberFormat": "صيغة رقم الفاتورة",
+    "numberExample": "مثال: {example}",
+    "numberFormatInvalid": "استخدم '{BRANCH}' و'{YYYY}' و'{SEQ:4}' (4 = عدد الأرقام)، مثلًا '{BRANCH}-{YYYY}-{SEQ:4}'.",
+    "terms": "الشروط المطبوعة على الفواتير",
+    "termsHint": "مثلًا شروط الكفالة لديك.",
+    "vatEnabled": "احتساب الضريبة",
+    "vatRate": "نسبة الضريبة (%)",
+    "vatRateInvalid": "أدخل نسبة من 0 إلى 100، مثل 11.",
+    "vatNumber": "الرقم الضريبي (اختياري)",
+    "appliesToNew": "التغييرات تنطبق على الفواتير الجديدة فقط. الفواتير الصادرة تحتفظ بأرقامها ونسبتها وشروطها.",
+    "save": "حفظ الإعدادات",
+    "saved": "تم حفظ الإعدادات.",
+    "logo": "الشعار",
+    "noLogo": "لا شعار",
+    "uploadLogo": "تحميل شعار",
+    "replaceLogo": "استبدال الشعار",
+    "logoHint": "PNG أو JPEG، حتى 1 ميغابايت. يُطبع على الفواتير الجديدة.",
+    "logoTooBig": "هذا الملف أكبر من 1 ميغابايت.",
+    "logoType": "استخدم صورة PNG أو JPEG."
   }
 }

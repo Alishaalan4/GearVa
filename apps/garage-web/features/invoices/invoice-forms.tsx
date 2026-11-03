@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
 import { ApiError, apiPatch, apiPost } from '@/lib/api';
 import { centsToDecimal, dollarsToCents } from '@/lib/format';
-import { DiscountFields, parseDiscount } from './invoice-status';
+import { DiscountFields, parseDiscount, useLineName } from './invoice-status';
 
 interface FormProps {
   invoice: InvoiceDetail;
@@ -137,10 +137,11 @@ export function CancelForm({ invoice, onSaved, onClose }: FormProps) {
 export function EditForm({ invoice, onSaved, onClose }: FormProps) {
   const t = useTranslations('invoice');
   const tCommon = useTranslations('common');
+  const lineName = useLineName();
   const [lines, setLines] = useState(
     invoice.items.map((item) => ({
       id: item.id,
-      description: item.description,
+      description: lineName(item),
       quantity: String(Number(item.quantity)),
       price: centsToDecimal(item.unitPriceCents),
     })),

@@ -101,6 +101,13 @@ describe('Changing invoices, debts and income', () => {
       expect(reissued.body.invoice).toMatchObject({ id: next.body.id, status: 'UNPAID' });
     });
 
+    it("gives each line's service name in both languages, besides the printed text", async () => {
+      const { detail } = await invoice();
+      const oil = await platform.serviceType.findUniqueOrThrow({ where: { id: oilId } });
+      expect(detail.items[0]?.serviceName).toEqual({ en: oil.nameEn, ar: oil.nameAr });
+      expect([oil.nameEn, oil.nameAr]).toContain(detail.items[0]?.description);
+    });
+
     it('gives the rate only when the garage has VAT on', async () => {
       const { visit } = await invoice();
       expect(visit.vatRatePercent).toBeNull();

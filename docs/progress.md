@@ -34,9 +34,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.3 API: finish creates the invoice, payments, free work | ✅ Done | 2026-11-02 |
 | 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | ✅ Done | 2026-11-02 |
 | 3 | 3.5 PDF (Arabic + English) and file storage | ✅ Done | 2026-11-02 |
-| 3 | 3.6 garage-web: finish step, invoice page, payments | 🔄 In progress | |
-| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | Next | |
-| 3 | 3.8 First deployment to Render (README 9) | | |
+| 3 | 3.6 garage-web: finish step, invoice page, payments | ✅ Done | 2026-11-02 |
+| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | 🔄 In progress | |
+| 3 | 3.8 First deployment to Render (README 9) | Next | |
 
 ---
 
@@ -941,7 +941,56 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 - Seen only in a screenshot: Arabic money read `$US 60.00` → `$`.
 - **A bug from step 3.5, found by the user's test run:** `invoice-pdf.spec.ts` failed with 2 files for one invoice. Two render jobs can overlap, and both saw no file yet. The same overlap could be worse: an older job finishing last would replace a newer PDF, so an invoice could print without its latest payment. Now a job remembers the invoice version, then saves under a short row lock only if that version is still current. Chrome runs outside the lock, so payments are not blocked. Two tests hold this.
 
-**Verified:** by me: 185 API tests (the full suite 5 times in a row, after your run caught the bug; both new tests fail on the old code), 41 tenancy tests, all other tests, typecheck and lint of everything, `format:check`. Real Chrome on a phone-size screen against the test database, with real PDF rendering: 22 checks as owner (finish, discount, part payment, invoice page, PDF through garage-web, payment, edit, cancel, reissue, free work, Arabic) and 10 checks on mechanic and receptionist rights and VAT, all passing, with no browser errors. These browser checks are not in the repo and do not run in CI; the Arabic `$` fix came after them and is covered by typecheck only. By the user: pending.
+**Verified:** by me: 185 API tests (the full suite 5 times in a row, after your run caught the bug; both new tests fail on the old code), 41 tenancy tests, all other tests, typecheck and lint of everything, `format:check`. Real Chrome on a phone-size screen against the test database, with real PDF rendering: 22 checks as owner (finish, discount, part payment, invoice page, PDF through garage-web, payment, edit, cancel, reissue, free work, Arabic) and 10 checks on mechanic and receptionist rights and VAT, all passing, with no browser errors. These browser checks are not in the repo and do not run in CI; the Arabic `$` fix came after them and is covered by typecheck only. By the user: `format:check`, `typecheck`, `npm test` (first run caught the overlapping-render bug, fixed above), `test:tenancy`.
+**Commit:** `6e89df7` — `Phase 3.6: finish step with Paid now, invoice page, payments, edit, cancel and reissue`
+
+---
+
+## Phase 3 · Step 3.7 — garage-web: invoice list, debt list, income, invoice settings (Done-when check)
+**When:** 2026-11-03 (~2 h of work)
+
+**Implements:** flow.md 1 (permission matrix), 7.5 (cancelled invoices stay listed), 8.2, 8.3; database.md 4.2 (invoice settings, logo).
+
+**Summary:** Four new screens on the APIs from steps 3.4 and 3.5, and their menu items by role:
+- **Invoices:** filters for status and "refund needed". Owner, manager, receptionist.
+- **Debts:** customers who owe, largest first, each invoice listed. Owner, manager, receptionist.
+- **Income:** today and this month, received against invoiced, a branch choice, and refund needed. Owner, manager.
+- **Invoice settings:** brand colour, number format with a live example, terms, VAT, and logo upload with a preview. Owner.
+
+**Decisions**
+- **Mechanics get no money screens in the menu;** they still open an invoice from its visit (flow.md 1). Pages a role cannot use say so, and the API refuses them anyway.
+- **Money is written as `$1,234.50` in both languages,** like the PDF. The `$` is added by hand: Arabic currency formatting prints `US$` even with `narrowSymbol`, so the 3.6 fix had not worked. It was not checked in the browser at the time.
+- **Staff read invoice lines in their own language** (user choice 2026-11-03, after testing). An invoice is written in the customer's language, so an English screen showed an Arabic line. `InvoiceDetail.items` gained `serviceName` (English and Arabic, from the line's service type). The screen uses it, while the PDF keeps the customer's language. A custom name (OTHER) shows as typed. No database change.
+- **Later, if wanted:** choosing the invoice language per customer. A customer's language belongs to their owner account, so it needs its own plan.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/features/invoices/invoice-list.tsx`, `debt-list.tsx`, `income-summary.tsx`, `invoice-settings.tsx` (new) | The four screens |
+| `apps/garage-web/app/[locale]/(app)/invoices/page.tsx`, `debts/`, `income/`, `settings/invoices/` (new) | Routes |
+| `apps/garage-web/components/pager.tsx`, `roles-only.tsx` (new) | Shared previous/next, and pages for several roles |
+| `apps/garage-web/components/app-shell.tsx` | Menu items by role |
+| `apps/garage-web/lib/api.ts`, `lib/format.ts`, `messages/*.json` | Logo upload, `$` in Arabic, translations |
+| `packages/contracts/src/invoices.ts`, `apps/api/src/invoices/invoices.service.ts`, `apps/garage-web/features/invoices/invoice-status.tsx`, `invoice-page.tsx`, `invoice-forms.tsx`, `apps/api/test/invoice-changes.spec.ts`, `invoice-html.spec.ts` | Line names in the staff's language; 1 test |
+
+**Doc changes:** flow.md 7.2 (invoice page shows line names in the staff's language).
+
+**Problems hit and fixed**
+- The number format hint showed raw text: next-intl reads `{BRANCH}` as a placeholder. The braces are now quoted.
+- Arabic showed `US$` (see Decisions).
+- The income amounts could not shrink on a phone; they now wrap.
+
+**Phase 3 "Done when" (README 6), checked in real Chrome against the test database with real PDFs:**
+- **Sequential invoice PDF:** three finishes in a row got numbers N, N+1, N+2, each with a PDF. A changed number format and VAT applied to the next invoice, and a PDF with the logo was read page by page.
+- **Partial payments:** a payment of $80 on $200 left $120, on the invoice and in the debt list.
+- **Debt list:** right totals per customer, largest first. A fully paid invoice leaves the list.
+- **Income:** today grew by exactly what was received and invoiced. A cancel took the invoice out of invoiced, kept the money in received, and added it to refund needed.
+- **Roles:** checked in the menu and on the pages.
+- **Result:** 30 of 31 checks passed. The other failed on a wrong assumption in the test, not the app: a VAT rate from an earlier run was still saved, so turning VAT on was rightly allowed.
+
+Phase 3 is complete except its last item, the first deployment, which is step 3.8.
+
+**Verified:** by me: 186 API tests, 41 tenancy tests, all other tests, typecheck and lint of everything, `format:check`; the browser checks above (not in the repo, not run in CI). After the `$` and wrap fixes, all four pages were shot again in Arabic and English with no sideways scroll and no `US`. By the user: `npm run dev`, finish, payment, PDF, debts, income, settings and Arabic in the browser (found the Arabic line name, fixed above); commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

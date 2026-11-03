@@ -61,10 +61,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         <>
           {item('/', t('nav.home'), pathname === '/')}
           {item('/customers', t('nav.customers'))}
+          {/* flow.md 1: money screens by role; mechanics see an invoice from its visit. */}
+          {me.role !== 'MECHANIC' && (
+            <>
+              {item('/invoices', t('nav.invoices'))}
+              {item('/debts', t('nav.debts'))}
+            </>
+          )}
+          {(me.role === 'OWNER' || me.role === 'MANAGER') && item('/income', t('nav.income'))}
           {me.role === 'OWNER' && (
             <>
               {item('/settings/branches', t('nav.branches'))}
               {item('/settings/staff', t('nav.staff'))}
+              {item('/settings/invoices', t('nav.invoiceSettings'))}
             </>
           )}
         </>

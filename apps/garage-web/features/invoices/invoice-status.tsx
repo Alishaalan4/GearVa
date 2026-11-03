@@ -1,8 +1,13 @@
 'use client';
 
-import { type Discount, type DiscountType, type InvoiceStatus } from '@gearva/contracts';
+import {
+  type Discount,
+  type DiscountType,
+  type InvoiceDetail,
+  type InvoiceStatus,
+} from '@gearva/contracts';
 import { Input, Pill, Select } from '@gearva/ui';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { dollarsToCents } from '@/lib/format';
 
 const STATUS_TONES = {
@@ -15,6 +20,15 @@ const STATUS_TONES = {
 export function InvoiceStatusPill({ status }: { status: InvoiceStatus }) {
   const t = useTranslations('invoice.status');
   return <Pill tone={STATUS_TONES[status]}>{t(status)}</Pill>;
+}
+
+/**
+ * A line's name for staff, in the screen's language. The PDF keeps the customer's language;
+ * a custom name has only the text that was typed.
+ */
+export function useLineName(): (item: InvoiceDetail['items'][number]) => string {
+  const locale = useLocale();
+  return (item) => item.serviceName?.[locale === 'ar' ? 'ar' : 'en'] ?? item.description;
 }
 
 /** Typed discount text for the API: null = none, 'invalid' = not an amount or a percent. */

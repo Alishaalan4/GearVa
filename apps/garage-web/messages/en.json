@@ -12,7 +12,8 @@
     "ownerOnly": "Only the garage owner can open this page.",
     "edit": "Edit",
     "backToSearch": "← Search",
-    "back": "Back"
+    "back": "Back",
+    "notAllowed": "Your role cannot open this page."
   },
   "errors": {
     "BAD_REQUEST": "The request was not valid.",
@@ -53,7 +54,11 @@
     "staff": "Staff",
     "signOut": "Sign out",
     "switchLanguage": "العربية",
-    "customers": "Customers"
+    "customers": "Customers",
+    "invoices": "Invoices",
+    "debts": "Debts",
+    "income": "Income",
+    "invoiceSettings": "Invoice settings"
   },
   "authSide": {
     "heading": "Know when every customer is due.",
@@ -399,5 +404,61 @@
       "PAID": "Paid",
       "CANCELLED": "Cancelled"
     }
+  },
+  "invoiceList": {
+    "title": "Invoices",
+    "filter": "Show",
+    "empty": "No invoices here.",
+    "refund": "Refund needed: {amount}",
+    "filters": {
+      "ALL": "All",
+      "UNPAID": "Unpaid",
+      "PARTIALLY_PAID": "Partly paid",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled",
+      "REFUND": "Refund needed"
+    }
+  },
+  "debts": {
+    "title": "Debts",
+    "count": "{count, plural, one {# customer owes money} other {# customers owe money}}",
+    "empty": "Nobody owes money. 🎉",
+    "owes": "Owes",
+    "remainingOf": "{remaining} of {total}"
+  },
+  "income": {
+    "title": "Income",
+    "today": "Today",
+    "month": "This month",
+    "received": "Received",
+    "invoiced": "Invoiced",
+    "branch": "Branch",
+    "allBranches": "All branches",
+    "refundNeeded": "Refund needed on cancelled invoices: {amount}",
+    "explain": "Received is the money taken (payments), on the day it was paid. Invoiced is the total of invoices issued, without cancelled ones. Money paid on an invoice that was later cancelled stays in received."
+  },
+  "invoiceSettings": {
+    "title": "Invoice settings",
+    "brandColor": "Brand colour",
+    "brandColorHint": "The line at the top of the invoice.",
+    "numberFormat": "Invoice number format",
+    "numberExample": "Example: {example}",
+    "numberFormatInvalid": "Use '{BRANCH}', '{YYYY}' and '{SEQ:4}' (4 = the number of digits), for example '{BRANCH}-{YYYY}-{SEQ:4}'.",
+    "terms": "Terms printed on invoices",
+    "termsHint": "For example your warranty rules.",
+    "vatEnabled": "Charge VAT",
+    "vatRate": "VAT rate (%)",
+    "vatRateInvalid": "Enter a rate from 0 to 100, like 11.",
+    "vatNumber": "VAT number (optional)",
+    "appliesToNew": "Changes apply to new invoices only. Invoices already issued keep their numbers, rate and terms.",
+    "save": "Save settings",
+    "saved": "Settings saved.",
+    "logo": "Logo",
+    "noLogo": "No logo",
+    "uploadLogo": "Upload a logo",
+    "replaceLogo": "Replace the logo",
+    "logoHint": "PNG or JPEG, up to 1 MB. It is printed on new invoices.",
+    "logoTooBig": "This file is larger than 1 MB.",
+    "logoType": "Use a PNG or JPEG image."
   }
 }

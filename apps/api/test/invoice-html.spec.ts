@@ -45,6 +45,7 @@ const invoice = (over: Partial<InvoiceDetail> = {}): InvoiceDetail => ({
     {
       id: 'l1',
       description: 'Oil change',
+      serviceName: null,
       brand: 'Total',
       grade: '10W-40',
       quantity: '4.50',

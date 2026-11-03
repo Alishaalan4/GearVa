@@ -36,7 +36,11 @@ async function send<T>(path: string, init?: RequestInit, asFile = false): Promis
     res = await fetch(path, {
       ...init,
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      // A FormData upload sets its own multipart type, with the boundary.
+      headers:
+        init?.body instanceof FormData
+          ? init.headers
+          : { 'Content-Type': 'application/json', ...init?.headers },
     });
   } catch {
     throw new ApiError(0, 'NETWORK_ERROR', 'Network error');
@@ -95,6 +99,11 @@ export async function api<T>(path: string, init?: RequestInit, asFile = false): 
 /** A file from the API, such as an invoice PDF. */
 export function apiFile(path: string): Promise<Blob> {
   return api<Blob>(path, undefined, true);
+}
+
+/** A file upload (multipart), such as the invoice logo. */
+export function apiUpload<T>(path: string, body: FormData): Promise<T> {
+  return api<T>(path, { method: 'POST', body });
 }
 
 function withBody<T>(method: string, path: string, body?: unknown): Promise<T> {

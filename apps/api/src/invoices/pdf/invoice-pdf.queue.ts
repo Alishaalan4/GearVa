@@ -18,9 +18,15 @@ export class InvoicePdfQueue implements OnApplicationShutdown {
   private readonly queue: Queue<InvoicePdfJob>;
   private worker?: Worker<InvoicePdfJob>;
 
+  private readonly prefix: string;
+
   constructor(@Inject(ENV) env: Env) {
     this.connection = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
-    this.queue = new Queue<InvoicePdfJob>(QUEUE_NAME, { connection: this.connection });
+    this.prefix = env.QUEUE_PREFIX;
+    this.queue = new Queue<InvoicePdfJob>(QUEUE_NAME, {
+      connection: this.connection,
+      prefix: this.prefix,
+    });
   }
 
   async add(job: InvoicePdfJob): Promise<void> {
@@ -36,6 +42,7 @@ export class InvoicePdfQueue implements OnApplicationShutdown {
     if (this.worker) return;
     this.worker = new Worker<InvoicePdfJob>(QUEUE_NAME, (job) => handler(job.data), {
       connection: this.connection,
+      prefix: this.prefix,
       concurrency: 2,
     });
     this.worker.on('failed', (job, error) =>

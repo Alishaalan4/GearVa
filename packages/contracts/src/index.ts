@@ -10,6 +10,7 @@ export * from './next-due';
 export * from './odometer';
 export * from './pagination';
 export * from './phone';
+export * from './reminders';
 export * from './staff';
 export * from './suggestions';
 export * from './text-normalize';

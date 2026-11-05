@@ -10,7 +10,13 @@ export interface SendInput {
   data: Record<string, unknown>;
 }
 
-export type SendResult = { ok: true; providerMessageId?: string } | { ok: false; error: string };
+/**
+ * `retryable` marks a failure that may pass on a later attempt (provider down, rate
+ * limited). Without it the failure is final, e.g. a bad address or invalid data. An
+ * adapter that throws is treated as retryable.
+ */
+export type SendResult =
+  { ok: true; providerMessageId?: string } | { ok: false; error: string; retryable?: boolean };
 
 /**
  * The one interface every outgoing message goes through (README section 5.5).

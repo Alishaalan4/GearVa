@@ -39,8 +39,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.8 Fix: first PDF froze the API; deployment moved after Phase 5 | ✅ Done | 2026-11-05 |
 | 4 | 4.0 Doc fixes and Phase 4 decisions (email, WhatsApp list, monthly off) | ✅ Done | 2026-11-05 |
 | 4 | 4.1 Database: customer email, monthly reminder setting | ✅ Done | 2026-11-05 |
-| 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | Next | |
-| 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | | |
+| 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | ✅ Done | 2026-11-05 |
+| 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | Next | |
 | 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | | |
 | 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | | |
 | 5 | … then the first deployment to Render, on free instances (README 9) | | |
@@ -1066,7 +1066,44 @@ Phase 3 is complete except its last item, the first deployment, which is step 3.
 
 **Doc changes:** none (written in step 4.0).
 
-**Verified:** by me: the migration applied to a fresh test database, and `prisma migrate diff` from that database to the schema is empty (the migration and the schema agree); typecheck of everything; 186 API tests, the database tests, and `test:tenancy` (23 guard-rail and 41 endpoint tests). By the user: the migration on the development database, then the commit.
+**Verified:** by me: the migration applied to a fresh test database, and `prisma migrate diff` from that database to the schema is empty (the migration and the schema agree); typecheck of everything; 186 API tests, the database tests, and `test:tenancy` (23 guard-rail and 41 endpoint tests). By the user: the migration on the development database, the checks, then the commit.
+**Commit:** `6bad3d7` — `Phase 4.1: customer email and monthly reminder setting`
+
+---
+
+## Phase 4 · Step 4.2 — Pipeline: retries, daytime only, stuck rows, fair-use cap
+**When:** 2026-11-05 (~1 h 30 min)
+
+**Implements:** flow.md 9.3, 9.4; README 5.5, 9 (emails stuck in `QUEUED`).
+
+**Summary:** The sending pipeline now follows the Phase 4 rules. Nothing calls the reminder parts yet; the reminder scan comes in 4.3.
+- **Retries:** a failure that may pass (an adapter marks it `retryable`, or throws) is tried again with exponential backoff, 3 attempts in all, then stored as `FAILED` with the error. While it waits, the row stays `QUEUED` and shows the last error. Any other failure (bad address, invalid template data) is `FAILED` at once.
+- **Daytime only:** a reminder (service, monthly, warranty) whose job runs outside 09:00–20:00 in the garage's time zone is put back in the queue until the next 09:00, and the row gets that `scheduledFor`. Invoices, invites and password resets are sent at once.
+- **Fair-use cap:** over 2,000 automatic reminder emails this month (garage time zone), a reminder is `SKIPPED` with "Monthly reminder limit reached". A constant in `contracts` until Phase 5.
+- **Stuck rows:** `requeueStuck()` queues again a garage's rows still `QUEUED` 10 minutes after they were written (Redis was down at the time). A row whose job still exists keeps it, and a job that crashed on its last attempt is replaced. 4.3's hourly scan will call it.
+
+**Decisions**
+- `SendResult` failures gained an optional `retryable` (README 5.5), so a provider outage is retried and a bad address is not.
+- The cap counts automatic emails only; messages staff send themselves on WhatsApp cost nothing. Jobs running at the same moment can pass it by a few, which is fine for a fair-use limit.
+- Two settings, both with defaults, so `.env` needs nothing new: `NOTIFICATION_RETRY_DELAY_MS` (first wait, 30 s; 20 ms in tests) and `QUEUE_PREFIX` (BullMQ's default `bull`).
+
+**Problems hit and fixed**
+- The first run of the new tests failed. API test files run in parallel on one Redis queue, so another file's worker, using the real console channel, took jobs meant for the fake channel. The reverse could make other tests flaky. The new file now uses its own queue prefix (`QUEUE_PREFIX`).
+- A delayed reminder that runs after its garage is gone (in tests, the next run's fresh database) now ends quietly instead of failing.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/reminders.ts` (new), `index.ts`, `test/reminders.test.ts` (new) | Daytime window, cap, `nextDaytimeStart` (time zones, summer time); 6 tests |
+| `apps/api/src/notifications/notifications.service.ts` | Daytime check, cap, retries, `requeueStuck` |
+| `apps/api/src/notifications/notifications.queue.ts` | 3 attempts with backoff, postpone, replace a failed job, prefix |
+| `apps/api/src/notifications/notification-channel.ts`, `adapters/console-email.channel.ts` | `retryable`; bad template data is a final failure |
+| `apps/api/src/config/env.ts`, `apps/api/src/invoices/pdf/invoice-pdf.queue.ts`, `packages/database/src/test-environment.ts` | The two settings |
+| `apps/api/test/notification-rules.spec.ts` (new), `test/helpers/app.ts` | 7 tests with a fake email channel; provider overrides in the test app |
+
+**Doc changes:** README 5.5 (`retryable`).
+
+**Verified:** by me: `format:check`, lint and typecheck of everything, all tests 3 times in a row (193 API tests, 7 new; 6 new `contracts` tests), `test:tenancy` (41). Not covered by a test: replacing a job that crashed on its last attempt (it needs a crash outside the send). By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

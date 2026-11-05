@@ -17,6 +17,11 @@ const envSchema = z
     // Only the local adapter exists until the first deployment (step 3.8).
     FILES_ADAPTER: z.enum(['local']).default('local'),
     FILES_LOCAL_DIR: z.string().min(1).default('.storage'),
+    // Redis key prefix of the BullMQ queues (BullMQ's default). A test that swaps a
+    // notification channel uses its own, so other test files' workers never take its jobs.
+    QUEUE_PREFIX: z.string().min(1).default('bull'),
+    // First wait before a failed notification is tried again (doubled each time).
+    NOTIFICATION_RETRY_DELAY_MS: z.coerce.number().int().positive().default(30_000),
     // `stub` is for tests, which have no Chrome.
     PDF_ADAPTER: z.enum(['puppeteer', 'stub']).default('puppeteer'),
     // Base URL of garage-web: invite and password-reset links point there.

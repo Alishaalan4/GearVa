@@ -230,7 +230,7 @@ interface NotificationChannel {
 }
 ```
 
-Build `EMAIL` first (Phase 1); `IN_APP` comes with the owner app in Phase 6 (decision 2026-11-05). `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it.
+Build `EMAIL` first (Phase 1); `IN_APP` comes with the owner app in Phase 6 (decision 2026-11-05). `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error, retryable? }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it. A failure marked `retryable` (provider down, rate limited), or an adapter that throws, is tried again with backoff, 3 attempts in all (flow.md 9.4); any other failure is final at once.
 
 ### 5.6 API conventions
 - REST + JSON, validated with Zod schemas from `packages/contracts`.

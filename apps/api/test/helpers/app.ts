@@ -1,12 +1,20 @@
 import type { Type } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/app.setup';
 
-/** The real app with the same setup as main.ts, plus optional test-only controllers. */
-export async function createTestApp(controllers: Type[] = []): Promise<NestExpressApplication> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule], controllers }).compile();
+/**
+ * The real app with the same setup as main.ts, plus optional test-only controllers and
+ * provider overrides (e.g. a fake notification channel).
+ */
+export async function createTestApp(
+  controllers: Type[] = [],
+  override: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder) => builder,
+): Promise<NestExpressApplication> {
+  const moduleRef = await override(
+    Test.createTestingModule({ imports: [AppModule], controllers }),
+  ).compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>();
   configureApp(app);
   await app.init();

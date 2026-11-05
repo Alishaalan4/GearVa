@@ -260,25 +260,27 @@ model Garage {
 }
 
 model GarageSettings {
-  garageId            String            @id @map("garage_id") @db.Uuid
-  logoFileId          String?           @map("logo_file_id") @db.Uuid
-  brandColor          String            @default("#111827") @map("brand_color")
-  invoiceNumberFormat String            @default("{BRANCH}-{YYYY}-{SEQ:4}") @map("invoice_number_format")
-  termsText           String?           @map("terms_text")
-  autoSendInvoice     Boolean           @default(false) @map("auto_send_invoice")
-  showLbp             Boolean           @default(false) @map("show_lbp")
+  garageId               String            @id @map("garage_id") @db.Uuid
+  logoFileId             String?           @map("logo_file_id") @db.Uuid
+  brandColor             String            @default("#111827") @map("brand_color")
+  invoiceNumberFormat    String            @default("{BRANCH}-{YYYY}-{SEQ:4}") @map("invoice_number_format")
+  termsText              String?           @map("terms_text")
+  autoSendInvoice        Boolean           @default(false) @map("auto_send_invoice")
+  showLbp                Boolean           @default(false) @map("show_lbp")
   // display-only rate: LBP per 1 USD
-  lbpRate             Int?              @map("lbp_rate")
-  vatEnabled          Boolean           @default(false) @map("vat_enabled")
-  vatRatePercent      Decimal?          @map("vat_rate_percent") @db.Decimal(5, 2)
-  vatNumber           String?           @map("vat_number")
-  paymentReminderDays Int?              @map("payment_reminder_days")
-  reminderLeadKm      Int               @default(500) @map("reminder_lead_km")
-  reminderLeadDays    Int               @default(7) @map("reminder_lead_days")
-  defaultDailyKm      Int?              @map("default_daily_km")
-  invoiceEditWindow   InvoiceEditWindow @default(SAME_DAY) @map("invoice_edit_window")
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  lbpRate                Int?              @map("lbp_rate")
+  vatEnabled             Boolean           @default(false) @map("vat_enabled")
+  vatRatePercent         Decimal?          @map("vat_rate_percent") @db.Decimal(5, 2)
+  vatNumber              String?           @map("vat_number")
+  paymentReminderDays    Int?              @map("payment_reminder_days")
+  reminderLeadKm         Int               @default(500) @map("reminder_lead_km")
+  reminderLeadDays       Int               @default(7) @map("reminder_lead_days")
+  defaultDailyKm         Int?              @map("default_daily_km")
+  invoiceEditWindow      InvoiceEditWindow @default(SAME_DAY) @map("invoice_edit_window")
+  // flow.md 9.2: off by default (decision 2026-11-05)
+  monthlyReminderEnabled Boolean           @default(false) @map("monthly_reminder_enabled")
+  createdAt              DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   garage Garage @relation(fields: [garageId], references: [id])
   logo   File?  @relation("GarageLogo", fields: [garageId, logoFileId], references: [garageId, id], onDelete: Restrict)
@@ -364,6 +366,8 @@ model GarageCustomer {
   name            String
   // private to this garage
   notes           String?
+  // the garage's own contact email for reminders (flow.md 9), not the owner's login
+  email           String?
   inviteSentAt    DateTime? @map("invite_sent_at") @db.Timestamptz(3)
   remindersOptOut Boolean   @default(false) @map("reminders_opt_out")
   marketingOptOut Boolean   @default(false) @map("marketing_opt_out")

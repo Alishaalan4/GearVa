@@ -38,8 +38,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | ✅ Done | 2026-11-03 |
 | 3 | 3.8 Fix: first PDF froze the API; deployment moved after Phase 5 | ✅ Done | 2026-11-05 |
 | 4 | 4.0 Doc fixes and Phase 4 decisions (email, WhatsApp list, monthly off) | ✅ Done | 2026-11-05 |
-| 4 | 4.1 Database: customer email, monthly reminder setting | Next | |
-| 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | | |
+| 4 | 4.1 Database: customer email, monthly reminder setting | ✅ Done | 2026-11-05 |
+| 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | Next | |
 | 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | | |
 | 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | | |
 | 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | | |
@@ -1046,7 +1046,27 @@ Phase 3 is complete except its last item, the first deployment, which is step 3.
 
 **Doc changes:** flow.md 1 (two matrix rows), 3.1 (customer email), 5.2, 9 (rewritten: 9.1 scan, 9.2 monthly, 9.3 rules, 9.4 pipeline, 9.5 WhatsApp list); database.md 4.1 (`owners.email`, `system_settings`), 4.2 (`monthlyReminderEnabled`), 4.3 (`garage_customers.email`), 4.6 (dedupe keys); README 5.5, 6 (Phase 4 list and Done-when, Phase 6).
 
-**Verified:** `format:check` on the docs; checked the docs for other mentions of the daily job, the old dedupe key and the inbox.
+**Verified:** `format:check` on the docs; checked the docs for other mentions of the daily job, the old dedupe key and the inbox. By the user: `format:check`, then the commit.
+**Commit:** `7e382cb` — `Phase 4.0: reminder decisions: customer email, WhatsApp list, monthly off by default`
+
+---
+
+## Phase 4 · Step 4.1 — Database: customer email, monthly reminder setting
+**When:** 2026-11-05 (~15 min)
+
+**Implements:** database.md 4.2 (`monthlyReminderEnabled`), 4.3 (`garage_customers.email`); flow.md 9.1, 9.2.
+
+**Summary:** One migration adds two columns: `garage_customers.email` (optional, the garage's own contact email for reminders) and `garage_settings.monthly_reminder_enabled` (default false). Both tables already have their row-level security and grants, so nothing else changes. No index is added: the reminder scan uses the existing `(garageId, status, nextDueDate)` index on `reminders` and the unique dedupe key on `notifications`.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma` | The two columns |
+| `packages/database/prisma/migrations/20261105090000_phase4_reminders/migration.sql` (new) | The migration |
+
+**Doc changes:** none (written in step 4.0).
+
+**Verified:** by me: the migration applied to a fresh test database, and `prisma migrate diff` from that database to the schema is empty (the migration and the schema agree); typecheck of everything; 186 API tests, the database tests, and `test:tenancy` (23 guard-rail and 41 endpoint tests). By the user: the migration on the development database, then the commit.
 **Commit:** _(filled in at the next step)_
 
 ---

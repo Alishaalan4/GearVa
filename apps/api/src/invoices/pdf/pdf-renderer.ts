@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { Injectable, type OnApplicationShutdown } from '@nestjs/common';
+import {
+  Injectable,
+  type OnApplicationBootstrap,
+  type OnApplicationShutdown,
+} from '@nestjs/common';
 import type { Browser } from 'puppeteer';
 
 export const PDF_RENDERER = Symbol('PDF_RENDERER');
@@ -38,9 +42,22 @@ function fontFaces(): string {
 
 /** One Chrome for the API process, started on first use. Each PDF gets its own page. */
 @Injectable()
-export class PuppeteerPdfRenderer implements PdfRenderer, OnApplicationShutdown {
+export class PuppeteerPdfRenderer
+  implements PdfRenderer, OnApplicationBootstrap, OnApplicationShutdown
+{
+  private puppeteer?: Promise<typeof import('puppeteer')>;
   private browser?: Promise<Browser>;
   private fonts?: string;
+
+  /**
+   * Loads Puppeteer before the API takes requests. Loading it is synchronous work that
+   * froze the API for 8 s on a cold Windows start; done on the first PDF, it made the
+   * requests and jobs of that moment overrun their 5 s transactions.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    await this.load();
+    this.fontCss();
+  }
 
   fontCss(): string {
     this.fonts ??= fontFaces();
@@ -74,12 +91,17 @@ export class PuppeteerPdfRenderer implements PdfRenderer, OnApplicationShutdown 
   }
 
   private open(): Promise<Browser> {
-    this.browser ??= import('puppeteer').then(({ default: puppeteer }) =>
+    this.browser ??= this.load().then(({ default: puppeteer }) =>
       // Render's containers have no user namespaces for Chrome's sandbox; the page runs
       // no scripts and reaches no network, so nothing untrusted runs in it.
       puppeteer.launch({ headless: true, args: ['--no-sandbox'] }),
     );
     return this.browser;
+  }
+
+  private load(): Promise<typeof import('puppeteer')> {
+    this.puppeteer ??= import('puppeteer');
+    return this.puppeteer;
   }
 }
 

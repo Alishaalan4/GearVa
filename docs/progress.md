@@ -35,8 +35,10 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.4 API: edit, cancel, debt list, income summary, invoice settings | ✅ Done | 2026-11-02 |
 | 3 | 3.5 PDF (Arabic + English) and file storage | ✅ Done | 2026-11-02 |
 | 3 | 3.6 garage-web: finish step, invoice page, payments | ✅ Done | 2026-11-02 |
-| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | 🔄 In progress | |
-| 3 | 3.8 First deployment to Render (README 9) | Next | |
+| 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | ✅ Done | 2026-11-03 |
+| 3 | 3.8 Fix: first PDF froze the API; deployment moved after Phase 5 | ✅ Done | 2026-11-05 |
+| 4 | Reminders and notifications (split at the start of the phase) | Next | |
+| 5 | … then the first deployment to Render, on free instances (README 9) | | |
 
 ---
 
@@ -990,7 +992,30 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 
 Phase 3 is complete except its last item, the first deployment, which is step 3.8.
 
-**Verified:** by me: 186 API tests, 41 tenancy tests, all other tests, typecheck and lint of everything, `format:check`; the browser checks above (not in the repo, not run in CI). After the `$` and wrap fixes, all four pages were shot again in Arabic and English with no sideways scroll and no `US`. By the user: `npm run dev`, finish, payment, PDF, debts, income, settings and Arabic in the browser (found the Arabic line name, fixed above); commit commands pending.
+**Verified:** by me: 186 API tests, 41 tenancy tests, all other tests, typecheck and lint of everything, `format:check`; the browser checks above (not in the repo, not run in CI). After the `$` and wrap fixes, all four pages were shot again in Arabic and English with no sideways scroll and no `US`. By the user: `npm run dev`, finish, payment, PDF, debts, income, settings and Arabic in the browser (found the Arabic line name, fixed above), then the commit commands. CI green.
+**Commit:** `3d77a5f` — `Phase 3.7: invoice list, debt list, income summary and invoice settings screens`
+
+---
+
+## Phase 3 · Step 3.8 — Fix: the first PDF froze the API; deployment moved after Phase 5
+**When:** 2026-11-05 (~30 min)
+
+**Summary:** The user's `npm run dev` showed an error when finishing a visit: a visit's transaction "expired" after 10 s, and a notification job could not start a transaction. Nothing was wrong in the database (no lock waits, nothing in its log). The cause: the first PDF after the API starts loads Puppeteer, and loading it is synchronous. On a cold Windows start it took 8.3 s, measured, with the whole API frozen for 8.3 s; the transactions of that moment overran their 5 s limit. Warm, it takes 0.2 s, which is why it was not seen before. The API now loads Puppeteer while it starts, before it takes requests.
+
+**Decisions**
+- **The first deployment waits until after Phase 5** (user choice 2026-11-05): with only test users, it waits until the admin side is complete. It will start on Render's free instances and move to paid plans before a real garage uses it. The production code planned for 3.8 (R2 files, Resend email, Chrome on Render, headers, private API, `render.yaml`) moves with it.
+- The database roles check on Render moves with it too.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/invoices/pdf/pdf-renderer.ts` | Loads Puppeteer (and the fonts) at startup |
+
+**Doc changes:** README 6 (deploy after Phase 5, free instances first) and 9 (free-plan limits to check).
+
+**Also seen, not changed:** the same log shows a `pg` warning, "Calling client.query() when the client is already executing a query". It is a warning for now (an error in a future `pg` 9), and our code never runs two queries at once on one transaction. To look at before upgrading `pg`.
+
+**Verified:** by me: measured Puppeteer's load time (8.3 s cold, 0.2 s warm, with the event loop blocked for the cold load); API typecheck and lint; the built API starts normally on the test database with real Puppeteer. By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

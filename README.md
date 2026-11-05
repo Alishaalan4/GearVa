@@ -250,7 +250,7 @@ Build `EMAIL` and `IN_APP` first. `WHATSAPP` is a later adapter and must need ze
 
 ## 6. Build roadmap (work step by step)
 
-Each phase ends with a working, tested slice. Do not start the next phase until the "Done when" list is true. After phase 3, deploy a first version (see "Deployment").
+Each phase ends with a working, tested slice. Do not start the next phase until the "Done when" list is true. After phase 5, deploy a first version (see "Deployment").
 
 ### Phase 0: Skeleton
 - npm workspaces, Turborepo, `packages/config`, `packages/contracts`, `packages/database`, `apps/api`, `apps/garage-web`, `apps/admin`
@@ -279,7 +279,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - PDF generation (Arabic + English), print, cancel with reason, edit window, debt list, garage invoice settings
 - A simple income summary for owners and managers: today and this month, money received vs invoiced (decision 2026-11-02, flow.md 8.3). The full revenue screens stay in Phase 7
 - **Done when:** finishing a visit produces a correct sequential invoice PDF, partial payments update the remaining amount, and the debt list is right.
-- **Deploy a first version to Render now (section 9).**
+- The first deployment was planned here and moved to after Phase 5 (decision 2026-11-05): with only test users, it waits until the admin side is complete.
 
 ### Phase 4: Reminders and notifications
 - Extend the notification module from Phase 1: in-app adapter and inbox, notification log screen (the `notifications` table), retries, dedupe keys, daily BullMQ job, monthly reminder, daytime-only rule, fair-use cap
@@ -289,6 +289,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - Subscription payments, expiring-soon list, paid/unpaid list, usage monitoring, system settings (default service types, reminder rules), view-as-garage with access log, business view
 - Public website with an application form, and an admin **Applications** page: approving an application creates the garage and sends the owner's invite link (decision 2026-10-29, from the design prototype)
 - **Done when:** the admin can run the whole subscription lifecycle without touching the database.
+- **Deploy a first version to Render now (section 9),** on free instances while only test users use it.
 
 ### Phase 6: Owner mobile app
 - Expo app, email + password login (given by the garage), cars, history, invoices, in-app notifications, push, offers
@@ -357,6 +358,7 @@ Keep **one repo**. Each service points at its folder inside the monorepo and bui
 - **Postgres roles:** the design uses three DB roles (database.md section 6). Confirm that Render's Postgres lets you create roles. If it does not allow `BYPASSRLS`, use the policy fallback described in database.md section 6.1.
 - **Puppeteer:** Chrome must be available at runtime. Either set `PUPPETEER_CACHE_DIR` to a folder inside the project so the build keeps the download, or deploy the API with a Dockerfile.
 - **Free instances sleep** after 15 minutes without traffic, so use them for demos only. Real garages need paid always-on services.
+- **Starting free (decision 2026-11-05):** the first version runs on free instances for test users, and moves to paid plans before a real garage uses it. The plan of each service can be changed later without rebuilding anything. Check these free-plan limits when deploying, on Render's current pricing page: the free Postgres is deleted after 30 days (recreate it, or take the smallest paid plan); a sleeping service takes about a minute to wake; 512 MB may not be enough for the API with Chrome; and features such as the pre-deploy command and private services may need a paid plan, so migrations might have to run in the start command at first.
 - **Backups:** turn on the database plan's backups and **test a restore** before the first real garage goes live. Optionally also run a nightly `pg_dump` to object storage.
 - **Files:** keep invoice PDFs and photos in object storage (Cloudflare R2), not on Render's disk, which is lost on redeploy unless you attach a paid disk.
 - **Monitoring:** Sentry for errors, plus an uptime monitor on `/health`.

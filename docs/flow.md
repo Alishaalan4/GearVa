@@ -27,6 +27,8 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Edit an invoice after the same day | yes | no | no | no |
 | Cancel an invoice | yes | yes | no | no |
 | See income summary, revenue screens, debt list | yes | yes | no | debt list only |
+| Reminders due list (send on WhatsApp, section 9.5) | yes | yes | no | yes |
+| Notification log | yes | yes | no | no |
 | Offers and broadcasts | yes | yes | no | no |
 | Staff, branches, garage settings | yes | no | no | no |
 | Switch branch view (all branches) | yes | yes | no, own branch only | no, own branch only |
@@ -134,7 +136,7 @@ sequenceDiagram
 
 **Same phone at two garages:** both garages link to the same `owners` row. Each garage sees only its own `garage_customers`, vehicles, visits and invoices (RLS). The owner app (phase 6) sees both histories through `ownerId`.
 
-API (step 2.3): `POST /v1/customers` `{ name, phone, notes? }` answers **201** with the new customer, or **200** with the existing one when this garage already has the phone (`created: false`; name and notes are left unchanged). The phone may be typed in any format; it is stored in E.164 (a number without a country code is read as Lebanese). Staff enter no email in Phase 2, so the app invite of step 5 is recorded for WhatsApp (`customer-app-invite`) and logged as `SKIPPED`. `GET /v1/customers` (every role, decision 2026-10-27: newest first, paginated, max 50 per page, 60 requests per minute, optional `q` matching the name or the end of the phone; no export, README 5.4), `GET /v1/customers/:id` (with the cars; writes a `customer.view` audit row, section 12) and `PATCH /v1/customers/:id` (name, notes, opt-outs; the phone is the owner's identity and does not change here). All four roles may use them.
+API (step 2.3): `POST /v1/customers` `{ name, phone, notes? }` answers **201** with the new customer, or **200** with the existing one when this garage already has the phone (`created: false`; name and notes are left unchanged). The phone may be typed in any format; it is stored in E.164 (a number without a country code is read as Lebanese). Staff enter no email in Phase 2, so the app invite of step 5 is recorded for WhatsApp (`customer-app-invite`) and logged as `SKIPPED`. Phase 4 adds an optional `email` to the customer (`garage_customers.email`, the garage's own contact data, decision 2026-11-05), used for reminders (section 9). The app invite stays as it is until the owner app exists (Phase 6). `GET /v1/customers` (every role, decision 2026-10-27: newest first, paginated, max 50 per page, 60 requests per minute, optional `q` matching the name or the end of the phone; no export, README 5.4), `GET /v1/customers/:id` (with the cars; writes a `customer.view` audit row, section 12) and `PATCH /v1/customers/:id` (name, notes, opt-outs; the phone is the owner's identity and does not change here). All four roles may use them.
 
 ### 3.2 Add a vehicle
 1. Staff enters plate, make, model, year, current odometer, and chooses the display unit (KM or MI).
@@ -239,7 +241,7 @@ daysSince = whole days between vehicles.lastOdometerAt and now (never negative)
 estimatedKm = vehicles.currentKm + round((avgDailyKm ?? garage defaultDailyKm ?? 35) * daysSince)
 ```
 
-Used for: the pre-filled odometer in quick entry, and the daily reminder job.
+Used for: the pre-filled odometer in quick entry, and the reminder scan (section 9.1).
 
 ### 5.3 Rules
 - A new odometer lower than the last recorded one is allowed only after a confirmation ("odometer correction"), is audit logged, and resets `avgDailyKm` calculation from that point.
@@ -355,30 +357,42 @@ Income per day, month, year, per service type and per branch, plus total invoice
 
 ## 9. Reminders (Phase 4)
 
-### 9.1 Daily job
-A BullMQ repeatable job runs once per day at `reminder.sendTimeLocal` (system setting). For each active garage (loop with `gearva_platform` only to list garages, then each garage processed under its own tenant context):
+Decisions of 2026-11-05 (user, at the start of Phase 4): until the owner app (Phase 6) and an automatic WhatsApp channel (later) exist, a reminder reaches the customer by **email** when the garage has their email, and otherwise through the **WhatsApp list** (9.5), where staff send it from their own WhatsApp in one tap. The monthly reminder is **off by default** (9.2).
+
+### 9.1 Reminder scan
+A BullMQ repeatable job runs **every hour**. It lists the active garages with `gearva_platform`, then processes each garage under its own tenant context, but only while the garage's local time is inside the daytime window (9.3). Running hourly instead of once a day at a fixed time handles every garage's time zone, and catches up after a restart; the dedupe keys make running it again harmless.
+
+A reminder is **due** when:
 
 ```
-for each ACTIVE SERVICE_DUE reminder in the garage:
-    owner opted out or garage_customer.remindersOptOut -> skip
-    estimatedKm = estimate for the vehicle (section 5.2)
-    dueByKm   = nextDueKm   != null and estimatedKm >= nextDueKm   - reminderLeadKm
-    dueByDate = nextDueDate != null and today       >= nextDueDate - reminderLeadDays
-    if not (dueByKm or dueByDate): continue
-    enqueue notification with dedupeKey = SERVICE_REMINDER:{reminderId}:{notifyCount}
+reminder.status is ACTIVE, or SENT with a follow-up due:
+    status SENT and notifyCount < 1 + REMINDER_FOLLOW_UPS (2)
+    and lastNotifiedAt <= now - REMINDER_FOLLOW_UP_DAYS (30)
+garage_customer.remindersOptOut is false (and the customer is not deleted)
+estimatedKm = estimate for the vehicle (section 5.2)
+dueByKm   = nextDueKm   != null and estimatedKm >= nextDueKm   - reminderLeadKm
+dueByDate = nextDueDate != null and today       >= nextDueDate - reminderLeadDays
+dueByKm or dueByDate
 ```
 
-- Message: "Kindly check your km, your next change is at [number]." (localized, number shown in the car's unit).
-- After a successful send: `notifyCount += 1`, `lastNotifiedAt = now`, status `SENT`. If the car is still not serviced, follow up at most 2 more times, at least 30 days apart (values are settings).
-- When the customer services the car, the reminder is `COMPLETED` (section 6).
+`today` is the date in the garage's time zone. `WARRANTY_END` and `RECOMMENDED_NEXT` reminders have only a date, so they are due by date.
+
+For each due reminder, one **round** (`notifyCount + 1`) is sent once:
+- **The customer has an email** (`garage_customers.email`): the scan records an `EMAIL` notification with `dedupeKey = REMINDER:{reminderId}:{round}:EMAIL` and queues it.
+- **No email, or the email of this round ended `FAILED` or `SKIPPED`:** nothing is sent automatically; the reminder appears on the WhatsApp list (9.5).
+
+When a round is sent (the email is `SENT`, or staff mark the WhatsApp message sent), in the same transaction: `notifyCount += 1`, `lastNotifiedAt = now`, status `SENT`. When the customer services the car, the reminder is `COMPLETED` (section 6), and a reminder that was never sent leaves the list.
+
+- Message: "Kindly check your km, your next change is at [number]." (in the customer's language, the number in the car's unit), with the garage's name. Warranty and recommended-next reminders have their own text.
+- The settings in capitals are constants in `contracts` until `system_settings` exists (Phase 5), like the default daily km (README 7).
 
 ### 9.2 Monthly reminder
-Once a month, every customer with a reachable channel gets a general reminder (dedupe key `MONTHLY_REMINDER:{ownerId}:{YYYY-MM}` per garage). Skipped if they already received a service reminder this month.
+A garage setting, `garage_settings.monthlyReminderEnabled`, **off by default** (decision 2026-11-05: avoids customers feeling spammed). When a garage turns it on, the scan sends, once a month, a general reminder by email to every customer of the garage that has an email and has not opted out (dedupe key `MONTHLY_REMINDER:{garageCustomerId}:{YYYY-MM}`). It is skipped for a customer who already received a reminder that month. It is never put on the WhatsApp list.
 
 ### 9.3 Sending rules
-- **Daytime only** in the garage's timezone (`reminder.daytimeStart` to `daytimeEnd`). Jobs outside the window are delayed to the next window, never sent at night.
+- **Daytime only** in the garage's time zone, from `REMINDER_DAYTIME_START` (09:00) to `REMINDER_DAYTIME_END` (20:00). The scan runs only inside the window, and a reminder email whose sending or retry falls outside it is delayed to the next window, never sent at night. Invoices, invites and password resets are not reminders and are sent at once.
 - **No duplicates:** the unique `(garageId, dedupeKey)` constraint is the real guard. The code also checks the log first.
-- **Fair-use cap:** per garage per month (`reminder.maxPerGaragePerMonth`). Over the cap, notifications are `SKIPPED` with a reason and the admin sees it in monitoring.
+- **Fair-use cap:** automatic reminder emails per garage per month, `REMINDER_MAX_PER_GARAGE_PER_MONTH` (a constant until the real cap is set in Phase 5, README 7). Over the cap, notifications are `SKIPPED` with a reason, so those reminders move to the WhatsApp list, and the admin sees it in monitoring (Phase 5). Messages staff send themselves on WhatsApp cost nothing and do not count.
 - **Warranty and recommended-next reminders** use the same pipeline with their own templates.
 
 ### 9.4 Notification pipeline
@@ -388,16 +402,23 @@ flowchart LR
   B --> C[BullMQ queue]
   C --> D{Channel adapter}
   D -->|EMAIL| E[Email provider]
-  D -->|IN_APP| F[Mark visible in owner/staff inbox]
+  D -->|IN_APP| F[Mark visible in owner inbox, phase 6]
   D -->|PUSH| G[FCM, phase 6]
   D -->|WHATSAPP| H[Later adapter]
   E --> I[SENT / DELIVERED / FAILED + error]
   F --> I
 ```
 
-- Retries with exponential backoff for transient failures (max 3), then `FAILED` with the error text.
-- The **notification log** screen in V1 shows what was sent, on which channel, and whether it was delivered or failed.
-- Owner channel choice order for now: `IN_APP` (if the owner uses the app) and `EMAIL` (if known). `WHATSAPP` is added to the order later without touching the callers.
+- Retries with exponential backoff for transient failures (3 attempts in all), then `FAILED` with the error text.
+- A row still `QUEUED` some minutes after it was written (Redis was down when it was queued, README 9) is queued again by the hourly scan. The job id is the notification id, so a row is never queued twice.
+- The **notification log** screen in V1 (OWNER and MANAGER) shows what was sent, on which channel, to whom, and whether it was sent or failed, with the error. It never shows `payload` (database.md 4.6).
+- Owner channel order for now: `EMAIL` (if the garage has it), else the WhatsApp list. `IN_APP` and `PUSH` come with the owner app in Phase 6, and an automatic `WHATSAPP` adapter later, without touching the callers.
+
+### 9.5 WhatsApp list
+A "Reminders due" screen for OWNER, MANAGER and RECEPTIONIST lists the due reminders (9.1) that this round has not reached by email: customer, car, plate, service, due km or date, and the number of earlier reminders.
+- **Send on WhatsApp** opens `https://wa.me/<phone>?text=<message>` with the reminder text already written in the customer's language. Staff press send in WhatsApp.
+- **Mark as sent** then records a `WHATSAPP` notification with status `SENT`, `dedupeKey = REMINDER:{reminderId}:{round}:WHATSAPP` and the phone as recipient, and counts the round (9.1). The audit row records who sent it. Gearva cannot see whether the message was really sent; it trusts the button.
+- A customer who does not want reminders is marked "No reminders" on their page (`remindersOptOut`) and leaves the list.
 
 ---
 

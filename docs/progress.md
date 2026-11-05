@@ -37,7 +37,12 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 3 | 3.6 garage-web: finish step, invoice page, payments | ✅ Done | 2026-11-02 |
 | 3 | 3.7 garage-web: debt list, income summary, settings (Done-when check) | ✅ Done | 2026-11-03 |
 | 3 | 3.8 Fix: first PDF froze the API; deployment moved after Phase 5 | ✅ Done | 2026-11-05 |
-| 4 | Reminders and notifications (split at the start of the phase) | Next | |
+| 4 | 4.0 Doc fixes and Phase 4 decisions (email, WhatsApp list, monthly off) | ✅ Done | 2026-11-05 |
+| 4 | 4.1 Database: customer email, monthly reminder setting | Next | |
+| 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | | |
+| 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | | |
+| 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | | |
+| 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | | |
 | 5 | … then the first deployment to Render, on free instances (README 9) | | |
 
 ---
@@ -1015,7 +1020,33 @@ Phase 3 is complete except its last item, the first deployment, which is step 3.
 
 **Also seen, not changed:** the same log shows a `pg` warning, "Calling client.query() when the client is already executing a query". It is a warning for now (an error in a future `pg` 9), and our code never runs two queries at once on one transaction. To look at before upgrading `pg`.
 
-**Verified:** by me: measured Puppeteer's load time (8.3 s cold, 0.2 s warm, with the event loop blocked for the cold load); API typecheck and lint; the built API starts normally on the test database with real Puppeteer. By the user: commit commands pending.
+**Verified:** by me: measured Puppeteer's load time (8.3 s cold, 0.2 s warm, with the event loop blocked for the cold load); API typecheck and lint; the built API starts normally on the test database with real Puppeteer. By the user: `format:check`, `typecheck`, `npm test`, `test:tenancy`, then the commit.
+**Commit:** `441a15e` — `Phase 3.8: load Puppeteer at API start; move the first deployment after Phase 5`
+
+---
+
+## Phase 4 · Step 4.0 — Doc fixes and Phase 4 decisions
+**When:** 2026-11-05 (~40 min)
+
+**Summary:** Planning Phase 4 found that no reminder could reach a customer: the customer screens have no email, the in-app channel needs the owner app (Phase 6), and WhatsApp was "later". So every reminder would have been logged as skipped. The user chose how reminders go out, and the docs now describe the phase before any code.
+
+**Decisions (user, 2026-11-05)**
+- **Email and a WhatsApp list.** An optional email on the customer is sent automatically. Customers without one (or whose email failed) appear on a "Reminders due" list, where staff open WhatsApp with the message already written and press send, then mark it sent. It is free and needs no WhatsApp business account.
+- **The monthly reminder is off by default;** each garage can turn it on.
+
+**Decisions (mine, in the docs for review)**
+- The customer's email is kept **per garage** (`garage_customers.email`), not on the shared `owners` row: one garage can neither see nor overwrite another garage's entry. `owners.email` stays for the owner app login.
+- The reminder job runs **every hour**, inside each garage's daytime window, instead of once a day at a fixed time: it handles every time zone and catches up after a restart. Dedupe keys make extra runs harmless.
+- Each **round** of a reminder is sent once, by email or WhatsApp, never both. Dedupe keys are now `REMINDER:{id}:{round}:{channel}`.
+- The `IN_APP` adapter and inbox move to Phase 6, with the owner app that reads them. Nothing would use them before.
+- The reminder settings are constants in `contracts` until `system_settings` exists (Phase 5), like the default daily km.
+- The Reminders due list: owner, manager, receptionist. The notification log: owner, manager.
+
+**Files changed:** docs only.
+
+**Doc changes:** flow.md 1 (two matrix rows), 3.1 (customer email), 5.2, 9 (rewritten: 9.1 scan, 9.2 monthly, 9.3 rules, 9.4 pipeline, 9.5 WhatsApp list); database.md 4.1 (`owners.email`, `system_settings`), 4.2 (`monthlyReminderEnabled`), 4.3 (`garage_customers.email`), 4.6 (dedupe keys); README 5.5, 6 (Phase 4 list and Done-when, Phase 6).
+
+**Verified:** `format:check` on the docs; checked the docs for other mentions of the daily job, the old dedupe key and the inbox.
 **Commit:** _(filled in at the next step)_
 
 ---

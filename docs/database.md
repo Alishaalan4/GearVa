@@ -101,7 +101,7 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 | id | uuid PK | |
 | phone | text U | E.164, the login identity |
 | name | text | name given by the first garage that added them |
-| email | text? | |
+| email | text? | the owner's own email, for the owner app login (Phase 6); garages' contact emails are on `garage_customers` |
 | locale | text | `ar` or `en`, used for invoices and notifications |
 | lastLoginAt | timestamptz? | null means the app was never used |
 
@@ -128,7 +128,7 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 Append-only. `id`, `adminId` FK, `garageId` FK, `action` (`VIEW_AS_GARAGE_START`, `VIEW_AS_GARAGE_END`, `RECORD_VIEWED`), `path`, `ip`, `createdAt`. Every time an admin opens a garage's data, a row is written.
 
 #### `system_settings`
-Key/value (`key` PK, `value` jsonb). Examples: `reminder.sendTimeLocal`, `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`.
+Key/value (`key` PK, `value` jsonb). Examples (until then, the reminder values are constants in `contracts`, flow.md 9): `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`.
 
 ### 4.2 Tenant root and settings
 
@@ -154,7 +154,7 @@ Key/value (`key` PK, `value` jsonb). Examples: `reminder.sendTimeLocal`, `remind
 The branch count is derived from active `branches` rows (extra branches are billed separately, so the admin sees `COUNT(branches) - 1`).
 
 #### `garage_settings` (1:1 with garage, `garageId` is PK)
-`logoFileId?` (FK to `files`, added in the Phase 3 migration), `brandColor` (default `#111827`), `invoiceNumberFormat` (default `{BRANCH}-{YYYY}-{SEQ:4}`), `termsText?`, `autoSendInvoice` bool (default false), `showLbp` bool (default false), `lbpRate` int? (LBP per 1 USD, display only), `vatEnabled` bool (default false), `vatRatePercent` numeric(5,2)?, `vatNumber?`, `paymentReminderDays` int?, `reminderLeadKm` int (default 500), `reminderLeadDays` int (default 7), `defaultDailyKm` int?, `invoiceEditWindow` (default `SAME_DAY`).
+`logoFileId?` (FK to `files`, added in the Phase 3 migration), `brandColor` (default `#111827`), `invoiceNumberFormat` (default `{BRANCH}-{YYYY}-{SEQ:4}`), `termsText?`, `autoSendInvoice` bool (default false), `showLbp` bool (default false), `lbpRate` int? (LBP per 1 USD, display only), `vatEnabled` bool (default false), `vatRatePercent` numeric(5,2)?, `vatNumber?`, `paymentReminderDays` int?, `reminderLeadKm` int (default 500), `reminderLeadDays` int (default 7), `defaultDailyKm` int?, `invoiceEditWindow` (default `SAME_DAY`), `monthlyReminderEnabled` bool (default false, added in Phase 4, flow.md 9.2).
 
 `invoiceEditWindow` is added in the Phase 3 migration, together with its enum, because its possible values are defined by the invoice edit rules (flow.md section 7.5). All other columns exist from Phase 1.
 
@@ -191,6 +191,7 @@ Each garage has exactly one `OWNER` created by the admin when the garage is crea
 | name | text | the garage's own name for the customer |
 | notes | text? | private to this garage |
 | inviteSentAt | timestamptz? | |
+| email | text? | the garage's own contact email for the customer, used for reminders (flow.md 9). Added in Phase 4 (decision 2026-11-05). Kept per garage, not on `owners`, so one garage can neither see nor overwrite the email another garage entered |
 | remindersOptOut / marketingOptOut | bool | honored by every channel |
 | deletedAt | timestamptz? | |
 | **U** | (garageId, ownerId) | one link per garage and owner |
@@ -414,7 +415,7 @@ Payments are append-only. Rule: `SUM(payments.amountCents) = invoices.paidCents`
 | readAt | timestamptz? | for `IN_APP` |
 | refType / refId | text? / uuid? | e.g. `reminder`, `invoice`, `offer` |
 
-Dedupe key examples: `SERVICE_REMINDER:{reminderId}:{notifyCount}`, `MONTHLY_REMINDER:{ownerId}:2026-10`, `INVOICE:{invoiceId}:EMAIL`, `INVITE:{userId}:{issuedAtMs}`, `PASSWORD_RESET:{userId}:{issuedAtMs}`.
+Dedupe key examples: `REMINDER:{reminderId}:{round}:EMAIL` and `REMINDER:{reminderId}:{round}:WHATSAPP` (flow.md 9.1, 9.5), `MONTHLY_REMINDER:{garageCustomerId}:2026-10`, `INVOICE:{invoiceId}:EMAIL`, `INVITE:{userId}:{issuedAtMs}`, `PASSWORD_RESET:{userId}:{issuedAtMs}`.
 
 Invite and password-reset emails use type `INVITE` with templates `staff-invite` and `password-reset`. **Their `payload` holds the one-time set-password link**, so no screen may show `payload` (the Phase 4 notification log shows type, channel, recipient, status and error only); otherwise a manager could open the owner's reset link.
 

@@ -230,7 +230,7 @@ interface NotificationChannel {
 }
 ```
 
-Build `EMAIL` and `IN_APP` first. `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it.
+Build `EMAIL` first (Phase 1); `IN_APP` comes with the owner app in Phase 6 (decision 2026-11-05). `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it.
 
 ### 5.6 API conventions
 - REST + JSON, validated with Zod schemas from `packages/contracts`.
@@ -282,8 +282,9 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - The first deployment was planned here and moved to after Phase 5 (decision 2026-11-05): with only test users, it waits until the admin side is complete.
 
 ### Phase 4: Reminders and notifications
-- Extend the notification module from Phase 1: in-app adapter and inbox, notification log screen (the `notifications` table), retries, dedupe keys, daily BullMQ job, monthly reminder, daytime-only rule, fair-use cap
-- **Done when:** the daily job sends exactly one reminder per due car and the log shows delivered or failed.
+- Extend the notification module from Phase 1: notification log screen (the `notifications` table), retries, dedupe keys, the reminder scan BullMQ job, monthly reminder (off by default), daytime-only rule, fair-use cap
+- An optional customer email, and a "Reminders due" list where staff send each reminder on WhatsApp in one tap (decisions 2026-11-05, flow.md 9: until the owner app and an automatic WhatsApp channel exist, email is the only automatic channel). The in-app adapter and inbox move to Phase 6, with the owner app that reads them
+- **Done when:** the reminder scan reaches each due car exactly once per round (an email, or a place on the WhatsApp list) and the log shows sent or failed.
 
 ### Phase 5: Admin completion
 - Subscription payments, expiring-soon list, paid/unpaid list, usage monitoring, system settings (default service types, reminder rules), view-as-garage with access log, business view
@@ -292,7 +293,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - **Deploy a first version to Render now (section 9),** on free instances while only test users use it.
 
 ### Phase 6: Owner mobile app
-- Expo app, email + password login (given by the garage), cars, history, invoices, in-app notifications, push, offers
+- Expo app, email + password login (given by the garage), cars, history, invoices, in-app notifications (the `IN_APP` adapter and inbox, moved here from Phase 4), push, offers
 - Owner-scoped access (see `database.md`)
 
 ### Phase 7: Offers, revenue screens, polish

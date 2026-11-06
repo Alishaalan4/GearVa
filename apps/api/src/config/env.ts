@@ -20,6 +20,8 @@ const envSchema = z
     // Redis key prefix of the BullMQ queues (BullMQ's default). A test that swaps a
     // notification channel uses its own, so other test files' workers never take its jobs.
     QUEUE_PREFIX: z.string().min(1).default('bull'),
+    // The hourly reminder scan (flow.md 9.1). Off in tests, which run scans themselves.
+    REMINDER_SCAN: z.enum(['on', 'off']).default('on'),
     // First wait before a failed notification is tried again (doubled each time).
     NOTIFICATION_RETRY_DELAY_MS: z.coerce.number().int().positive().default(30_000),
     // `stub` is for tests, which have no Chrome.

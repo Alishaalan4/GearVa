@@ -375,7 +375,7 @@ dueByDate = nextDueDate != null and today       >= nextDueDate - reminderLeadDay
 dueByKm or dueByDate
 ```
 
-`today` is the date in the garage's time zone. `WARRANTY_END` and `RECOMMENDED_NEXT` reminders have only a date, so they are due by date.
+`today` is the date in the garage's time zone. `WARRANTY_END` and `RECOMMENDED_NEXT` reminders have only a date, so they are due by date, and are sent once: follow-ups are for service reminders only (step 4.3). Implemented as `reminderRound` in `packages/contracts/src/reminders.ts`; a warranty end is logged with type `WARRANTY_END`, a recommended service with `SERVICE_REMINDER`.
 
 For each due reminder, one **round** (`notifyCount + 1`) is sent once:
 - **The customer has an email** (`garage_customers.email`): the scan records an `EMAIL` notification with `dedupeKey = REMINDER:{reminderId}:{round}:EMAIL` and queues it.

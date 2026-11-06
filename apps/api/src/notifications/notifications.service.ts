@@ -45,6 +45,12 @@ const REMINDER_TYPES: readonly NotificationType[] = [
   'WARRANTY_END',
 ];
 
+/**
+ * Runs in the transaction that marks a notification SENT, for rows with this `refType`:
+ * e.g. a sent reminder email counts the reminder's round (flow.md 9.1).
+ */
+export type SentHandler = (tx: TenantTx, notification: Notification) => Promise<void>;
+
 /** A row still QUEUED this long after it was written lost its job (flow.md 9.4). */
 const STUCK_AFTER_MS = 10 * 60_000;
 
@@ -58,6 +64,7 @@ const STUCK_AFTER_MS = 10 * 60_000;
 @Injectable()
 export class NotificationsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(NotificationsService.name);
+  private readonly sentHandlers = new Map<string, SentHandler>();
 
   constructor(
     private readonly queue: NotificationsQueue,
@@ -100,6 +107,11 @@ export class NotificationsService implements OnApplicationBootstrap {
       where: { garageId_dedupeKey: { garageId: input.garageId, dedupeKey: input.dedupeKey } },
     });
     return { notification, created: count === 1 };
+  }
+
+  /** Registers what happens when a notification with this `refType` is SENT. */
+  onSent(refType: string, handler: SentHandler): void {
+    this.sentHandlers.set(refType, handler);
   }
 
   /** Call after the transaction that recorded the row has committed. */
@@ -189,7 +201,7 @@ export class NotificationsService implements OnApplicationBootstrap {
       };
     }
 
-    if (result.ok) return this.finish(notificationId, 'SENT', null);
+    if (result.ok) return this.finish(notificationId, 'SENT', null, notification);
     const { error } = result;
     if (result.retryable && !delivery.lastAttempt) {
       // Still QUEUED: the log shows the last error while the job waits to retry.
@@ -227,13 +239,18 @@ export class NotificationsService implements OnApplicationBootstrap {
     id: string,
     status: 'SENT' | 'FAILED' | 'SKIPPED',
     error: string | null,
+    notification?: Notification,
   ): Promise<void> {
     const garageId = this.tenantDb.garageId;
-    await this.tenantDb.run((tx) =>
-      tx.notification.updateMany({
+    const handler = notification?.refType ? this.sentHandlers.get(notification.refType) : null;
+    await this.tenantDb.run(async (tx) => {
+      const { count } = await tx.notification.updateMany({
         where: { id, garageId, status: 'QUEUED' },
         data: { status, error, sentAt: status === 'SENT' ? new Date() : null },
-      }),
-    );
+      });
+      if (count === 1 && status === 'SENT' && handler && notification) {
+        await handler(tx, notification);
+      }
+    });
   }
 }

@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { Locale } from '../notification-channel';
 import { passwordReset } from './password-reset';
+import { monthlyReminder, recommendedNext, serviceReminder, warrantyEnd } from './reminders';
 import { staffInvite } from './staff-invite';
 
 export interface RenderedEmail {
@@ -18,6 +19,10 @@ export interface EmailTemplate<T> {
 const EMAIL_TEMPLATES = {
   'staff-invite': staffInvite,
   'password-reset': passwordReset,
+  'service-reminder': serviceReminder,
+  'warranty-end': warrantyEnd,
+  'recommended-next': recommendedNext,
+  'monthly-reminder': monthlyReminder,
 };
 
 export type EmailTemplateName = keyof typeof EMAIL_TEMPLATES;

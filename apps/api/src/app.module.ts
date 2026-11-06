@@ -21,6 +21,7 @@ import { HealthModule } from './health/health.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { RemindersModule } from './reminders/reminders.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
@@ -64,6 +65,7 @@ import { VisitsModule } from './visits/visits.module';
     MaintenanceModule,
     InvoicesModule,
     VisitsModule,
+    RemindersModule,
     HealthModule,
   ],
   providers: [

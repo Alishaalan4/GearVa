@@ -40,8 +40,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 4 | 4.0 Doc fixes and Phase 4 decisions (email, WhatsApp list, monthly off) | ✅ Done | 2026-11-05 |
 | 4 | 4.1 Database: customer email, monthly reminder setting | ✅ Done | 2026-11-05 |
 | 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | ✅ Done | 2026-11-05 |
-| 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | Next | |
-| 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | | |
+| 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | ✅ Done | 2026-11-05 |
+| 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | Next | |
 | 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | | |
 | 5 | … then the first deployment to Render, on free instances (README 9) | | |
 
@@ -1103,7 +1103,55 @@ Phase 3 is complete except its last item, the first deployment, which is step 3.
 
 **Doc changes:** README 5.5 (`retryable`).
 
-**Verified:** by me: `format:check`, lint and typecheck of everything, all tests 3 times in a row (193 API tests, 7 new; 6 new `contracts` tests), `test:tenancy` (41). Not covered by a test: replacing a job that crashed on its last attempt (it needs a crash outside the send). By the user: commit commands pending.
+**Verified:** by me: `format:check`, lint and typecheck of everything, all tests 3 times in a row (193 API tests, 7 new; 6 new `contracts` tests), `test:tenancy` (41). Not covered by a test: replacing a job that crashed on its last attempt (it needs a crash outside the send). By the user: the checks, then the commit.
+**Commit:** `851f687` — `Phase 4.2: notification retries, daytime-only reminders, fair-use cap, stuck rows`
+
+---
+
+## Phase 4 · Step 4.3 — Reminder scan job
+**When:** 2026-11-05 (~2 h)
+
+**Implements:** flow.md 9.1, 9.2, 9.3; database.md 4.4 (`reminders`), 4.6 (dedupe keys).
+
+**Summary:** A BullMQ job scheduler runs the reminder scan every hour. It skips locked garages (the same lock rule as staff login), and handles each other garage under its own tenant context, so a failure in one garage does not stop the others. For each garage it:
+1. Queues again any stuck notification rows (step 4.2), at any hour.
+2. Stops there outside 09:00–20:00 in the garage's time zone.
+3. Finds the due reminders (`reminderRound`: by estimated km or by date, each with the garage's lead; follow-ups after 30 days, twice at most).
+4. Emails the customers the garage has an email for: one row per round, key `REMINDER:{id}:{round}:EMAIL`.
+5. Sends the monthly reminder, when the garage turned it on.
+
+When an email is marked `SENT`, the same transaction counts the round on the reminder (`notifyCount`, `lastNotifiedAt`, status `SENT`). Customers without an email, or whose email failed, stay due for the WhatsApp list (step 4.4).
+
+**Decisions**
+- **Follow-ups are for service reminders only.** A warranty end or a recommended service is sent once. Written in flow.md 9.1.
+- **A sent round counts through a hook.** The notification module calls a handler for its `refType` when a row becomes `SENT`. So notifications do not depend on reminders, and 4.4's "mark as sent on WhatsApp" will count rounds the same way (`countRound`).
+- **One scan per hour, wherever the API runs.** Every API process registers the same scheduler, and the worker takes one scan at a time. `REMINDER_SCAN=off` turns it off; tests use that and run scans themselves.
+- **Hourly scans stay cheap.** A scan first leaves out dedupe keys already in the log, so it writes nothing for work it already did. The unique key still guards two scans at once.
+- **Four new email templates,** in English and Arabic: service reminder, warranty end, recommended service, and monthly. Numbers and dates use Western digits, as on the invoices. Checked by rendering samples.
+- **A scan reads all open reminders of a garage.** That is fine at today's sizes; filter in SQL if a garage grows large.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/reminders.ts`, `test/reminders.test.ts` | `reminderRound`, `monthStart`, `localMonth`, follow-up constants; 8 tests |
+| `apps/api/src/reminders/*` (new) | Scan scheduler, `RemindersService` (scan, due list, rounds, monthly), module |
+| `apps/api/src/notifications/notifications.service.ts` | `onSent` hook, run in the transaction that marks a row `SENT` |
+| `apps/api/src/notifications/templates/reminders.ts` (new), `templates/index.ts` | The four templates |
+| `apps/api/src/app.module.ts`, `src/config/env.ts`, `packages/database/src/test-environment.ts` | Module; `REMINDER_SCAN` (on by default, off in tests) |
+| `apps/api/test/reminders.spec.ts` (new) | 10 tests |
+
+**Doc changes:** flow.md 9.1 (follow-ups for service reminders only; where the rule lives).
+
+**Verified:** by me: `format:check`, lint and typecheck of everything; the 10 new tests cover:
+- one email per round, also with three scans at once;
+- nothing before due, nothing for an opted-out customer, nothing outside the daytime window;
+- no email: nothing sent, still due for the list;
+- follow-ups at 30 days, at most 3 rounds;
+- servicing the car closes the reminder;
+- the warranty template;
+- the monthly reminder: off by default, once a month, not after a service reminder.
+
+All tests passed 4 times in a row: 203 API tests, 69 `contracts` tests, and `test:tenancy` (41). Once in those 4 runs, Jest said a test worker "failed to exit gracefully". Every test still passed, and neither new test file leaves anything open when run alone, so its cause is not found. Not covered by a test: `scanAll` skipping locked garages, because a scan of every garage would touch other test files' garages. It uses the same lock rule that is tested for logins. By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

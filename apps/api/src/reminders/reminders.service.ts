@@ -28,7 +28,7 @@ import { fromDbDate } from '../maintenance/records.service';
 import type { Locale } from '../notifications/notification-channel';
 import { whatsappReminderText } from '../notifications/templates/reminders';
 import { NotificationsService, type NewNotification } from '../notifications/notifications.service';
-import { ReminderScanQueue } from './reminder-scan.queue';
+import type { ScheduledJob } from '../common/jobs/scheduled-job';
 
 /** A due reminder with what its message needs (flow.md 9.1). */
 export interface DueReminder {
@@ -53,6 +53,9 @@ export interface ScanResult {
 
 export const REMINDER_REF = 'reminder';
 
+/** The hourly reminder scan job (flow.md 9.1). */
+export const REMINDER_SCAN_JOB = Symbol('REMINDER_SCAN_JOB');
+
 /** How each reminder kind is logged and which email it uses. */
 export const KINDS: Record<Reminder['kind'], { type: NotificationType; template: string }> = {
   SERVICE_DUE: { type: 'SERVICE_REMINDER', template: 'service-reminder' },
@@ -75,7 +78,7 @@ export class RemindersService implements OnApplicationBootstrap {
     private readonly db: TenantDb,
     private readonly platform: PlatformDb,
     private readonly notifications: NotificationsService,
-    private readonly scanQueue: ReminderScanQueue,
+    @Inject(REMINDER_SCAN_JOB) private readonly scanJob: ScheduledJob,
     private readonly cls: ClsService,
     private readonly context: RequestContext,
     @Inject(ENV) private readonly env: Env,
@@ -89,7 +92,7 @@ export class RemindersService implements OnApplicationBootstrap {
       }
     });
     // Off in tests, which run scans themselves.
-    if (this.env.REMINDER_SCAN === 'on') await this.scanQueue.start(() => this.scanAll());
+    if (this.env.SCHEDULED_JOBS === 'on') await this.scanJob.start(() => this.scanAll());
   }
 
   /**

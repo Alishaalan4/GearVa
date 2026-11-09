@@ -42,8 +42,8 @@ export function useTestEnvironment(env: NodeJS.ProcessEnv = process.env): void {
   // Tests have no Chrome, and their files stay out of the development folder.
   env.PDF_ADAPTER = 'stub';
   env.FILES_LOCAL_DIR = join(tmpdir(), 'gearva-test-files');
-  // Tests run reminder scans themselves, at the moment they choose.
-  env.REMINDER_SCAN = 'off';
+  // Tests run the hourly jobs themselves, at the moment they choose.
+  env.SCHEDULED_JOBS = 'off';
   // Retried notifications wait milliseconds, not 30 s.
   env.NOTIFICATION_RETRY_DELAY_MS = '20';
   env.NODE_ENV = 'test';

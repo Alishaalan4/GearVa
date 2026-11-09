@@ -22,7 +22,12 @@ describe('garageLockReason', () => {
     expect(garageLockReason(garage({ status: 'EXPIRED' }), NOW)).toBe('expired');
   });
 
-  it('a paid-until date in the past locks even before the daily job marks it EXPIRED', () => {
+  it('an unpaid trial marked EXPIRED still says its trial ended', () => {
+    const ended = { status: 'EXPIRED' as const, isPaid: false, expiresAt: null };
+    expect(garageLockReason(garage({ ...ended, trialEndsAt: before }), NOW)).toBe('trial_ended');
+  });
+
+  it('a paid-until date in the past locks even before the hourly pass marks it EXPIRED', () => {
     expect(garageLockReason(garage({ expiresAt: before }), NOW)).toBe('expired');
   });
 

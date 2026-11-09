@@ -20,7 +20,10 @@ export function garageLockReason(
   now = new Date(),
 ): GarageLockReason | null {
   if (garage.status === 'SUSPENDED') return 'suspended';
-  if (garage.status === 'EXPIRED') return 'expired';
+  // An unpaid trial marked EXPIRED by the hourly pass still says why: its trial ended.
+  if (garage.status === 'EXPIRED') {
+    return !garage.isPaid && garage.trialEndsAt ? 'trial_ended' : 'expired';
+  }
   if (garage.expiresAt && garage.expiresAt < now) return 'expired';
   if (
     garage.status === 'TRIAL' &&

@@ -8,6 +8,7 @@ import {
   type Paginated,
   type SuspendGarageInput,
   TRIAL_DAYS,
+  suggestNewExpiry,
 } from '@gearva/contracts';
 import { Prisma, type Garage, type Notification } from '@gearva/database';
 import { UserAccessLinksService } from '../../auth/user-access-links.service';
@@ -154,9 +155,14 @@ export class AdminGaragesService {
         ...garageWithCounts,
         branches: { orderBy: [{ isMain: 'desc' }, { code: 'asc' }] },
         users: { where: { role: 'OWNER' }, take: 1 },
+        subscriptionPayments: {
+          include: { recordedBy: { select: { id: true, name: true } } },
+          orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+        },
       },
     });
     if (!garage) throw notFound();
+    const day = (d: Date) => d.toISOString().slice(0, 10);
     const owner = garage.users[0];
     return {
       ...toListItem(garage),
@@ -182,6 +188,22 @@ export class AdminGaragesService {
         isMain: b.isMain,
         isActive: b.isActive,
       })),
+      payments: garage.subscriptionPayments.map((p) => ({
+        id: p.id,
+        amountCents: p.amountCents,
+        method: p.method,
+        paidOn: day(p.paidAt),
+        periodStart: day(p.periodStart),
+        newExpiryDate: day(p.newExpiryDate),
+        extraBranches: p.extraBranches,
+        note: p.note,
+        recordedBy: p.recordedBy,
+        createdAt: p.createdAt.toISOString(),
+      })),
+      suggestedExpiry: suggestNewExpiry(
+        garage.isPaid && garage.expiresAt ? day(garage.expiresAt) : null,
+        day(new Date()),
+      ),
     };
   }
 

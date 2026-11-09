@@ -22,6 +22,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
@@ -66,6 +67,7 @@ import { VisitsModule } from './visits/visits.module';
     InvoicesModule,
     VisitsModule,
     RemindersModule,
+    SubscriptionsModule,
     HealthModule,
   ],
   providers: [

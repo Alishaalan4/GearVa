@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { addMonths } from './next-due';
 import { paginationQuerySchema } from './pagination';
 import { phoneSchema } from './phone';
 
@@ -54,6 +55,56 @@ export const suspendGarageSchema = z.object({
 });
 export type SuspendGarageInput = z.infer<typeof suspendGarageSchema>;
 
+// ---------------------------------------------------------------------------
+// Subscription lifecycle (flow.md 11.1, step 5.2)
+// ---------------------------------------------------------------------------
+
+export const SUBSCRIPTION_PAYMENT_METHODS = ['CASH', 'WHISH'] as const;
+export type SubscriptionPaymentMethod = (typeof SUBSCRIPTION_PAYMENT_METHODS)[number];
+
+/**
+ * POST /admin/v1/garages/:garageId/payments. Dates are YYYY-MM-DD; access ends at the end
+ * of `newExpiryDate` (UTC), like `paidUntil` when a garage is created.
+ */
+export const recordSubscriptionPaymentSchema = z
+  .object({
+    amountCents: z.number().int().positive().max(100_000_000),
+    method: z.enum(SUBSCRIPTION_PAYMENT_METHODS),
+    /** the day the money was received; not in the future */
+    paidOn: z.iso.date().refine((d) => d <= today(), { message: 'Cannot be in the future' }),
+    /** the new last paid day; today or later, so the garage is usable at once */
+    newExpiryDate: z.iso.date().refine((d) => d >= today(), { message: 'Must be today or later' }),
+    /** extra branches this payment covers, beyond the main one */
+    extraBranches: z.number().int().min(0).max(50).default(0),
+    note: z
+      .string()
+      .trim()
+      .max(500)
+      .transform((v) => (v === '' ? null : v))
+      .nullable()
+      .optional(),
+  })
+  .refine((p) => p.newExpiryDate >= p.paidOn, {
+    message: 'The new expiry date cannot be before the payment date',
+    path: ['newExpiryDate'],
+  });
+export type RecordSubscriptionPaymentInput = z.infer<typeof recordSubscriptionPaymentSchema>;
+
+/** POST /admin/v1/garages/:garageId/extend-trial: the new last trial day (flow.md 11.1). */
+export const extendTrialSchema = z.object({
+  trialEndsOn: z.iso.date().refine((d) => d >= today(), { message: 'Must be today or later' }),
+});
+export type ExtendTrialInput = z.infer<typeof extendTrialSchema>;
+
+/**
+ * flow.md 11.1: the suggested new expiry date of a payment: 12 months after the current
+ * paid period if it has not ended yet, else 12 months from today. A trial does not count.
+ */
+export function suggestNewExpiry(paidUntil: string | null, today: string): string {
+  const from = paidUntil && paidUntil >= today ? paidUntil : today;
+  return addMonths(from, 12);
+}
+
 // Responses. Dates are ISO strings in JSON.
 
 export interface GarageListItem {
@@ -89,6 +140,21 @@ export interface GarageBranchSummary {
   isActive: boolean;
 }
 
+export interface SubscriptionPaymentItem {
+  id: string;
+  amountCents: number;
+  method: SubscriptionPaymentMethod;
+  /** YYYY-MM-DD */
+  paidOn: string;
+  /** YYYY-MM-DD: the paid period */
+  periodStart: string;
+  newExpiryDate: string;
+  extraBranches: number;
+  note: string | null;
+  recordedBy: { id: string; name: string };
+  createdAt: string;
+}
+
 export interface GarageDetail extends GarageListItem {
   locationText: string;
   timezone: string;
@@ -97,4 +163,8 @@ export interface GarageDetail extends GarageListItem {
   suspendedReason: string | null;
   owner: GarageOwnerSummary | null;
   branches: GarageBranchSummary[];
+  /** newest first */
+  payments: SubscriptionPaymentItem[];
+  /** suggested new expiry date for the next payment, YYYY-MM-DD */
+  suggestedExpiry: string;
 }

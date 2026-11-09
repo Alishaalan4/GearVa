@@ -45,8 +45,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | ✅ Done | 2026-11-09 |
 | 5 | 5.0 Doc fixes and Phase 5 decisions (website in garage-web, prices, simple counts) | ✅ Done | 2026-11-09 |
 | 5 | 5.1 Database: subscription payments, access logs, system settings, applications | ✅ Done | 2026-11-09 |
-| 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | Next | |
-| 5 | 5.3 API: system settings (constants move here) and global service types | | |
+| 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | ✅ Done | 2026-11-09 |
+| 5 | 5.3 API: system settings (constants move here) and global service types | Next | |
 | 5 | 5.4 API: monitoring lists, usage counts, business view | | |
 | 5 | 5.5 API: view as garage (read-only, access log) | | |
 | 5 | 5.6 Applications API and the public website pages in garage-web | | |
@@ -1324,7 +1324,61 @@ By the user: stopped the leftover test web server, ran the checks and committed.
 - 25 database tests (2 new), 218 API tests, `test:tenancy` (46).
 - `format:check`, lint and typecheck of everything.
 
-By the user: the migration on the development database, then the commit.
+By the user: the migration on the development database, the checks, then the commit.
+**Commit:** `1961183` — `Phase 5.1: subscription payments, admin access logs, system settings and garage applications tables`
+
+---
+
+## Phase 5 · Step 5.2 — API: subscription lifecycle
+**When:** 2026-11-09 (~1 h 30 min)
+
+**Implements:** flow.md 2.5, 11.1; database.md 4.1 (`subscription_payments`).
+
+**Summary:**
+- **Record a payment** (`POST /admin/v1/garages/:garageId/payments`): amount, method (cash or Whish), payment date, new expiry date, extra branches, note. The garage becomes paid and `ACTIVE` until the end of the new expiry date, at once. Its staff's existing sessions work again without signing in.
+- **Extend a trial** (`POST .../extend-trial`): for a garage that has never paid, to a later day, also after the trial ended.
+- **The garage detail** lists its payments, newest first, with who recorded each, and suggests the next expiry date: 12 months after the current paid period, or after today.
+- **An hourly job** marks `EXPIRED` the garages whose paid period or unpaid trial ended. Access never waits for it: the lock guard checks the dates on every request.
+
+**Decisions**
+- **A renewal continues the paid period.** It starts where the current one ends if that has not passed yet, else on the payment day; trial days are not added (flow.md 11.1).
+- **A payment does not lift a suspension;** Reactivate does.
+- **A trial is never shortened** by "extend". It cannot be extended once the garage has paid (`409 GARAGE_NOT_IN_TRIAL`).
+- **Each change locks the garage row,** so two admins recording at once cannot overwrite each other.
+- **Hourly, not daily,** with the same scheduler as the reminder scan. The scheduler became a shared class (`common/jobs/scheduled-job.ts`), and its switch was renamed `REMINDER_SCAN` → `SCHEDULED_JOBS` (on by default, off in tests).
+
+**Problems hit and fixed**
+- **A real bug the new job would have caused:** an unpaid trial marked `EXPIRED` would show staff the lock screen for an expired subscription instead of "trial ended". The lock rule now gives `trial_ended` for it; 1 test.
+- **A test run failed once** (1 of 227) and did not fail again in 4 runs. The likely cause: the new tests ran the expiry job over every garage in the test database, while other test files, running at the same time, check their own garages' status. The job now takes an optional list of garages, and the tests pass only their own; three full runs in a row then passed.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/garages.ts`, `errors.ts`, `test/garages.test.ts` (new) | Payment and trial schemas, `suggestNewExpiry`, `GARAGE_NOT_IN_TRIAL`; 3 tests |
+| `apps/api/src/admin/garages/admin-subscriptions.service.ts` (new), `admin-garages.controller.ts`, `admin-garages.service.ts`, `admin/admin.module.ts` | Payments, trial extension, payments in the detail |
+| `apps/api/src/subscriptions/*` (new), `app.module.ts` | The hourly expiry job |
+| `apps/api/src/common/jobs/scheduled-job.ts` (new), `reminders/reminders.module.ts`, `reminders.service.ts`, `reminders/reminder-scan.queue.ts` (removed) | Shared scheduler |
+| `apps/api/src/common/garage-lock.ts`, `test/garage-lock.spec.ts` | `trial_ended` for an expired trial; 1 test |
+| `apps/api/src/config/env.ts`, `packages/database/src/test-environment.ts` | `SCHEDULED_JOBS` |
+| `apps/api/test/admin-subscriptions.spec.ts` (new) | 9 tests |
+
+**Doc changes:** flow.md 2.5 (hourly job, the lock reason), 11.1 (payment and trial rules, endpoints).
+
+**Verified:** by me:
+- The 9 new API tests cover:
+  - a trial becoming paid;
+  - a renewal continuing the period, and a date inside it refused;
+  - an expired garage's own staff session locked, then working again right after the payment;
+  - a suspended garage staying suspended;
+  - bad amounts, methods and dates refused;
+  - the audit row;
+  - trial extension, and its refusal after a payment;
+  - the expiry job marking only what it should.
+- 3 new `contracts` tests.
+- All tests 3 times in a row (228 API tests), `test:tenancy` (46), `format:check`, lint and typecheck.
+- The intermittent "worker failed to exit gracefully" warning of step 4.3 showed once more, with every test passing.
+
+By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

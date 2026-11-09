@@ -13,7 +13,8 @@ export interface AccessClaims {
   sub: string;
   /** sessions.id: lets a guard reject a token whose session was revoked */
   sid: string;
-  typ: 'admin' | 'staff';
+  /** `view-as`: an admin's read-only session in a garage's app (flow.md 11.3) */
+  typ: 'admin' | 'staff' | 'view-as';
 }
 
 interface MfaClaims {
@@ -48,6 +49,7 @@ export class SessionService {
     subjectType: SubjectType,
     subjectId: string,
     meta: ClientMeta,
+    options: { ttlSeconds?: number; viewAsGarageId?: string } = {},
   ): Promise<{ session: Session; refreshToken: string }> {
     const refreshToken = randomBytes(32).toString('base64url');
     const session = await this.platformDb.client.session.create({
@@ -55,9 +57,10 @@ export class SessionService {
         subjectType,
         subjectId,
         refreshTokenHash: sha256(refreshToken),
+        viewAsGarageId: options.viewAsGarageId ?? null,
         ip: meta.ip ?? null,
         userAgent: meta.userAgent ?? null,
-        expiresAt: new Date(Date.now() + REFRESH_TTL_SECONDS * 1000),
+        expiresAt: new Date(Date.now() + (options.ttlSeconds ?? REFRESH_TTL_SECONDS) * 1000),
       },
     });
     return { session, refreshToken };
@@ -120,12 +123,17 @@ export class SessionService {
   }
 
   async isActive(sessionId: string): Promise<boolean> {
-    const session = await this.platformDb.client.session.findUnique({ where: { id: sessionId } });
-    return !!session && !session.revokedAt && session.expiresAt > new Date();
+    return !!(await this.findActive(sessionId));
   }
 
-  signAccess(claims: AccessClaims): Promise<string> {
-    return this.jwt.signAsync(claims, { expiresIn: ACCESS_TTL_SECONDS });
+  /** The session if it is neither revoked nor expired. */
+  async findActive(sessionId: string): Promise<Session | null> {
+    const session = await this.platformDb.client.session.findUnique({ where: { id: sessionId } });
+    return session && !session.revokedAt && session.expiresAt > new Date() ? session : null;
+  }
+
+  signAccess(claims: AccessClaims, ttlSeconds = ACCESS_TTL_SECONDS): Promise<string> {
+    return this.jwt.signAsync(claims, { expiresIn: ttlSeconds });
   }
 
   async verifyAccess(token: string, typ: AccessClaims['typ']): Promise<AccessClaims | null> {

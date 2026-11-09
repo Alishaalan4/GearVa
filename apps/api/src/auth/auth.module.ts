@@ -10,6 +10,7 @@ import { StaffAuthService } from './staff-auth.service';
 import { StaffGuard } from './staff.guard';
 import { TotpService } from './totp.service';
 import { UserAccessLinksService } from './user-access-links.service';
+import { ViewAsService } from './view-as.service';
 
 /** Sessions, passwords, 2FA, access links; staff sign-in (/v1/auth) and its guard. */
 @Module({
@@ -33,6 +34,7 @@ import { UserAccessLinksService } from './user-access-links.service';
     StaffGuard,
     TotpService,
     UserAccessLinksService,
+    ViewAsService,
   ],
   exports: [
     LoginAttemptsService,
@@ -41,6 +43,7 @@ import { UserAccessLinksService } from './user-access-links.service';
     StaffGuard,
     TotpService,
     UserAccessLinksService,
+    ViewAsService,
   ],
 })
 export class AuthModule {}

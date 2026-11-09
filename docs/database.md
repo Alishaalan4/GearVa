@@ -126,6 +126,9 @@ Append-only (step 5.1): `gearva_platform` has `SELECT, INSERT` only, like `payme
 | recordedById | uuid FK | admin user |
 | note | text? | |
 
+#### `sessions`: view as garage (step 5.5)
+`viewAsGarageId` (uuid? FK `garages`): set only on an admin's read-only "view as garage" session (flow.md 11.3), which lasts an hour and is never refreshed. A check allows it only when `subjectType = ADMIN`.
+
 #### `admin_access_logs`
 Append-only. `id`, `adminId` FK, `garageId` FK, `action` (`VIEW_AS_GARAGE_START`, `VIEW_AS_GARAGE_END`, `RECORD_VIEWED`), `path`, `ip`, `createdAt`. Every time an admin opens a garage's data, a row is written.
 

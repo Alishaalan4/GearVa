@@ -48,8 +48,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | ✅ Done | 2026-11-09 |
 | 5 | 5.3 API: system settings (constants move here) and global service types | ✅ Done | 2026-11-09 |
 | 5 | 5.4 API: monitoring lists, usage counts, business view | ✅ Done | 2026-11-09 |
-| 5 | 5.5 API: view as garage (read-only, access log) | Next | |
-| 5 | 5.6 Applications API and the public website pages in garage-web | | |
+| 5 | 5.5 API: view as garage (read-only, access log) | ✅ Done | 2026-11-09 |
+| 5 | 5.6 Applications API and the public website pages in garage-web | Next | |
 | 5 | 5.7 admin web screens (Done-when check) | | |
 | Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | | |
 
@@ -1487,7 +1487,61 @@ By the user: the checks, then the commit.
   - business totals growing by a recorded payment.
 - All tests twice (243 API tests), `test:tenancy` (46), `format:check`, lint and typecheck.
 
-By the user: commit commands pending.
+By the user: the checks, then the commit.
+**Commit:** `aa95926` — `Phase 5.4: admin monitoring lists, usage counts and business view`
+
+---
+
+## Phase 5 · Step 5.5 — View as garage
+**When:** 2026-11-09 (~2 h 30 min)
+
+**Implements:** flow.md 11.3, 12; database.md 4.1 (`admin_access_logs`, `sessions`).
+
+**Summary:** An admin can open a garage's own app, read only, for support:
+1. **The link:** `POST /admin/v1/garages/:garageId/view-as` gives a link to garage-web's `/view-as` page, with a one-time code after `#`. The code works once, for 2 minutes; only its hash is kept, in Redis.
+2. **The session:** garage-web trades the code for a 1-hour session of the admin in that garage, never refreshed. The screens are the owner's, with a banner ("You are viewing … as a Gearva admin. Read only; every page you open is logged.") and a **Leave** button.
+3. **Read only:** every request that is not a read is refused with `403 VIEW_ONLY`.
+4. **Logs:** the start, every page of data opened (its path, never the data), and Leave go to `admin_access_logs`. The garage's own audit log shows the views under the admin.
+
+**Decisions**
+- **The real garage screens,** not copies in the admin app: support sees exactly what the garage sees, and nothing has to be built twice.
+- **The code goes after `#`:** browsers never send it to a server, so it stays out of every log; garage-web's locale redirect keeps it (checked in Chrome).
+- **A locked garage can be viewed,** since an expired or suspended garage is often the one needing help.
+- **No support actions yet:** everything that changes data is refused. flow.md 11.3 allows adding specific ones later, audit logged.
+- **A session that runs out has no end row;** its last viewed page shows when the visit ended. Written in flow.md.
+- **A new nullable column, `sessions.viewAsGarageId`,** with a check that only an admin session can have it. The guard reads the garage from the session, never from the request.
+
+**Problems hit and fixed**
+- **An existing race in the tenancy suite,** seen once in two full runs: garage B's invoice PDF is made by a background job. When it finished during the first test, the "B unchanged" check saw the new PDF. The setup now waits for both garages' PDFs; three full runs in a row then passed.
+- **Found by the user's test run:** every view-as start logged "Audit write failed" (foreign key on `audit_logs.garage_id`). The endpoint's audit entity was "garage", so the interceptor took the response's `id` as the garage, but the response is the admin's profile. The visit worked, but its audit row was lost, and no test failed, because a failed audit write is only logged. The entity is now the admin, and the row takes the viewed garage from the session. A test now checks the row exists, and a full run has no "Audit write failed" line.
+- The garage-web page first set state inside an effect (lint error). It now uses a mutation, and sends the one-time code only once even when React runs effects twice.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma`, `migrations/20261110090000_view_as_sessions/migration.sql` (new) | `sessions.viewAsGarageId` and its check |
+| `packages/contracts/src/staff.ts`, `garages.ts`, `errors.ts` | `viewOnly`, `viewAsSchema`, `ViewAsLink`, `VIEW_ONLY` |
+| `apps/api/src/auth/view-as.service.ts` (new), `session.service.ts`, `staff.guard.ts`, `staff-auth.controller.ts`, `staff-auth.service.ts`, `cookies.ts`, `auth.module.ts` | Codes, sessions, the read-only guard, logs, Leave |
+| `apps/api/src/admin/garages/admin-garages.controller.ts` | The link |
+| `apps/garage-web/app/[locale]/view-as/page.tsx`, `features/auth/view-as-entry.tsx` (new), `components/app-shell.tsx`, `messages/*.json` | The entry page, the banner, texts |
+| `apps/api/test/view-as.spec.ts` (new), `test/tenancy.spec.ts` | 8 tests; the new public route; the PDF wait |
+
+**Doc changes:** flow.md 11.3 (how it works); database.md 4.1 (`sessions.viewAsGarageId`).
+
+**Verified:** by me:
+- The 8 new tests cover:
+  - only a signed-in admin gets a link;
+  - the session is a read-only owner, and its start is logged;
+  - only that garage's records are read, and each view is logged, also in the garage's audit log;
+  - every change refused, with nothing written;
+  - a code works once, and a session of another garage sees none of this one;
+  - a suspended garage can be viewed;
+  - no refresh, and Leave ends the visit with a row;
+  - a deactivated admin is cut off.
+- Real Chrome against a throwaway stack: the link without a locale opens the garage through the redirect, with the banner, and the code is gone from the address bar; a change is refused with `VIEW_ONLY`; pages opened are logged; the same link again is refused; Leave ends the visit and logs it.
+- All tests 3 times in a row (251 API tests), `test:tenancy` (46), `format:check`, lint and typecheck; after the audit fix, a full run with 0 "Audit write failed" lines.
+
+By the user: the first `npm test` run (all passed, but showed the audit errors above); after the fix, the commit commands.
 **Commit:** _(filled in at the next step)_
 
 ---

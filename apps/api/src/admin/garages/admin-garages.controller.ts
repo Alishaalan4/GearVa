@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   ParseUUIDPipe,
   Post,
@@ -16,6 +17,7 @@ import {
   type GarageListItem,
   type Paginated,
   type RecordSubscriptionPaymentInput,
+  type ViewAsLink,
   createGarageSchema,
   extendTrialSchema,
   garageListQuerySchema,
@@ -24,6 +26,9 @@ import {
 } from '@gearva/contracts';
 import { ZodValidationPipe, createZodDto } from 'nestjs-zod';
 import { Audit } from '../../audit/audit.decorator';
+import { ViewAsService } from '../../auth/view-as.service';
+import { RequestContext } from '../../common/context/request-context';
+import { ENV, type Env } from '../../config/env';
 import { AdminGuard } from '../admin.guard';
 import { AdminGaragesService } from './admin-garages.service';
 import { AdminSubscriptionsService } from './admin-subscriptions.service';
@@ -42,6 +47,9 @@ export class AdminGaragesController {
   constructor(
     private readonly garages: AdminGaragesService,
     private readonly subscriptions: AdminSubscriptionsService,
+    private readonly viewAs: ViewAsService,
+    private readonly context: RequestContext,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Post()
@@ -107,6 +115,24 @@ export class AdminGaragesController {
   ): Promise<GarageDetail> {
     await this.subscriptions.extendTrial(garageId, body);
     return this.garages.detail(garageId);
+  }
+
+  /**
+   * flow.md 11.3: a one-time link (2 minutes) that opens the garage's own app, read only,
+   * for an hour. The code goes after `#`, so it never reaches a server log.
+   */
+  @Post(':garageId/view-as')
+  @HttpCode(HttpStatus.OK)
+  @Audit('garage.view_as', 'garage')
+  async viewAsGarage(@Param('garageId', ParseUUIDPipe) garageId: string): Promise<ViewAsLink> {
+    await this.garages.detail(garageId);
+    const adminId = this.context.actor?.id;
+    if (!adminId) throw new Error('view as garage needs an admin actor');
+    const { code, expiresAt } = await this.viewAs.issue(adminId, garageId);
+    return {
+      url: `${this.env.APP_URL_GARAGE}/view-as#${code}`,
+      expiresAt: expiresAt.toISOString(),
+    };
   }
 
   @Post(':garageId/reactivate')

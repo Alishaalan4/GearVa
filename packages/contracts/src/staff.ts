@@ -51,7 +51,16 @@ export interface StaffProfile {
     defaultLocale: Locale;
     timezone: string;
   };
+  /**
+   * true for a Gearva admin's read-only "view as garage" session (flow.md 11.3): the app
+   * shows a banner, and the API refuses every change with VIEW_ONLY.
+   */
+  viewOnly: boolean;
 }
+
+/** POST /v1/auth/view-as: the one-time code from the admin app's link (flow.md 11.3). */
+export const viewAsSchema = z.object({ code: z.string().min(20).max(200) });
+export type ViewAsInput = z.infer<typeof viewAsSchema>;
 
 // Branches (OWNER manages; OWNER and MANAGER can list).
 

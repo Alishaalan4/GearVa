@@ -140,6 +140,13 @@ export interface GarageBranchSummary {
   isActive: boolean;
 }
 
+/** POST /admin/v1/garages/:garageId/view-as: open this link within `expiresAt`. */
+export interface ViewAsLink {
+  /** garage-web's /view-as page, with the one-time code after `#` */
+  url: string;
+  expiresAt: string;
+}
+
 export interface SubscriptionPaymentItem {
   id: string;
   amountCents: number;

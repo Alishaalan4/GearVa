@@ -1,6 +1,6 @@
 'use client';
 
-import { AppFrame, Logo, navItemClass } from '@gearva/ui';
+import { AppFrame, Button, Logo, navItemClass } from '@gearva/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect } from 'react';
@@ -100,6 +100,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         </>
       }
     >
+      {me.viewOnly && (
+        // flow.md 11.3: a Gearva admin is looking, read only; every page opened is logged.
+        <div
+          role="status"
+          className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-tint px-4 py-3 text-sm text-brand-ink"
+        >
+          <span>{t('viewAs.banner', { garage: me.garage.name })}</span>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={signOut.isPending}
+            onClick={() => signOut.mutate()}
+          >
+            {t('viewAs.exit')}
+          </Button>
+        </div>
+      )}
       {children}
     </AppFrame>
   );

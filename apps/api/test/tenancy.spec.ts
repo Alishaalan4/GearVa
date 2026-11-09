@@ -13,6 +13,7 @@ import type { PrismaClient } from '@gearva/database';
 import request from 'supertest';
 import { PlatformDb } from '../src/common/db/platform-db';
 import { createTestApp } from './helpers/app';
+import { waitFor } from './helpers/garages';
 import {
   type TestStaffGarage,
   createGarageWithOwner,
@@ -29,6 +30,8 @@ const NO_TENANT_DATA: Record<string, string> = {
   'POST /v1/auth/set-password': 'the one-time link token decides the user',
   'POST /v1/auth/refresh': 'the refresh token decides the session',
   'POST /v1/auth/logout': 'revokes only the presented refresh token',
+  'POST /v1/auth/view-as':
+    'the one-time code decides admin and garage; view-as sessions are tested in view-as.spec.ts',
 };
 
 interface Side {
@@ -189,6 +192,13 @@ describe('Tenant isolation (test:tenancy)', () => {
     ).id;
     a = await createSide();
     b = await createSide();
+    // Each garage's invoice PDF is made by a background job. Wait for both, so a job that
+    // finishes during a test never looks like a change to B's rows.
+    for (const side of [a, b]) {
+      await waitFor(() =>
+        platform.invoice.findFirst({ where: { id: side.invoiceId, pdfFileId: { not: null } } }),
+      );
+    }
     await http()
       .post('/v1/invoice-settings/logo')
       .set('Cookie', b.cookie)

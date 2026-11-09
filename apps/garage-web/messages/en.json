@@ -47,7 +47,8 @@
     "INVOICE_ALREADY_REISSUED": "This visit already has a newer invoice.",
     "INVOICE_PDF_NOT_READY": "The PDF is still being prepared. Try again in a moment.",
     "FILE_TOO_LARGE": "The file is too large.",
-    "REMINDER_NOT_DUE": "This reminder is not due any more. The list was refreshed."
+    "REMINDER_NOT_DUE": "This reminder is not due any more. The list was refreshed.",
+    "VIEW_ONLY": "You are viewing this garage as a Gearva admin: nothing can be changed."
   },
   "nav": {
     "home": "Search",
@@ -532,5 +533,12 @@
     "monthly": "Send a monthly reminder email to every customer",
     "monthlyHint": "Once a month, to customers with an email who did not get a reminder that month. Off by default.",
     "saved": "Saved."
+  },
+  "viewAs": {
+    "title": "View as garage",
+    "opening": "Opening the garage…",
+    "noCode": "This link is incomplete. Open \"View as garage\" again from the admin app.",
+    "banner": "You are viewing {garage} as a Gearva admin. Read only; every page you open is logged.",
+    "exit": "Leave"
   }
 }

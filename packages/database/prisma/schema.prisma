@@ -184,12 +184,16 @@ model Session {
   // id in users / admin_users / owners, so no foreign key
   subjectId        String      @map("subject_id") @db.Uuid
   refreshTokenHash String      @unique @map("refresh_token_hash")
+  // an admin's read-only "view as garage" session (flow.md 11.3); null for every other
+  viewAsGarageId   String?     @map("view_as_garage_id") @db.Uuid
   userAgent        String?     @map("user_agent")
   ip               String?
   expiresAt        DateTime    @map("expires_at") @db.Timestamptz(3)
   revokedAt        DateTime?   @map("revoked_at") @db.Timestamptz(3)
   createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  viewAsGarage Garage? @relation(fields: [viewAsGarageId], references: [id])
 
   @@index([subjectType, subjectId])
   @@map("sessions")
@@ -267,6 +271,7 @@ model Garage {
   subscriptionPayments SubscriptionPayment[]
   adminAccessLogs      AdminAccessLog[]
   applications         GarageApplication[]
+  viewAsSessions       Session[]
 
   @@index([status, expiresAt])
   @@map("garages")

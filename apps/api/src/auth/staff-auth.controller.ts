@@ -15,6 +15,7 @@ import {
   type StaffProfile,
   setPasswordSchema,
   staffLoginSchema,
+  viewAsSchema,
 } from '@gearva/contracts';
 import type { Request, Response } from 'express';
 import { createZodDto } from 'nestjs-zod';
@@ -25,9 +26,11 @@ import { ENV, type Env } from '../config/env';
 import { STAFF_COOKIES, clearStaffSessionCookies, setStaffSessionCookies } from './cookies';
 import { Public } from './staff-access.decorators';
 import { StaffAuthService } from './staff-auth.service';
+import { VIEW_AS_TTL_SECONDS, ViewAsService } from './view-as.service';
 
 class SetPasswordDto extends createZodDto(setPasswordSchema) {}
 class StaffLoginDto extends createZodDto(staffLoginSchema) {}
+class ViewAsDto extends createZodDto(viewAsSchema) {}
 
 const AUTH_LIMIT = { default: { limit: 10, ttl: 60_000 } };
 
@@ -43,6 +46,7 @@ export class StaffAuthController {
 
   constructor(
     private readonly auth: StaffAuthService,
+    private readonly viewAsService: ViewAsService,
     private readonly context: RequestContext,
     @Inject(ENV) env: Env,
   ) {
@@ -115,10 +119,47 @@ export class StaffAuthController {
     clearStaffSessionCookies(res, this.secureCookies);
   }
 
-  /** Signed in (StaffGuard): who am I, which garage. */
+  /**
+   * flow.md 11.3: garage-web's /view-as page trades the admin's one-time code for a
+   * 1-hour read-only session in that garage. The code alone decides admin and garage.
+   */
+  @Post('view-as')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Throttle(AUTH_LIMIT)
+  // The response is the admin's profile, so the entity is the admin; the row's garage
+  // comes from the actor set below (the garage being viewed).
+  @Audit('admin.view_as.start', 'admin_user')
+  async viewAs(
+    @Body() body: ViewAsDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StaffProfile> {
+    const { profile, accessToken, refreshToken } = await this.viewAsService.exchange(
+      body.code,
+      this.clientMeta(),
+    );
+    setStaffSessionCookies(
+      res,
+      this.secureCookies,
+      { accessToken, refreshToken },
+      VIEW_AS_TTL_SECONDS,
+    );
+    this.context.setActor({
+      type: 'ADMIN',
+      id: profile.id,
+      garageId: profile.garage.id,
+      role: 'OWNER',
+      branchId: null,
+    });
+    return profile;
+  }
+
+  /** Signed in (StaffGuard): who am I, which garage. An admin viewing it is view-only. */
   @Get('me')
   me(): Promise<StaffProfile> {
-    return this.auth.profile();
+    return this.context.actor?.type === 'ADMIN'
+      ? this.viewAsService.profile()
+      : this.auth.profile();
   }
 
   private clientMeta() {

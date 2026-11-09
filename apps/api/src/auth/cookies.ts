@@ -63,20 +63,22 @@ export const STAFF_COOKIES = {
 const STAFF_PATH = '/v1';
 const STAFF_AUTH_PATH = '/v1/auth';
 
+/** `maxAgeSeconds`: both cookies end then (a view-as session, flow.md 11.3). */
 export function setStaffSessionCookies(
   res: Response,
   secure: boolean,
   tokens: { accessToken: string; refreshToken: string },
+  maxAgeSeconds?: number,
 ): void {
   res.cookie(STAFF_COOKIES.access, tokens.accessToken, {
     ...base(secure),
     path: STAFF_PATH,
-    maxAge: ACCESS_TTL_SECONDS * 1000,
+    maxAge: (maxAgeSeconds ?? ACCESS_TTL_SECONDS) * 1000,
   });
   res.cookie(STAFF_COOKIES.refresh, tokens.refreshToken, {
     ...base(secure),
     path: STAFF_AUTH_PATH,
-    maxAge: REFRESH_TTL_SECONDS * 1000,
+    maxAge: (maxAgeSeconds ?? REFRESH_TTL_SECONDS) * 1000,
   });
 }
 

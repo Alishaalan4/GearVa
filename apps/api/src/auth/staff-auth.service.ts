@@ -15,6 +15,7 @@ import { hashAccessToken } from './access-links';
 import { LoginAttemptsService } from './login-attempts.service';
 import { PasswordService } from './password.service';
 import { type ClientMeta, SessionService } from './session.service';
+import { ViewAsService } from './view-as.service';
 
 export interface StaffTokens {
   accessToken: string;
@@ -38,6 +39,7 @@ export function toStaffProfile(user: UserWithGarage): StaffProfile {
       defaultLocale: user.garage.defaultLocale === 'ar' ? 'ar' : 'en',
       timezone: user.garage.timezone,
     },
+    viewOnly: false,
   };
 }
 
@@ -55,6 +57,7 @@ export class StaffAuthService {
     private readonly sessions: SessionService,
     private readonly attempts: LoginAttemptsService,
     private readonly context: RequestContext,
+    private readonly viewAs: ViewAsService,
   ) {}
 
   /**
@@ -165,6 +168,8 @@ export class StaffAuthService {
 
   async logout(refreshToken: string): Promise<void> {
     const session = await this.sessions.revoke(refreshToken);
+    // An admin leaving "view as garage": the end of the visit (flow.md 11.3).
+    if (session?.subjectType === 'ADMIN') return this.viewAs.end(session, this.context.ip);
     if (session?.subjectType !== 'STAFF') return;
     const user = await this.platformDb.client.user.findUnique({ where: { id: session.subjectId } });
     if (user) this.setActor(user);

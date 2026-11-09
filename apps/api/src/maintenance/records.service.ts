@@ -25,6 +25,7 @@ import type { Prisma, ServiceRecord, ServiceType, TenantTx, User, Vehicle } from
 import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { paginated, toSkipTake } from '../common/pagination';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { SuggestionsService } from '../suggestions/suggestions.service';
 import { ServiceTypesService, toServiceTypeItem } from './service-types.service';
 
@@ -101,6 +102,7 @@ export class RecordsService {
     private readonly db: TenantDb,
     private readonly types: ServiceTypesService,
     private readonly suggestions: SuggestionsService,
+    private readonly systemSettings: SystemSettingsService,
   ) {}
 
   /** Saves service lines, with their next due values, reminders and suggestions. */
@@ -271,6 +273,7 @@ export class RecordsService {
   /** flow.md 4.1 step 3: everything quick entry can fill in before anything is typed. */
   async prefill(vehicleId: string, serviceTypeId: string): Promise<PrefillResponse> {
     const garageId = this.db.garageId;
+    const { defaultDailyKm } = await this.systemSettings.get();
     return this.db.run(async (tx) => {
       const vehicle = await tx.vehicle.findFirst({
         where: { id: vehicleId, garageId, deletedAt: null },
@@ -295,6 +298,7 @@ export class RecordsService {
         lastOdometerAt: vehicle.lastOdometerAt,
         avgDailyKm: vehicle.avgDailyKm === null ? null : Number(vehicle.avgDailyKm),
         garageDefaultDailyKm: settings?.defaultDailyKm,
+        systemDefaultDailyKm: defaultDailyKm,
       });
       const next = computeNextDue({
         odometerKm: estimatedKm,

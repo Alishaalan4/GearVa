@@ -314,7 +314,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Reminder lead time | 500 km or 7 days before due (garage-editable) | Phase 4 |
 | Default daily km for a car with no history | **Confirmed 2026-10-23:** 35 km/day, a constant in `contracts` until `system_settings` exists (Phase 5); a garage can override it with `garage_settings.defaultDailyKm` | Phase 2 |
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |
-| Fair-use message cap per garage | set later, from real cost data | Phase 5 |
+| Fair-use message cap per garage | 2,000 reminder emails per month by default; a system setting the admin changes from real cost data (step 5.3) | Phase 5 |
 | VAT on invoices | **Decided 2026-11-02:** off by default; a garage setting turns it on after its accountant confirms | Phase 3 |
 | Owner app login | **Decided 2026-10-29:** email + password given by the garage (from the design prototype), not phone + one-time code. To settle in Phase 6: who sets the password (typed by staff, or an invite link like staff accounts), reset, and an owner who is a customer at two garages | Phase 6 |
 

@@ -13,5 +13,6 @@ export * from './phone';
 export * from './reminders';
 export * from './staff';
 export * from './suggestions';
+export * from './system-settings';
 export * from './text-normalize';
 export * from './visits';

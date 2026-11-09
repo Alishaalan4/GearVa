@@ -46,8 +46,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.0 Doc fixes and Phase 5 decisions (website in garage-web, prices, simple counts) | ✅ Done | 2026-11-09 |
 | 5 | 5.1 Database: subscription payments, access logs, system settings, applications | ✅ Done | 2026-11-09 |
 | 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | ✅ Done | 2026-11-09 |
-| 5 | 5.3 API: system settings (constants move here) and global service types | Next | |
-| 5 | 5.4 API: monitoring lists, usage counts, business view | | |
+| 5 | 5.3 API: system settings (constants move here) and global service types | ✅ Done | 2026-11-09 |
+| 5 | 5.4 API: monitoring lists, usage counts, business view | Next | |
 | 5 | 5.5 API: view as garage (read-only, access log) | | |
 | 5 | 5.6 Applications API and the public website pages in garage-web | | |
 | 5 | 5.7 admin web screens (Done-when check) | | |
@@ -1377,6 +1377,66 @@ By the user: the migration on the development database, the checks, then the com
 - 3 new `contracts` tests.
 - All tests 3 times in a row (228 API tests), `test:tenancy` (46), `format:check`, lint and typecheck.
 - The intermittent "worker failed to exit gracefully" warning of step 4.3 showed once more, with every test passing.
+
+By the user: the checks, then the commit.
+**Commit:** `26da975` — `Phase 5.2: subscription payments, trial extension and hourly garage expiry`
+
+---
+
+## Phase 5 · Step 5.3 — API: system settings and default service types
+**When:** 2026-11-09 (~2 h)
+
+**Implements:** flow.md 11.4; database.md 4.1 (`system_settings`), 4.4 (`service_types`), 9 item 3; README 7.
+
+**Summary:** The values fixed in code until now are settings the admin edits, with the same defaults:
+- trial days (30);
+- yearly price ($200) and extra-branch price ($100);
+- reminder daytime window (09:00–20:00);
+- follow-ups (2) and the days between them (30);
+- monthly reminder cap per garage (2,000);
+- default daily km (35).
+
+Every admin reads them (`GET /admin/v1/settings`); only a super admin changes them (`PATCH`). They now apply where the constants did:
+- trial length of a new garage;
+- the reminder scan and delivery (window, follow-ups, cap);
+- every km estimate (quick entry pre-fill, car page, reminders).
+
+The **default service types** can be listed, with how many garages override each. A super admin can add a type (it can start hidden), and edit names, intervals, order, or hide it.
+
+**Decisions**
+- **Super admins only for changes:** prices, reminder rules and default types affect every garage. Every change is audit logged.
+- **No seeded rows.** The defaults live in `contracts`, and a row exists only once an admin changed a value, so the seed and the code cannot disagree. Updated in database.md 9.
+- **Each API process keeps the settings for a minute,** so a change reaches every process within a minute. A missing or bad stored value falls back to its default, and never stops the app.
+- **Code stays the source of the defaults.** The constants remain in `contracts` as defaults, and the helpers take the setting as an input (`nextDaytimeStart`, `reminderRound`, `estimateCurrentKm`).
+- **A default type's code never changes,** and records already saved keep their due values.
+
+**Problems hit and fixed**
+- The edit schema for a service type was built from the create schema, whose defaults (order 0, offered) would have been applied to every edit: changing only a name would have also reset its order and shown a hidden type to garages. It is now built without defaults, so a field left out stays unchanged. Checked by parsing it.
+- Settings and default types are shared by test files running at the same time; one test expects the exact list of service types. So the tests change only the prices (nothing else reads them yet) and put them back. The new type is created hidden. The effects of trial days and daily km are checked in a second test app with a stubbed settings service.
+
+**Not changed yet:** the admin web garage form still shows "30 days" from the constant; its screens come in 5.7 and will read the settings.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/system-settings.ts` (new), `index.ts`, `reminders.ts`, `odometer.ts`, `errors.ts`, `test/system-settings.test.ts` (new) | Settings schema, keys, defaults, reading; settings as inputs; service type schemas; `SERVICE_TYPE_CODE_EXISTS`; 4 tests |
+| `apps/api/src/system-settings/*` (new), `app.module.ts` | The cached settings service |
+| `apps/api/src/admin/settings/*` (new), `admin/admin-roles.ts` (new), `admin/admin.module.ts` | Settings and default service type endpoints; super admin check |
+| `apps/api/src/notifications/notifications.service.ts`, `reminders/reminders.service.ts`, `maintenance/records.service.ts`, `vehicles/vehicles.service.ts`, `admin/garages/admin-garages.service.ts` | Read the settings |
+| `apps/api/test/admin-settings.spec.ts` (new), `test/helpers/admin.ts` | 8 tests; super admin sign-in |
+
+**Doc changes:** flow.md 11.4 (what is a setting, who changes it, the endpoints); database.md 9 item 3 (no seeded rows); README 7 (fair-use cap).
+
+**Verified:** by me:
+- The 8 new API tests cover:
+  - reading the settings, and changing them as super admin but not as admin;
+  - values stored and audit logged;
+  - bad values refused, also a window ending before the stored start;
+  - trial days and daily km applied;
+  - default types listed with override counts, added, edited (fields left out unchanged), duplicate code refused, a garage's own type not reachable.
+- 4 new `contracts` tests.
+- All tests twice (236 API tests), `test:tenancy` (46), `format:check`, lint and typecheck.
+- The intermittent "worker failed to exit gracefully" warning showed once, with every test passing.
 
 By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_

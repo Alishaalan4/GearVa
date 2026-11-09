@@ -1,5 +1,5 @@
-// Reminder rules (flow.md 9.1, 9.3). The values are constants until system_settings
-// exists (Phase 5), like the default daily km (README 7).
+// Reminder rules (flow.md 9.1, 9.3). The constants are the defaults of the admin's
+// system settings (system-settings.ts, step 5.3).
 import { z } from 'zod';
 import type { DistanceUnit } from './distance';
 import { paginationQuerySchema } from './pagination';
@@ -38,6 +38,9 @@ export interface DueCheck {
   leadKm: number;
   leadDays: number;
   now: Date;
+  /** system settings; the defaults when left out */
+  followUps?: number;
+  followUpDays?: number;
 }
 
 /** A YYYY-MM-DD date plus whole days (negative to go back). */
@@ -48,15 +51,16 @@ function addDays(date: string, days: number): string {
 /**
  * flow.md 9.1: the round to send now (`notifyCount + 1`), or null when the reminder is not
  * due. A service reminder is due by its km or its date, each with the garage's lead; it
- * gets up to 2 follow-ups, 30 days apart, while the car is not serviced. A warranty end or
+ * gets follow-ups (2, 30 days apart, by default) while the car is not serviced. A warranty end or
  * a recommended service has only a date, and one round.
  */
 export function reminderRound(reminder: ReminderState, check: DueCheck): number | null {
   if (reminder.status === 'SENT') {
     if (reminder.kind !== 'SERVICE_DUE') return null;
-    if (reminder.notifyCount >= 1 + REMINDER_FOLLOW_UPS) return null;
+    if (reminder.notifyCount >= 1 + (check.followUps ?? REMINDER_FOLLOW_UPS)) return null;
     if (!reminder.lastNotifiedAt) return null;
-    const followUpAt = reminder.lastNotifiedAt.getTime() + REMINDER_FOLLOW_UP_DAYS * DAY_MS;
+    const followUpAt =
+      reminder.lastNotifiedAt.getTime() + (check.followUpDays ?? REMINDER_FOLLOW_UP_DAYS) * DAY_MS;
     if (check.now.getTime() < followUpAt) return null;
   } else if (reminder.status !== 'ACTIVE') {
     return null;
@@ -114,23 +118,34 @@ function zonedTime(year: number, month: number, day: number, hour: number, timeZ
   return new Date(guess);
 }
 
+/** The daytime window in local hours: from `startHour` until (not including) `endHour`. */
+export interface DaytimeWindow {
+  startHour: number;
+  endHour: number;
+}
+
 /**
  * flow.md 9.3: null while the garage's local time is inside the daytime window, else
  * the instant the next window opens (today at 09:00 before it, tomorrow after it).
  */
-export function nextDaytimeStart(now: Date, timeZone: string): Date | null {
+export function nextDaytimeStart(
+  now: Date,
+  timeZone: string,
+  window: DaytimeWindow = {
+    startHour: REMINDER_DAYTIME_START_HOUR,
+    endHour: REMINDER_DAYTIME_END_HOUR,
+  },
+): Date | null {
   const local = localParts(now, timeZone);
-  if (local.hour >= REMINDER_DAYTIME_START_HOUR && local.hour < REMINDER_DAYTIME_END_HOUR) {
-    return null;
-  }
-  const dayOffset = local.hour >= REMINDER_DAYTIME_END_HOUR ? 1 : 0;
+  if (local.hour >= window.startHour && local.hour < window.endHour) return null;
+  const dayOffset = local.hour >= window.endHour ? 1 : 0;
   // Date.UTC rolls the day over the end of a month or year.
   const day = new Date(Date.UTC(local.year, local.month - 1, local.day + dayOffset));
   return zonedTime(
     day.getUTCFullYear(),
     day.getUTCMonth() + 1,
     day.getUTCDate(),
-    REMINDER_DAYTIME_START_HOUR,
+    window.startHour,
     timeZone,
   );
 }
@@ -180,7 +195,8 @@ export const markWhatsappSentSchema = z.object({
     .number()
     .int()
     .min(1)
-    .max(1 + REMINDER_FOLLOW_UPS),
+    // the most follow-ups system settings allow (5), plus the first round
+    .max(6),
 });
 export type MarkWhatsappSentInput = z.infer<typeof markWhatsappSentSchema>;
 

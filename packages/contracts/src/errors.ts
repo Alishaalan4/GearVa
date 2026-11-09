@@ -19,6 +19,8 @@ export const ERROR_CODES = {
   GARAGE_NOT_SUSPENDED: 'GARAGE_NOT_SUSPENDED',
   /** A trial can be extended only while the garage has never paid (flow.md 11.1). */
   GARAGE_NOT_IN_TRIAL: 'GARAGE_NOT_IN_TRIAL',
+  /** A default service type with this code already exists (flow.md 11.4). */
+  SERVICE_TYPE_CODE_EXISTS: 'SERVICE_TYPE_CODE_EXISTS',
   GARAGE_LOCKED: 'GARAGE_LOCKED',
   INVALID_LINK: 'INVALID_LINK',
   USER_ALREADY_ACTIVE: 'USER_ALREADY_ACTIVE',

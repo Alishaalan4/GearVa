@@ -23,6 +23,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { SystemSettingsModule } from './system-settings/system-settings.module';
 import { SuggestionsModule } from './suggestions/suggestions.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
@@ -43,6 +44,7 @@ import { VisitsModule } from './visits/visits.module';
       },
     }),
     DatabaseModule,
+    SystemSettingsModule,
     RedisModule,
     // Default limit per client IP; auth endpoints get stricter limits (flow.md 2.2).
     // Off in tests: the counters live in Redis and would carry over between test runs.

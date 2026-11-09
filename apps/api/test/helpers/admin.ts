@@ -13,6 +13,7 @@ import { cookiesOf } from './app';
  */
 export async function signInAsNewAdmin(
   app: INestApplication,
+  role: 'ADMIN' | 'SUPER_ADMIN' = 'ADMIN',
 ): Promise<{ adminId: string; cookie: string }> {
   const platform = app.get(PlatformDb).client;
   const totp = app.get(TotpService);
@@ -24,7 +25,7 @@ export async function signInAsNewAdmin(
     data: {
       email,
       name: '[test] admin',
-      role: 'ADMIN',
+      role,
       passwordHash: await app.get(PasswordService).hash(password),
       totpSecretEnc: totp.encrypt(secret),
       totpEnabled: true,

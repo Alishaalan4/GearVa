@@ -7,13 +7,13 @@ import {
   type GarageListQuery,
   type Paginated,
   type SuspendGarageInput,
-  TRIAL_DAYS,
   suggestNewExpiry,
 } from '@gearva/contracts';
 import { Prisma, type Garage, type Notification } from '@gearva/database';
 import { UserAccessLinksService } from '../../auth/user-access-links.service';
 import { RequestContext } from '../../common/context/request-context';
 import { PlatformDb } from '../../common/db/platform-db';
+import { SystemSettingsService } from '../../system-settings/system-settings.service';
 import { AppException } from '../../common/errors/app-exception';
 import { paginated, toSkipTake } from '../../common/pagination';
 
@@ -56,6 +56,7 @@ export class AdminGaragesService {
     private readonly platformDb: PlatformDb,
     private readonly links: UserAccessLinksService,
     private readonly context: RequestContext,
+    private readonly systemSettings: SystemSettingsService,
   ) {}
 
   /**
@@ -66,6 +67,7 @@ export class AdminGaragesService {
     const adminId = this.context.actor?.id;
     if (!adminId) throw new Error('create garage needs an admin actor');
     const now = new Date();
+    const { trialDays } = await this.systemSettings.get();
 
     let invite: Notification;
     let garageId: string;
@@ -84,7 +86,7 @@ export class AdminGaragesService {
               ? {
                   status: 'TRIAL',
                   isPaid: false,
-                  trialEndsAt: new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
+                  trialEndsAt: new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000),
                 }
               : {
                   status: 'ACTIVE',

@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
-import { REMINDER_MAX_PER_GARAGE_PER_MONTH, nextDaytimeStart } from '@gearva/contracts';
+import { nextDaytimeStart } from '@gearva/contracts';
 import {
   Prisma,
   type Notification,
@@ -10,6 +10,7 @@ import {
 import { ClsService } from 'nestjs-cls';
 import { RequestContext } from '../common/context/request-context';
 import { TenantDb } from '../common/db/tenant-db';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import {
   NOTIFICATION_CHANNELS,
   type Locale,
@@ -72,6 +73,7 @@ export class NotificationsService implements OnApplicationBootstrap {
     private readonly cls: ClsService,
     private readonly context: RequestContext,
     @Inject(NOTIFICATION_CHANNELS) private readonly channels: NotificationChannel[],
+    private readonly systemSettings: SystemSettingsService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -170,7 +172,11 @@ export class NotificationsService implements OnApplicationBootstrap {
 
     if (REMINDER_TYPES.includes(notification.type)) {
       // flow.md 9.3: never at night. A retry or a late job waits for the next morning.
-      const opensAt = nextDaytimeStart(new Date(), timeZone);
+      const system = await this.systemSettings.get();
+      const opensAt = nextDaytimeStart(new Date(), timeZone, {
+        startHour: system.reminderDaytimeStartHour,
+        endHour: system.reminderDaytimeEndHour,
+      });
       if (opensAt) {
         await this.tenantDb.run((tx) =>
           tx.notification.updateMany({
@@ -180,7 +186,7 @@ export class NotificationsService implements OnApplicationBootstrap {
         );
         return delivery.postpone(opensAt);
       }
-      if (await this.overMonthlyCap(timeZone)) {
+      if (await this.overMonthlyCap(timeZone, system.reminderMaxPerGaragePerMonth)) {
         return this.finish(notificationId, 'SKIPPED', 'Monthly reminder limit reached');
       }
     }
@@ -222,7 +228,7 @@ export class NotificationsService implements OnApplicationBootstrap {
    * zone, against the cap. Messages staff send themselves on WhatsApp do not count. Jobs
    * running at the same moment may pass it by a few; it is a fair-use limit.
    */
-  private async overMonthlyCap(timeZone: string): Promise<boolean> {
+  private async overMonthlyCap(timeZone: string, cap: number): Promise<boolean> {
     const garageId = this.tenantDb.garageId;
     const [row] = await this.tenantDb.run(
       (tx) => tx.$queryRaw<{ sent: bigint }[]>`
@@ -232,7 +238,7 @@ export class NotificationsService implements OnApplicationBootstrap {
           AND "type"::text IN (${Prisma.join(REMINDER_TYPES)})
           AND "sent_at" >= date_trunc('month', now() AT TIME ZONE ${timeZone}) AT TIME ZONE ${timeZone}`,
     );
-    return Number(row?.sent ?? 0) >= REMINDER_MAX_PER_GARAGE_PER_MONTH;
+    return Number(row?.sent ?? 0) >= cap;
   }
 
   private async finish(

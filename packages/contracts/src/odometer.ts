@@ -52,14 +52,18 @@ export interface EstimateInput {
   avgDailyKm: number | null;
   /** garage_settings.defaultDailyKm */
   garageDefaultDailyKm?: number | null;
+  /** the admin's system setting (step 5.3); DEFAULT_DAILY_KM when left out */
+  systemDefaultDailyKm?: number;
   now?: Date;
 }
 
-/** The km per day used for estimates: the car's own, else the garage's, else 35. */
+/** The km per day used for estimates: the car's own, else the garage's, else the system's. */
 export function dailyKmFor(
-  input: Pick<EstimateInput, 'avgDailyKm' | 'garageDefaultDailyKm'>,
+  input: Pick<EstimateInput, 'avgDailyKm' | 'garageDefaultDailyKm' | 'systemDefaultDailyKm'>,
 ): number {
-  return input.avgDailyKm ?? input.garageDefaultDailyKm ?? DEFAULT_DAILY_KM;
+  return (
+    input.avgDailyKm ?? input.garageDefaultDailyKm ?? input.systemDefaultDailyKm ?? DEFAULT_DAILY_KM
+  );
 }
 
 /**

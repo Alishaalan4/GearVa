@@ -15,6 +15,7 @@ import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { customerNotFound } from '../customers/customers.service';
 import { toCustomerSummary, toVehicleItem } from '../customers/mappers';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { SuggestionsService } from '../suggestions/suggestions.service';
 
 function vehicleNotFound(): AppException {
@@ -35,6 +36,7 @@ export class VehiclesService {
     private readonly db: TenantDb,
     private readonly suggestions: SuggestionsService,
     private readonly audit: AuditService,
+    private readonly systemSettings: SystemSettingsService,
   ) {}
 
   /** flow.md 3.2.1: a car for an existing customer (any number of cars per customer). */
@@ -173,6 +175,7 @@ export class VehiclesService {
         lastOdometerAt: vehicle.lastOdometerAt,
         avgDailyKm,
         garageDefaultDailyKm: settings?.defaultDailyKm,
+        systemDefaultDailyKm: (await this.systemSettings.get()).defaultDailyKm,
       }),
       customer: toCustomerSummary(vehicle.customer),
       createdAt: vehicle.createdAt.toISOString(),

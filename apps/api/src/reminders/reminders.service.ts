@@ -7,6 +7,7 @@ import {
   monthStart,
   nextDaytimeStart,
   reminderRound,
+  type SystemSettings,
 } from '@gearva/contracts';
 import type {
   Garage,
@@ -24,6 +25,7 @@ import { PlatformDb } from '../common/db/platform-db';
 import { TenantDb } from '../common/db/tenant-db';
 import { garageLockReason } from '../common/garage-lock';
 import { ENV, type Env } from '../config/env';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { fromDbDate } from '../maintenance/records.service';
 import type { Locale } from '../notifications/notification-channel';
 import { whatsappReminderText } from '../notifications/templates/reminders';
@@ -82,6 +84,7 @@ export class RemindersService implements OnApplicationBootstrap {
     private readonly cls: ClsService,
     private readonly context: RequestContext,
     @Inject(ENV) private readonly env: Env,
+    private readonly systemSettings: SystemSettingsService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -131,9 +134,14 @@ export class RemindersService implements OnApplicationBootstrap {
     const garage = await this.db.run((tx) =>
       tx.garage.findUniqueOrThrow({ where: { id: garageId } }),
     );
-    if (nextDaytimeStart(now, garage.timezone)) return { emailed: 0, monthly: 0 };
+    const system = await this.systemSettings.get();
+    const window = {
+      startHour: system.reminderDaytimeStartHour,
+      endHour: system.reminderDaytimeEndHour,
+    };
+    if (nextDaytimeStart(now, garage.timezone, window)) return { emailed: 0, monthly: 0 };
 
-    const due = await this.db.run((tx) => this.findDue(tx, garage, now));
+    const due = await this.db.run((tx) => this.findDue(tx, garage, now, system));
     const emails = due.filter((d) => d.customer.email).map((d) => this.reminderEmail(d, garage));
     const emailed = await this.recordNew(emails);
     const monthly = await this.recordNew(await this.monthlyEmails(garage, now));
@@ -143,9 +151,10 @@ export class RemindersService implements OnApplicationBootstrap {
   /** The due reminders of the current garage: for the scan, and the WhatsApp list (9.5). */
   async dueNow(now = new Date()): Promise<DueReminder[]> {
     const garageId = this.db.garageId;
+    const system = await this.systemSettings.get();
     return this.db.run(async (tx) => {
       const garage = await tx.garage.findUniqueOrThrow({ where: { id: garageId } });
-      return this.findDue(tx, garage, now);
+      return this.findDue(tx, garage, now, system);
     });
   }
 
@@ -156,7 +165,8 @@ export class RemindersService implements OnApplicationBootstrap {
   private async findDue(
     tx: TenantTx,
     garage: Pick<Garage, 'id' | 'timezone'>,
-    now = new Date(),
+    now: Date,
+    system: SystemSettings,
   ): Promise<DueReminder[]> {
     const settings = await tx.garageSettings.findUniqueOrThrow({ where: { garageId: garage.id } });
     const reminders = await tx.reminder.findMany({
@@ -180,6 +190,7 @@ export class RemindersService implements OnApplicationBootstrap {
         lastOdometerAt: vehicle.lastOdometerAt,
         avgDailyKm: vehicle.avgDailyKm === null ? null : Number(vehicle.avgDailyKm),
         garageDefaultDailyKm: settings.defaultDailyKm,
+        systemDefaultDailyKm: system.defaultDailyKm,
         now,
       });
       const round = reminderRound(
@@ -190,6 +201,8 @@ export class RemindersService implements OnApplicationBootstrap {
           leadKm: settings.reminderLeadKm,
           leadDays: settings.reminderLeadDays,
           now,
+          followUps: system.reminderFollowUps,
+          followUpDays: system.reminderFollowUpDays,
         },
       );
       if (round === null) continue;

@@ -55,6 +55,11 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
               <p className="text-muted" dir="ltr">
                 {c.phone}
               </p>
+              {c.email && (
+                <p className="text-sm text-muted" dir="ltr">
+                  {c.email}
+                </p>
+              )}
               {c.notes && <p className="whitespace-pre-line text-sm text-muted">{c.notes}</p>}
               <div className="flex flex-wrap gap-2 pt-1 text-xs">
                 {c.remindersOptOut && <Pill tone="brand">{t('remindersOptOut')}</Pill>}
@@ -112,6 +117,7 @@ function EditCustomer({ customer, onDone }: { customer: CustomerDetail; onDone: 
     defaultValues: {
       name: customer.name,
       notes: customer.notes ?? '',
+      email: customer.email ?? '',
       remindersOptOut: customer.remindersOptOut,
       marketingOptOut: customer.marketingOptOut,
     },
@@ -139,6 +145,16 @@ function EditCustomer({ customer, onDone }: { customer: CustomerDetail; onDone: 
       </Field>
       <Field label={t('phone')} hint={t('phoneFixed')}>
         <Input value={customer.phone} dir="ltr" disabled readOnly />
+      </Field>
+      <Field label={t('email')} hint={t('emailHint')} error={errors.email && t('invalid.email')}>
+        <Input
+          type="email"
+          inputMode="email"
+          autoComplete="off"
+          dir="ltr"
+          aria-invalid={!!errors.email}
+          {...form.register('email')}
+        />
       </Field>
       <Field label={t('notes')} error={errors.notes && t('invalid.notes')}>
         <Textarea rows={2} {...form.register('notes')} />

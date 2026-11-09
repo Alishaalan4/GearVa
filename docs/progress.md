@@ -42,7 +42,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | ✅ Done | 2026-11-05 |
 | 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | ✅ Done | 2026-11-05 |
 | 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | ✅ Done | 2026-11-09 |
-| 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | Next | |
+| 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | ✅ Done | 2026-11-09 |
+| 5 | Admin completion (split at the start of the phase) | Next | |
 | 5 | … then the first deployment to Render, on free instances (README 9) | | |
 
 ---
@@ -1188,7 +1189,68 @@ All tests passed 4 times in a row: 203 API tests, 69 `contracts` tests, and `tes
 
 **Doc changes:** flow.md 3.1 (email in the API), 9.5 (the endpoints), 14 (API surface).
 
-**Verified:** by me: `format:check`, lint and typecheck of everything; all tests twice in a row (218 API tests, 10 new); `test:tenancy` (46, 5 new: A sees only its own due reminders and log, cannot mark B's reminder, and its settings change never reaches B); sample WhatsApp messages rendered in both languages. By the user: commit commands pending.
+**Verified:** by me: `format:check`, lint and typecheck of everything; all tests twice in a row (218 API tests, 10 new); `test:tenancy` (46, 5 new: A sees only its own due reminders and log, cannot mark B's reminder, and its settings change never reaches B); sample WhatsApp messages rendered in both languages. By the user: the checks, then the commit.
+**Commit:** `c1b85ef` — `Phase 4.4: customer email, WhatsApp reminder list, notification log and reminder settings API`
+
+---
+
+## Phase 4 · Step 4.5 — garage-web: email field, Reminders due, messages log, reminder settings (Done-when check)
+**When:** 2026-11-09 (~2 h)
+
+**Implements:** flow.md 1 (matrix), 3.1, 9.4, 9.5; README 6 (Phase 4 "Done when").
+
+**Summary:** The Phase 4 screens, on the API of step 4.4.
+- **Customer email:** an optional field on the New customer form and on the customer's edit form, shown on the customer page. The hint explains it: with an email, reminders go out by themselves; without one, they come to the WhatsApp list.
+- **Reminders due** (owner, manager, receptionist). One card per due reminder: customer, phone, car, service in the screen's language, due km or date, the car's estimated km, and labels ("Reminder", "Follow-up 1", "Email failed"). **Send on WhatsApp** opens WhatsApp with the message ready in the customer's language; **Mark as sent** then becomes the main button, and the card leaves the list.
+- **Messages log** (owner, manager). Each message with who it was for, the channel, the address, the time, and a status label (Waiting, Sent, Failed, Skipped). It shows the error when there is one, and when a reminder is waiting for daytime. Filters for status and channel. Never the content.
+- **Reminder settings** (owner). Lead km (0–5,000), lead days (0–60), and the monthly reminder switch, with what each does.
+- Menu items by role, and text in English and Arabic.
+
+**Decisions**
+- **The screen says "Messages log", not "Notification log".** That is plainer for garage staff; the docs and code keep "notification log".
+- **No email field in quick entry:** it must stay under 20 seconds (README 5.7). The email is added on the customer's page.
+
+**Problems hit and fixed**
+- A card read "due at 50,400 km or due on 9 May 2027". It now says "due at 50,400 km or on 9 May 2027", in Arabic too.
+- Script-only problems, not app bugs:
+  - The message check expected "km", but the message is in the customer's language (Arabic here, "كم").
+  - Typing the lead km added to the old value instead of replacing it.
+  - The database check compared `t` with `true`.
+  - The Arabic full-page screenshot looked shifted, as in step 3.7. A screen-size screenshot is correct, and the page has no sideways scroll.
+
+**Phase 4 "Done when" (README 6), checked in real Chrome on a phone-size screen against the test database, with the real API, queue and hourly scan job:**
+- **Each due car is reached once per round:**
+  - Of two due cars, the customer with an email was emailed once (`EMAIL` `SENT`) and the round counted. The customer without one got nothing automatic and was on the WhatsApp list.
+  - The WhatsApp link had their phone and the message.
+  - Mark as sent took them off the list, logged a `WHATSAPP` `SENT` row and counted the round.
+  - Two more scans sent nothing more.
+  - When the next round's email failed, that reminder came to the list as "Follow-up 1 · Email failed". The failure was written into the database by the script, because the console email never fails; real failures are covered by the API tests of step 4.2.
+- **The log shows sent or failed:** the sent email, the WhatsApp message with the customer's name, and the failed email with its error. The status filter worked.
+- **Also checked:**
+  - The email field: saved in lower case and shown, and a wrong address refused.
+  - Reminder settings saved.
+  - Roles in the menu and on the pages: the receptionist has Reminders but not the log; the mechanic has neither.
+  - Arabic fits a phone screen.
+- **Result:** 25 of 25 checks passed, after fixing the script problems above.
+
+**Phase 4 is complete.**
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/features/reminders/reminders-due.tsx`, `reminder-settings.tsx`, `features/notifications/notification-log.tsx` (new) | The three screens |
+| `apps/garage-web/app/[locale]/(app)/reminders/`, `notifications/`, `settings/reminders/` (new) | Routes |
+| `apps/garage-web/features/customers/new-customer-form.tsx`, `customer-page.tsx` | Email field |
+| `apps/garage-web/components/app-shell.tsx`, `messages/en.json`, `messages/ar.json` | Menu by role; texts and `REMINDER_NOT_DUE` |
+
+**Doc changes:** none (the screens follow flow.md 9.5 as written in step 4.0).
+
+**Verified:** by me:
+- `format:check`, lint and typecheck of everything.
+- 218 API tests and `test:tenancy` (46).
+- The browser check above. It is not in the repo and does not run in CI.
+
+By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

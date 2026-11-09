@@ -46,7 +46,8 @@
     "INVOICE_NOT_CANCELLED": "Cancel the invoice before issuing a new one.",
     "INVOICE_ALREADY_REISSUED": "This visit already has a newer invoice.",
     "INVOICE_PDF_NOT_READY": "The PDF is still being prepared. Try again in a moment.",
-    "FILE_TOO_LARGE": "The file is too large."
+    "FILE_TOO_LARGE": "The file is too large.",
+    "REMINDER_NOT_DUE": "This reminder is not due any more. The list was refreshed."
   },
   "nav": {
     "home": "Search",
@@ -58,7 +59,10 @@
     "invoices": "Invoices",
     "debts": "Debts",
     "income": "Income",
-    "invoiceSettings": "Invoice settings"
+    "invoiceSettings": "Invoice settings",
+    "reminders": "Reminders",
+    "notifications": "Messages log",
+    "reminderSettings": "Reminder settings"
   },
   "authSide": {
     "heading": "Know when every customer is due.",
@@ -206,8 +210,11 @@
     "invalid": {
       "name": "Enter a name (2 to 120 characters).",
       "phone": "Enter a valid phone number.",
-      "notes": "Use at most 1000 characters."
-    }
+      "notes": "Use at most 1000 characters.",
+      "email": "Enter a valid email address."
+    },
+    "email": "Email (optional)",
+    "emailHint": "Service reminders are emailed automatically. Without an email, they appear in Reminders for WhatsApp."
   },
   "vehicles": {
     "newTitle": "New car for {name}",
@@ -460,5 +467,70 @@
     "logoHint": "PNG or JPEG, up to 1 MB. It is printed on new invoices.",
     "logoTooBig": "This file is larger than 1 MB.",
     "logoType": "Use a PNG or JPEG image."
+  },
+  "reminders": {
+    "title": "Reminders due",
+    "intro": "Customers to remind today on WhatsApp: they have no email, or their email failed. Customers with an email get theirs automatically.",
+    "empty": "Nobody to remind right now.",
+    "count": "{count, plural, one {# reminder} other {# reminders}} to send",
+    "firstReminder": "Reminder",
+    "followUp": "Follow-up {number}",
+    "emailFailed": "Email failed",
+    "kinds": {
+      "SERVICE_DUE": "{service}",
+      "WARRANTY_END": "Warranty ends: {service}",
+      "RECOMMENDED_NEXT": "Recommended: {service}"
+    },
+    "dueAt": "due at {km}",
+    "dueOn": "due on {date}",
+    "dueAtOrOn": "due at {km} or on {date}",
+    "estimated": "The car is now at about {km}.",
+    "sendWhatsapp": "Send on WhatsApp",
+    "markSent": "Mark as sent"
+  },
+  "notificationLog": {
+    "title": "Messages log",
+    "status": "Status",
+    "channel": "Channel",
+    "allStatuses": "All statuses",
+    "allChannels": "All channels",
+    "empty": "No messages yet.",
+    "scheduledFor": "Waiting for daytime: goes out {when}.",
+    "statuses": {
+      "QUEUED": "Waiting",
+      "SENT": "Sent",
+      "DELIVERED": "Delivered",
+      "FAILED": "Failed",
+      "SKIPPED": "Skipped"
+    },
+    "channels": {
+      "EMAIL": "Email",
+      "IN_APP": "App",
+      "PUSH": "Push",
+      "WHATSAPP": "WhatsApp"
+    },
+    "types": {
+      "SERVICE_REMINDER": "Service reminder",
+      "MONTHLY_REMINDER": "Monthly reminder",
+      "WARRANTY_END": "Warranty reminder",
+      "INVOICE": "Invoice",
+      "OFFER": "Offer",
+      "INVITE": "Invite or password link",
+      "CAR_READY": "Car ready",
+      "PAYMENT_REMINDER": "Payment reminder"
+    }
+  },
+  "reminderSettings": {
+    "title": "Reminder settings",
+    "intro": "Reminders go out between 09:00 and 20:00, by email when the customer has one, otherwise in Reminders for WhatsApp.",
+    "leadKm": "Remind this many km early",
+    "leadKmHint": "From 0 to 5,000. Default 500.",
+    "leadKmInvalid": "Enter a whole number from 0 to 5,000.",
+    "leadDays": "Remind this many days early",
+    "leadDaysHint": "From 0 to 60. Default 7.",
+    "leadDaysInvalid": "Enter a whole number from 0 to 60.",
+    "monthly": "Send a monthly reminder email to every customer",
+    "monthlyHint": "Once a month, to customers with an email who did not get a reminder that month. Off by default.",
+    "saved": "Saved."
   }
 }

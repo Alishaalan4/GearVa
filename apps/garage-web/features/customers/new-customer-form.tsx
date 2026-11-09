@@ -16,8 +16,8 @@ import { useRouter } from '@/i18n/navigation';
 import { apiPost } from '@/lib/api';
 
 /**
- * flow.md 3.1: name and phone. A phone this garage already has opens that customer
- * instead of creating a duplicate (flow.md 13).
+ * flow.md 3.1: name and phone, and an optional email for reminders (flow.md 9). A phone
+ * this garage already has opens that customer instead of creating a duplicate (flow.md 13).
  */
 export function NewCustomerForm({ phone = '' }: { phone?: string }) {
   const t = useTranslations('customers');
@@ -25,7 +25,7 @@ export function NewCustomerForm({ phone = '' }: { phone?: string }) {
   const queryClient = useQueryClient();
   const form = useForm<z.input<typeof createCustomerSchema>, unknown, CreateCustomerInput>({
     resolver: zodResolver(createCustomerSchema),
-    defaultValues: { name: '', phone, notes: '' },
+    defaultValues: { name: '', phone, email: '', notes: '' },
   });
   const { errors } = form.formState;
 
@@ -66,6 +66,20 @@ export function NewCustomerForm({ phone = '' }: { phone?: string }) {
               dir="ltr"
               aria-invalid={!!errors.phone}
               {...form.register('phone')}
+            />
+          </Field>
+          <Field
+            label={t('email')}
+            hint={t('emailHint')}
+            error={errors.email && t('invalid.email')}
+          >
+            <Input
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              dir="ltr"
+              aria-invalid={!!errors.email}
+              {...form.register('email')}
             />
           </Field>
           <Field label={t('notes')} error={errors.notes && t('invalid.notes')}>

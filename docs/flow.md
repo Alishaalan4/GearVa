@@ -460,8 +460,10 @@ stateDiagram-v2
 - **Usage per garage:** counts of customers, vehicles, invoices, reminders and broadcasts sent, and last login. Computed with the platform role as counts only.
 - **Message volume per garage:** emails sent and failed, and WhatsApp messages marked sent by staff, this month. Counts only: no cost estimate while no paid channel exists (decision 2026-11-09); add it with a paid channel.
 - **Delivery and failure logs:** which messages failed and why.
-- **Inactive garages:** no login for N days.
-- **System health:** failed BullMQ jobs and errors (queue dashboard + Sentry).
+- **Inactive garages:** no login **and no visit recorded** for N days (step 5.4: sessions last 30 days, so a garage working every day may not sign in for weeks; the last visit shows real use).
+- **System health:** failed BullMQ jobs and errors (queue dashboard + Sentry), set up with the deployment.
+
+API (step 5.4), for every admin, read only: `GET /admin/v1/monitoring/expiring` (`paidDays` 21, `trialDays` 7 by default), `GET /admin/v1/monitoring/usage` (paginated; filters `q` for the name, `status`, `paid`, `inactiveDays`; per garage: branches, customers, cars, invoices this month, emails sent and failed and WhatsApp messages marked sent this month, last login, last visit), `GET /admin/v1/monitoring/failures` (which messages failed and why, with the garage; never the recipient or the content, which belong to the garage, flow.md 12). Months are calendar months in UTC.
 
 ### 11.3 View as garage
 1. Admin clicks "View as garage" on a garage.
@@ -480,7 +482,7 @@ The public website is a few pages inside `garage-web` (no separate app): a landi
 3. The same email or phone can apply again later; the admin sees earlier applications from it.
 
 ### 11.5 Business view
-Subscription revenue per month and year, and growth (garages new, renewed, lost). The cost of notifications per garage comes with a paid channel (decision 2026-11-09).
+Subscription revenue per month and year, and growth (garages new, renewed, lost). The cost of notifications per garage comes with a paid channel (decision 2026-11-09). API (step 5.4): `GET /admin/v1/business`: the last 12 months (revenue, payments, new garages), this year's and last year's revenue, this year's revenue by method, garages per status, and how many have paid at least once.
 
 ---
 

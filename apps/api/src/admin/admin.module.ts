@@ -6,6 +6,8 @@ import { AdminAuthService } from './auth/admin-auth.service';
 import { AdminGaragesController } from './garages/admin-garages.controller';
 import { AdminGaragesService } from './garages/admin-garages.service';
 import { AdminSubscriptionsService } from './garages/admin-subscriptions.service';
+import { AdminMonitoringController } from './monitoring/admin-monitoring.controller';
+import { AdminMonitoringService } from './monitoring/admin-monitoring.service';
 import { AdminServiceTypesService } from './settings/admin-service-types.service';
 import {
   AdminServiceTypesController,
@@ -20,6 +22,7 @@ import {
     AdminGaragesController,
     AdminSettingsController,
     AdminServiceTypesController,
+    AdminMonitoringController,
   ],
   providers: [
     AdminAuthService,
@@ -27,6 +30,7 @@ import {
     AdminGaragesService,
     AdminSubscriptionsService,
     AdminServiceTypesService,
+    AdminMonitoringService,
   ],
 })
 export class AdminModule {}

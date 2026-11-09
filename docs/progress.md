@@ -47,8 +47,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.1 Database: subscription payments, access logs, system settings, applications | ✅ Done | 2026-11-09 |
 | 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | ✅ Done | 2026-11-09 |
 | 5 | 5.3 API: system settings (constants move here) and global service types | ✅ Done | 2026-11-09 |
-| 5 | 5.4 API: monitoring lists, usage counts, business view | Next | |
-| 5 | 5.5 API: view as garage (read-only, access log) | | |
+| 5 | 5.4 API: monitoring lists, usage counts, business view | ✅ Done | 2026-11-09 |
+| 5 | 5.5 API: view as garage (read-only, access log) | Next | |
 | 5 | 5.6 Applications API and the public website pages in garage-web | | |
 | 5 | 5.7 admin web screens (Done-when check) | | |
 | Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | | |
@@ -1437,6 +1437,55 @@ The **default service types** can be listed, with how many garages override each
 - 4 new `contracts` tests.
 - All tests twice (236 API tests), `test:tenancy` (46), `format:check`, lint and typecheck.
 - The intermittent "worker failed to exit gracefully" warning showed once, with every test passing.
+
+By the user: the checks, then the commit.
+**Commit:** `6edff6d` — `Phase 5.3: system settings and default service types, editable by super admins`
+
+---
+
+## Phase 5 · Step 5.4 — API: monitoring lists, usage counts, business view
+**When:** 2026-11-09 (~1 h 30 min)
+
+**Implements:** flow.md 11.2, 11.5, 12.
+
+**Summary:** Read-only views for every admin:
+- **Expiring soon:** paid periods ending within 3 weeks and trials ending within 7 days, soonest first, each with its counts.
+- **Usage per garage:** paginated, with filters for name, status, paid, and inactive for N days. Per garage:
+  - branches, customers, cars, invoices this month;
+  - this month's emails sent and failed, and WhatsApp messages marked sent;
+  - last sign-in and last visit.
+- **Failed messages:** which garage, which kind, which channel, and why.
+- **Business view:**
+  - revenue, payments and new garages for each of the last 12 months;
+  - this year's and last year's revenue, and this year's revenue by payment method;
+  - garages per status, and how many have ever paid.
+
+**Decisions**
+- **Counts only, never customer data:** no names, recipients or message content, not even in the failure list (flow.md 12). Only counts and the garage's own account data are read, so no admin access log row is needed; those come with "view as garage" in 5.5.
+- **"Inactive" means no sign-in and no visit.** Sessions last 30 days, so a garage working every day may not sign in for weeks; the last visit shows real use. Written in flow.md 11.2.
+- **Months are calendar months in UTC,** for the whole platform. A garage's own screens use its time zone.
+- **Few queries:** the counts for a page of garages come from a few grouped queries, not one per garage.
+- **A name filter on the usage list,** useful for the admin, and it lets tests find their own garages while other test files run.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/monitoring.ts` (new), `index.ts` | Query schemas and response types |
+| `apps/api/src/admin/monitoring/*` (new), `admin/admin.module.ts` | The four endpoints |
+| `apps/api/test/admin-monitoring.spec.ts` (new) | 7 tests |
+
+**Doc changes:** flow.md 11.2 (inactive, endpoints), 11.5 (business view endpoint).
+
+**Verified:** by me:
+- The 7 new tests cover:
+  - sign-in needed;
+  - expiring paid and trial garages, soonest first, and a wider window;
+  - the counts of a garage with real customers, cars, visits, invoices and messages, without customer names;
+  - an idle garage found as inactive, while one that signs in rarely but records visits is not;
+  - the status and paid filters;
+  - failures with the reason and without the recipient;
+  - business totals growing by a recorded payment.
+- All tests twice (243 API tests), `test:tenancy` (46), `format:check`, lint and typecheck.
 
 By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_

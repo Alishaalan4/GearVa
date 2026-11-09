@@ -6,6 +6,7 @@ export * from './garages';
 export * from './health';
 export * from './invoices';
 export * from './money';
+export * from './monitoring';
 export * from './next-due';
 export * from './odometer';
 export * from './pagination';

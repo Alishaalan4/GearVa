@@ -136,7 +136,7 @@ sequenceDiagram
 
 **Same phone at two garages:** both garages link to the same `owners` row. Each garage sees only its own `garage_customers`, vehicles, visits and invoices (RLS). The owner app (phase 6) sees both histories through `ownerId`.
 
-API (step 2.3): `POST /v1/customers` `{ name, phone, notes? }` answers **201** with the new customer, or **200** with the existing one when this garage already has the phone (`created: false`; name and notes are left unchanged). The phone may be typed in any format; it is stored in E.164 (a number without a country code is read as Lebanese). Staff enter no email in Phase 2, so the app invite of step 5 is recorded for WhatsApp (`customer-app-invite`) and logged as `SKIPPED`. Phase 4 adds an optional `email` to the customer (`garage_customers.email`, the garage's own contact data, decision 2026-11-05), used for reminders (section 9). The app invite stays as it is until the owner app exists (Phase 6). `GET /v1/customers` (every role, decision 2026-10-27: newest first, paginated, max 50 per page, 60 requests per minute, optional `q` matching the name or the end of the phone; no export, README 5.4), `GET /v1/customers/:id` (with the cars; writes a `customer.view` audit row, section 12) and `PATCH /v1/customers/:id` (name, notes, opt-outs; the phone is the owner's identity and does not change here). All four roles may use them.
+API (step 2.3): `POST /v1/customers` `{ name, phone, notes? }` answers **201** with the new customer, or **200** with the existing one when this garage already has the phone (`created: false`; name and notes are left unchanged). The phone may be typed in any format; it is stored in E.164 (a number without a country code is read as Lebanese). Staff enter no email in Phase 2, so the app invite of step 5 is recorded for WhatsApp (`customer-app-invite`) and logged as `SKIPPED`. Phase 4 adds an optional `email` to the customer (`garage_customers.email`, the garage's own contact data, decision 2026-11-05), used for reminders (section 9). The app invite stays as it is until the owner app exists (Phase 6). API (step 4.4): `email` is optional on `POST` and `PATCH /v1/customers`, stored lower case; an empty value clears it. Adding a phone the garage already has leaves the email unchanged, like the name. `GET /v1/customers` (every role, decision 2026-10-27: newest first, paginated, max 50 per page, 60 requests per minute, optional `q` matching the name or the end of the phone; no export, README 5.4), `GET /v1/customers/:id` (with the cars; writes a `customer.view` audit row, section 12) and `PATCH /v1/customers/:id` (name, notes, opt-outs; the phone is the owner's identity and does not change here). All four roles may use them.
 
 ### 3.2 Add a vehicle
 1. Staff enters plate, make, model, year, current odometer, and chooses the display unit (KM or MI).
@@ -419,6 +419,7 @@ A "Reminders due" screen for OWNER, MANAGER and RECEPTIONIST lists the due remin
 - **Send on WhatsApp** opens `https://wa.me/<phone>?text=<message>` with the reminder text already written in the customer's language. Staff press send in WhatsApp.
 - **Mark as sent** then records a `WHATSAPP` notification with status `SENT`, `dedupeKey = REMINDER:{reminderId}:{round}:WHATSAPP` and the phone as recipient, and counts the round (9.1). The audit row records who sent it. Gearva cannot see whether the message was really sent; it trusts the button.
 - A customer who does not want reminders is marked "No reminders" on their page (`remindersOptOut`) and leaves the list.
+- API (step 4.4): `GET /v1/reminders/due` (paginated; each item has the round, the service in both languages, the due km or date, the estimated km, `emailFailed` and the ready `whatsappUrl`) and `POST /v1/reminders/:reminderId/whatsapp-sent` `{ round }`. Marking a round that is already counted answers `counted: false` and changes nothing; a round that is not the next one is `409 REMINDER_NOT_DUE`. The log is `GET /v1/notifications` (filters `status`, `channel`), and the owner's settings are `GET` / `PATCH /v1/reminder-settings` (lead km 0–5,000, lead days 0–60, monthly reminder).
 
 ---
 
@@ -516,7 +517,7 @@ Subscription revenue per month and year, growth (garages new, renewed, lost), an
 /v1/service-types
 /v1/invoices, /v1/invoices/:id/payments, /v1/invoices/:id/cancel, /v1/invoices/:id/pdf
 /v1/debts
-/v1/reminders, /v1/notifications
+/v1/reminders/due, /v1/reminders/:id/whatsapp-sent, /v1/reminder-settings, /v1/notifications
 /v1/offers
 /v1/reports/*                 revenue screens
 /v1/audit

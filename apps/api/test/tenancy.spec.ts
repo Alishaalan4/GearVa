@@ -478,6 +478,59 @@ describe('Tenant isolation (test:tenancy)', () => {
       ).toBe(before);
     },
 
+    'GET /v1/reminders/due': async () => {
+      // Both garages' oil-change reminders become due; A lists only its own.
+      for (const side of [a, b]) {
+        await platform.reminder.updateMany({
+          where: { garageId: side.garage.garageId, kind: 'SERVICE_DUE', status: 'ACTIVE' },
+          data: { nextDueKm: 0 },
+        });
+      }
+      const res = await asA.get('/v1/reminders/due?pageSize=50').expect(200);
+      const ids = res.body.items.map((d: { reminderId: string }) => d.reminderId);
+      const own = await platform.reminder.findMany({
+        where: { garageId: a.garage.garageId, kind: 'SERVICE_DUE', status: 'ACTIVE' },
+      });
+      expect(ids.sort()).toEqual(own.map((r) => r.id).sort());
+      expect(res.body.items.map((d: { customer: { id: string } }) => d.customer.id)).not.toContain(
+        b.customerId,
+      );
+    },
+
+    'POST /v1/reminders/:reminderId/whatsapp-sent': async () => {
+      const reminder = await platform.reminder.findFirstOrThrow({
+        where: { garageId: b.garage.garageId, kind: 'SERVICE_DUE', status: 'ACTIVE' },
+      });
+      await expectBUnchanged(async () => {
+        await asA.post(`/v1/reminders/${reminder.id}/whatsapp-sent`, { round: 1 }).expect(404);
+      });
+    },
+
+    'GET /v1/notifications': async () => {
+      const res = await asA.get('/v1/notifications?pageSize=50').expect(200);
+      expect(res.body.total).toBeGreaterThan(0);
+      const ids = res.body.items.map((n: { id: string }) => n.id);
+      const rows = await platform.notification.findMany({ where: { id: { in: ids } } });
+      expect(new Set(rows.map((r) => r.garageId))).toEqual(new Set([a.garage.garageId]));
+    },
+
+    'GET /v1/reminder-settings': async () => {
+      await asA.get('/v1/reminder-settings').expect(200);
+    },
+
+    'PATCH /v1/reminder-settings': async () => {
+      await asA
+        .patch('/v1/reminder-settings', {
+          monthlyReminderEnabled: true,
+          garageId: b.garage.garageId,
+        })
+        .expect(200);
+      const row = await platform.garageSettings.findUniqueOrThrow({
+        where: { garageId: b.garage.garageId },
+      });
+      expect(row.monthlyReminderEnabled).toBe(false);
+    },
+
     'POST /v1/invoices/:invoiceId/payments': async () => {
       await expectBUnchanged(async () => {
         await asA

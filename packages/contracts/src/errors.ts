@@ -39,6 +39,8 @@ export const ERROR_CODES = {
   INVOICE_NOT_CANCELLED: 'INVOICE_NOT_CANCELLED',
   INVOICE_ALREADY_REISSUED: 'INVOICE_ALREADY_REISSUED',
   INVOICE_PDF_NOT_READY: 'INVOICE_PDF_NOT_READY',
+  /** The round is not the reminder's next one, or the reminder is closed (flow.md 9.5). */
+  REMINDER_NOT_DUE: 'REMINDER_NOT_DUE',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */

@@ -26,6 +26,7 @@ import { garageLockReason } from '../common/garage-lock';
 import { ENV, type Env } from '../config/env';
 import { fromDbDate } from '../maintenance/records.service';
 import type { Locale } from '../notifications/notification-channel';
+import { whatsappReminderText } from '../notifications/templates/reminders';
 import { NotificationsService, type NewNotification } from '../notifications/notifications.service';
 import { ReminderScanQueue } from './reminder-scan.queue';
 
@@ -37,6 +38,8 @@ export interface DueReminder {
   };
   /** the round to send: notifyCount + 1 */
   round: number;
+  /** the car's estimated km now (flow.md 5.2) */
+  estimatedKm: number;
   vehicle: Vehicle;
   customer: GarageCustomer & { owner: Owner };
 }
@@ -48,16 +51,16 @@ export interface ScanResult {
   monthly: number;
 }
 
-const REMINDER_REF = 'reminder';
+export const REMINDER_REF = 'reminder';
 
 /** How each reminder kind is logged and which email it uses. */
-const KINDS: Record<Reminder['kind'], { type: NotificationType; template: string }> = {
+export const KINDS: Record<Reminder['kind'], { type: NotificationType; template: string }> = {
   SERVICE_DUE: { type: 'SERVICE_REMINDER', template: 'service-reminder' },
   WARRANTY_END: { type: 'WARRANTY_END', template: 'warranty-end' },
   RECOMMENDED_NEXT: { type: 'SERVICE_REMINDER', template: 'recommended-next' },
 };
 
-const localeOf = (owner: Owner): Locale => (owner.locale === 'en' ? 'en' : 'ar');
+export const localeOf = (owner: Owner): Locale => (owner.locale === 'en' ? 'en' : 'ar');
 
 /**
  * Reminders (flow.md 9): the hourly scan finds due reminders and emails the customers the
@@ -169,16 +172,17 @@ export class RemindersService implements OnApplicationBootstrap {
     const today = localDate(now, garage.timezone);
     const due: DueReminder[] = [];
     for (const { vehicle, ...reminder } of reminders) {
+      const estimatedKm = estimateCurrentKm({
+        currentKm: vehicle.currentKm,
+        lastOdometerAt: vehicle.lastOdometerAt,
+        avgDailyKm: vehicle.avgDailyKm === null ? null : Number(vehicle.avgDailyKm),
+        garageDefaultDailyKm: settings.defaultDailyKm,
+        now,
+      });
       const round = reminderRound(
         { ...reminder, nextDueDate: fromDbDate(reminder.nextDueDate) },
         {
-          estimatedKm: estimateCurrentKm({
-            currentKm: vehicle.currentKm,
-            lastOdometerAt: vehicle.lastOdometerAt,
-            avgDailyKm: vehicle.avgDailyKm === null ? null : Number(vehicle.avgDailyKm),
-            garageDefaultDailyKm: settings.defaultDailyKm,
-            now,
-          }),
+          estimatedKm,
           today,
           leadKm: settings.reminderLeadKm,
           leadDays: settings.reminderLeadDays,
@@ -187,7 +191,7 @@ export class RemindersService implements OnApplicationBootstrap {
       );
       if (round === null) continue;
       const { customer, ...car } = vehicle;
-      due.push({ reminder, round, vehicle: car as Vehicle, customer });
+      due.push({ reminder, round, estimatedKm, vehicle: car as Vehicle, customer });
     }
     return due;
   }
@@ -216,6 +220,29 @@ export class RemindersService implements OnApplicationBootstrap {
     if (sourceRecord.customName) return sourceRecord.customName;
     if (!serviceType) return '';
     return localeOf(due.customer.owner) === 'en' ? serviceType.nameEn : serviceType.nameAr;
+  }
+
+  /** flow.md 9.5: a wa.me link with the message written in the customer's language. */
+  whatsappUrl(due: DueReminder, garageName: string): string {
+    const { reminder, vehicle, customer } = due;
+    const text = whatsappReminderText(
+      reminder.kind,
+      {
+        customerName: customer.name,
+        garageName,
+        vehicle: `${vehicle.make} ${vehicle.model}`,
+        plate: vehicle.plate,
+        serviceName: this.serviceName(due),
+        dueKm:
+          reminder.kind === 'SERVICE_DUE' && reminder.nextDueKm !== null
+            ? Math.round(fromKm(reminder.nextDueKm, vehicle.distanceUnit))
+            : null,
+        unit: vehicle.distanceUnit,
+        dueDate: fromDbDate(reminder.nextDueDate),
+      },
+      localeOf(customer.owner),
+    );
+    return `https://wa.me/${customer.owner.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
   }
 
   private reminderEmail(due: DueReminder, garage: Pick<Garage, 'id' | 'name'>): NewNotification {

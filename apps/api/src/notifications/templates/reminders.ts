@@ -41,20 +41,23 @@ const serviceSchema = z
   })
   .refine((d) => d.dueKm !== null || d.dueDate !== null, 'A due km or date is needed');
 
+/** "at 55,100 km or on 5 May 2027, whichever comes first", in the customer's language. */
+function serviceDue(d: z.infer<typeof serviceSchema>, locale: Locale): string {
+  const km = d.dueKm === null ? null : distance(d.dueKm, d.unit, locale);
+  const on = d.dueDate === null ? null : day(d.dueDate, locale);
+  if (locale === 'en') {
+    if (km && on) return `at ${km} or on ${on}, whichever comes first`;
+    return km ? `at ${km}` : `on ${on}`;
+  }
+  if (km && on) return `عند ${km} أو في ${on}، أيهما أقرب`;
+  return km ? `عند ${km}` : `في ${on}`;
+}
+
 /** flow.md 9.1: "Kindly check your km, your next change is at [number]." */
 export const serviceReminder: EmailTemplate<z.infer<typeof serviceSchema>> = {
   schema: serviceSchema,
   render: (d) => {
-    const due = (locale: Locale) => {
-      const km = d.dueKm === null ? null : distance(d.dueKm, d.unit, locale);
-      const on = d.dueDate === null ? null : day(d.dueDate, locale);
-      if (locale === 'en') {
-        if (km && on) return `at ${km} or on ${on}, whichever comes first`;
-        return km ? `at ${km}` : `on ${on}`;
-      }
-      if (km && on) return `عند ${km} أو في ${on}، أيهما أقرب`;
-      return km ? `عند ${km}` : `في ${on}`;
-    };
+    const due = (locale: Locale) => serviceDue(d, locale);
     return {
       en: {
         subject: `${d.serviceName} reminder for ${d.plate}`,
@@ -163,3 +166,32 @@ export const monthlyReminder: EmailTemplate<z.infer<typeof monthlySchema>> = {
     },
   }),
 };
+
+/**
+ * flow.md 9.5: the message staff send from their own WhatsApp, in the customer's
+ * language. Shorter than the email, with the same due text.
+ */
+export function whatsappReminderText(
+  kind: 'SERVICE_DUE' | 'WARRANTY_END' | 'RECOMMENDED_NEXT',
+  data: z.input<typeof serviceSchema>,
+  locale: Locale,
+): string {
+  const d = serviceSchema.parse(data);
+  const hello =
+    locale === 'en'
+      ? `Hello ${d.customerName}, this is ${d.garageName}.`
+      : `مرحباً ${d.customerName}، معك ${d.garageName}.`;
+  if (kind === 'WARRANTY_END' && d.dueDate) {
+    return locale === 'en'
+      ? `${hello} The warranty on the ${d.serviceName} of your ${d.vehicle} (${d.plate}) ends on ${day(d.dueDate, 'en')}.`
+      : `${hello} تنتهي كفالة ${d.serviceName} لسيارتك ${d.vehicle} (${d.plate}) في ${day(d.dueDate, 'ar')}.`;
+  }
+  if (kind === 'RECOMMENDED_NEXT' && d.dueDate) {
+    return locale === 'en'
+      ? `${hello} We recommended a ${d.serviceName} for your ${d.vehicle} (${d.plate}) around ${day(d.dueDate, 'en')}. Reply to book it.`
+      : `${hello} ننصح بـ${d.serviceName} لسيارتك ${d.vehicle} (${d.plate}) في حدود ${day(d.dueDate, 'ar')}. راسلنا لحجز موعد.`;
+  }
+  return locale === 'en'
+    ? `${hello} Kindly check your km: the next ${d.serviceName} for your ${d.vehicle} (${d.plate}) is due ${serviceDue(d, 'en')}. Reply to book it.`
+    : `${hello} يرجى التحقق من عدّاد سيارتك: موعد ${d.serviceName} القادم لسيارتك ${d.vehicle} (${d.plate}) ${serviceDue(d, 'ar')}. راسلنا لحجز موعد.`;
+}

@@ -18,11 +18,25 @@ const optionalNotes = z
 // Customers
 // ---------------------------------------------------------------------------
 
+/**
+ * The garage's own contact email for reminders (flow.md 9, decision 2026-11-05).
+ * Optional; an empty field clears it.
+ */
+const optionalEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .transform((v) => (v === '' ? null : v))
+  .pipe(z.email().max(254).nullable())
+  .nullable()
+  .optional();
+
 /** flow.md 3.1: name and phone. The phone is stored in E.164 on the global owner. */
 export const createCustomerSchema = z.object({
   name: z.string().trim().min(2).max(120),
   phone: phoneSchema,
   notes: optionalNotes,
+  email: optionalEmail,
 });
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
@@ -30,6 +44,7 @@ export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export const updateCustomerSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   notes: optionalNotes,
+  email: optionalEmail,
   remindersOptOut: z.boolean().optional(),
   marketingOptOut: z.boolean().optional(),
 });
@@ -45,6 +60,7 @@ export interface CustomerSummary {
 
 export interface CustomerDetail extends CustomerSummary {
   notes: string | null;
+  email: string | null;
   remindersOptOut: boolean;
   marketingOptOut: boolean;
   createdAt: string;

@@ -1,5 +1,8 @@
 // Reminder rules (flow.md 9.1, 9.3). The values are constants until system_settings
 // exists (Phase 5), like the default daily km (README 7).
+import { z } from 'zod';
+import type { DistanceUnit } from './distance';
+import { paginationQuerySchema } from './pagination';
 
 /** Reminders go out between these local hours, in the garage's time zone: 09:00 to 20:00. */
 export const REMINDER_DAYTIME_START_HOUR = 9;
@@ -143,3 +146,91 @@ export function localMonth(now: Date, timeZone: string): string {
   const local = localParts(now, timeZone);
   return `${local.year}-${String(local.month).padStart(2, '0')}`;
 }
+
+// ---------------------------------------------------------------------------
+// API: reminders due (WhatsApp list), notification log, reminder settings
+// ---------------------------------------------------------------------------
+
+/** GET /v1/reminders/due: one due reminder that email has not reached (flow.md 9.5). */
+export interface DueReminderItem {
+  reminderId: string;
+  /** 1 = first reminder, 2 and 3 = follow-ups */
+  round: number;
+  kind: ReminderState['kind'];
+  customer: { id: string; name: string; phone: string };
+  vehicle: { id: string; plate: string; make: string; model: string; distanceUnit: DistanceUnit };
+  /** the service in both languages, for the staff screen; a custom name is the same in both */
+  serviceName: { en: string; ar: string };
+  /** km */
+  dueKm: number | null;
+  /** YYYY-MM-DD */
+  dueDate: string | null;
+  /** the car's estimated km now, km */
+  estimatedKm: number;
+  lastNotifiedAt: string | null;
+  /** the customer has an email, but this round's email failed or was skipped */
+  emailFailed: boolean;
+  /** wa.me link with the message already written, in the customer's language */
+  whatsappUrl: string;
+}
+
+/** POST /v1/reminders/:reminderId/whatsapp-sent: the round shown on the list. */
+export const markWhatsappSentSchema = z.object({
+  round: z
+    .number()
+    .int()
+    .min(1)
+    .max(1 + REMINDER_FOLLOW_UPS),
+});
+export type MarkWhatsappSentInput = z.infer<typeof markWhatsappSentSchema>;
+
+export interface MarkWhatsappSentResponse {
+  /** the reminder (also the audit row's entity) */
+  id: string;
+  round: number;
+  /** false when the round was already counted (by email, or by an earlier click) */
+  counted: boolean;
+}
+
+export const NOTIFICATION_STATUSES = ['QUEUED', 'SENT', 'DELIVERED', 'FAILED', 'SKIPPED'] as const;
+export type NotificationStatusName = (typeof NOTIFICATION_STATUSES)[number];
+export const NOTIFICATION_CHANNELS = ['EMAIL', 'IN_APP', 'PUSH', 'WHATSAPP'] as const;
+export type NotificationChannelName = (typeof NOTIFICATION_CHANNELS)[number];
+
+/** GET /v1/notifications: the log, newest first (flow.md 9.4). */
+export const notificationLogQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(NOTIFICATION_STATUSES).optional(),
+  channel: z.enum(NOTIFICATION_CHANNELS).optional(),
+});
+export type NotificationLogQuery = z.infer<typeof notificationLogQuerySchema>;
+
+/** One row of the log. Never the payload: an invite's payload holds a sign-in link. */
+export interface NotificationLogItem {
+  id: string;
+  createdAt: string;
+  /** when a delayed reminder will go out (daytime only) */
+  scheduledFor: string | null;
+  sentAt: string | null;
+  type: string;
+  channel: NotificationChannelName;
+  status: NotificationStatusName;
+  /** email or phone */
+  recipient: string | null;
+  error: string | null;
+  /** who it was for: a customer of this garage, or a staff member */
+  to: { kind: 'customer' | 'staff'; id: string; name: string } | null;
+}
+
+/** GET / PATCH /v1/reminder-settings (owner): database.md 4.2. */
+export interface ReminderSettings {
+  reminderLeadKm: number;
+  reminderLeadDays: number;
+  monthlyReminderEnabled: boolean;
+}
+
+export const updateReminderSettingsSchema = z.object({
+  reminderLeadKm: z.number().int().min(0).max(5000).optional(),
+  reminderLeadDays: z.number().int().min(0).max(60).optional(),
+  monthlyReminderEnabled: z.boolean().optional(),
+});
+export type UpdateReminderSettingsInput = z.infer<typeof updateReminderSettingsSchema>;

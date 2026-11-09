@@ -127,6 +127,7 @@ export class CustomersService {
         data: {
           name: input.name,
           notes: input.notes,
+          email: input.email,
           remindersOptOut: input.remindersOptOut,
           marketingOptOut: input.marketingOptOut,
         },
@@ -163,7 +164,13 @@ export class CustomersService {
     }
 
     const customer = await tx.garageCustomer.create({
-      data: { garageId, ownerId, name: input.name, notes: input.notes ?? null },
+      data: {
+        garageId,
+        ownerId,
+        name: input.name,
+        notes: input.notes ?? null,
+        email: input.email ?? null,
+      },
     });
     // flow.md 3.1 step 5: invite the customer to the owner app. Staff do not enter an
     // email, so it waits for WhatsApp: the row is stored and logged as SKIPPED.
@@ -198,6 +205,7 @@ export class CustomersService {
     return {
       ...toCustomerSummary(customer),
       notes: customer.notes,
+      email: customer.email,
       remindersOptOut: customer.remindersOptOut,
       marketingOptOut: customer.marketingOptOut,
       createdAt: customer.createdAt.toISOString(),

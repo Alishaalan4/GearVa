@@ -41,8 +41,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 4 | 4.1 Database: customer email, monthly reminder setting | ✅ Done | 2026-11-05 |
 | 4 | 4.2 Pipeline: retries, daytime delay, stuck rows, fair-use cap | ✅ Done | 2026-11-05 |
 | 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | ✅ Done | 2026-11-05 |
-| 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | Next | |
-| 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | | |
+| 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | ✅ Done | 2026-11-09 |
+| 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | Next | |
 | 5 | … then the first deployment to Render, on free instances (README 9) | | |
 
 ---
@@ -1151,7 +1151,44 @@ When an email is marked `SENT`, the same transaction counts the round on the rem
 - the warranty template;
 - the monthly reminder: off by default, once a month, not after a service reminder.
 
-All tests passed 4 times in a row: 203 API tests, 69 `contracts` tests, and `test:tenancy` (41). Once in those 4 runs, Jest said a test worker "failed to exit gracefully". Every test still passed, and neither new test file leaves anything open when run alone, so its cause is not found. Not covered by a test: `scanAll` skipping locked garages, because a scan of every garage would touch other test files' garages. It uses the same lock rule that is tested for logins. By the user: commit commands pending.
+All tests passed 4 times in a row: 203 API tests, 69 `contracts` tests, and `test:tenancy` (41). Once in those 4 runs, Jest said a test worker "failed to exit gracefully". Every test still passed, and neither new test file leaves anything open when run alone, so its cause is not found. Not covered by a test: `scanAll` skipping locked garages, because a scan of every garage would touch other test files' garages. It uses the same lock rule that is tested for logins. By the user: the checks (the first `npm test` failed because Postgres and Redis had stopped; started again with `npm run db:up`), then the commit.
+**Commit:** `fc34b8b` — `Phase 4.3: hourly reminder scan with rounds, follow-ups, warranty and monthly emails`
+
+---
+
+## Phase 4 · Step 4.4 — API: customer email, WhatsApp list, notification log, reminder settings
+**When:** 2026-11-09 (~2 h)
+
+**Implements:** flow.md 1 (matrix), 3.1, 9.4, 9.5; database.md 4.2, 4.3, 4.6.
+
+**Summary:** The API the Phase 4 screens need.
+- **Customer email:** optional on create and edit, stored lower case; an empty value clears it.
+- **Reminders due:** the WhatsApp list. A customer without an email, or whose email of this round failed or was skipped, is listed with a `wa.me` link and the message already written in their language. A customer whose email is waiting or sent is left out, so nobody gets a round twice.
+- **Mark as sent:** writes a `WHATSAPP` `SENT` row in the log and counts the round, like a sent email. A second click changes nothing (`counted: false`). A round that is not the next one is `409 REMINDER_NOT_DUE`. Who sent it is in the audit log.
+- **Notification log:** newest first, filters for status and channel. Each row says who it was for (customer or staff member), and never includes the content.
+- **Reminder settings:** lead km, lead days and the monthly reminder. Owner only.
+
+**Roles (flow.md 1):** the due list and mark-sent are for the owner, managers and receptionists; the log for the owner and managers; the settings for the owner.
+
+**Decisions**
+- **One wording, two channels.** The WhatsApp text sits next to the email templates and uses the same due text ("at 55,100 km or on 5 May 2027, whichever comes first"), shorter, ending with "Reply to book it".
+- **The list is built from the same rule as the scan** (`dueNow`), then checks this round's email in the log. A follow-up whose earlier round went by email can come to the list if its own email fails.
+- **The log shows the recipient's address,** as database.md 4.6 allows, for the owner and managers only.
+- **The mark-sent response field is `id`,** so the audit row records the reminder like other audited actions.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/customers.ts`, `reminders.ts`, `errors.ts` | Email field; list, mark-sent, log and settings types; `REMINDER_NOT_DUE` |
+| `apps/api/src/customers/customers.service.ts` | Saves and returns the email |
+| `apps/api/src/reminders/reminder-list.service.ts`, `reminder-settings.service.ts`, `reminders.controller.ts` (new), `reminders.service.ts`, `reminders.module.ts` | The list, mark-sent, settings; `whatsappUrl`, estimated km on due reminders |
+| `apps/api/src/notifications/notification-log.service.ts`, `notifications.controller.ts` (new), `notifications.module.ts` | The log |
+| `apps/api/src/notifications/templates/reminders.ts` | `whatsappReminderText`; the due text shared with the email |
+| `apps/api/test/reminder-api.spec.ts` (new), `test/tenancy.spec.ts` | 10 tests; 5 tenancy cases |
+
+**Doc changes:** flow.md 3.1 (email in the API), 9.5 (the endpoints), 14 (API surface).
+
+**Verified:** by me: `format:check`, lint and typecheck of everything; all tests twice in a row (218 API tests, 10 new); `test:tenancy` (46, 5 new: A sees only its own due reminders and log, cannot mark B's reminder, and its settings change never reaches B); sample WhatsApp messages rendered in both languages. By the user: commit commands pending.
 **Commit:** _(filled in at the next step)_
 
 ---

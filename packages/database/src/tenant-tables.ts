@@ -29,6 +29,11 @@ export const TENANT_TABLES = [
   'invoices',
   'invoice_items',
   'payments',
+  // Phase 5: platform tables with a garage_id. They get the policy as a second guard;
+  // gearva_app has no grant on them at all (database.md 4.1).
+  'subscription_payments',
+  'admin_access_logs',
+  'garage_applications',
 ] as const;
 
 export type TenantTable = (typeof TENANT_TABLES)[number];

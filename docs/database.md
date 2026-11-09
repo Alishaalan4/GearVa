@@ -26,7 +26,7 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 
 | Group | Tables | Tenant (`garage_id`)? | RLS |
 |---|---|---|---|
-| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `owner_otps`, `device_tokens` | No | No (only reachable from admin/auth code) |
+| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `owner_otps`, `device_tokens` | No | No (only reachable from admin/auth code). Exception (step 5.1): `subscription_payments`, `admin_access_logs` and `garage_applications` carry a `garage_id`, so they also get the tenant policy as a second guard, and are listed in `tenant-tables.ts`; `gearva_app` has no right on them at all |
 | Tenant root | `garages` | It is the tenant (`id`) | Yes, `id = app.garage_id` |
 | Tenant data | `garage_settings`, `branches`, `users`, `garage_customers`, `vehicles`, `service_types`*, `suggestions`, `visits`, `service_records`, `reminders`, `invoices`, `invoice_items`, `invoice_counters`, `payments`, `offers`, `notifications`, `files`, `audit_logs` | Yes | Yes |
 
@@ -112,6 +112,8 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 `id`, `ownerId` FK, `token` U, `platform` (`ios`/`android`), `lastSeenAt`.
 
 #### `subscription_payments`
+Append-only (step 5.1): `gearva_platform` has `SELECT, INSERT` only, like `payments`. Checks: amount above 0, extra branches 0 or more, new expiry date not before the period start.
+
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
@@ -128,7 +130,7 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 Append-only. `id`, `adminId` FK, `garageId` FK, `action` (`VIEW_AS_GARAGE_START`, `VIEW_AS_GARAGE_END`, `RECORD_VIEWED`), `path`, `ip`, `createdAt`. Every time an admin opens a garage's data, a row is written.
 
 #### `garage_applications` (Phase 5, flow.md 11.6)
-A garage asking to join from the public website. Not a tenant table.
+A garage asking to join from the public website. A platform table (only `gearva_platform`, `SELECT, INSERT, UPDATE`). Checks: 1 to 50 branches; `APPROVED` needs `garageId`, `REJECTED` needs `rejectReason`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -148,7 +150,7 @@ A garage asking to join from the public website. Not a tenant table.
 | createdAt / updatedAt | timestamptz | |
 
 #### `system_settings`
-Key/value (`key` PK, `value` jsonb). Examples (until then, the reminder values are constants in `contracts`, flow.md 9): `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`.
+Key/value (`key` PK, `value` jsonb, `updatedById?` admin, `updatedAt`). `gearva_platform` reads and writes it (never deletes); `gearva_app` may read it, as it is global configuration like the default service types (step 5.1). Examples (until then, the reminder values are constants in `contracts`, flow.md 9): `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`.
 
 ### 4.2 Tenant root and settings
 

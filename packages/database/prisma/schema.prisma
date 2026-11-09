@@ -111,6 +111,12 @@ enum PaymentMethod {
   WHISH
 }
 
+enum ApplicationStatus {
+  NEW
+  APPROVED
+  REJECTED
+}
+
 enum DiscountType {
   AMOUNT
   PERCENT
@@ -163,7 +169,11 @@ model AdminUser {
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  createdGarages Garage[]
+  createdGarages       Garage[]
+  subscriptionPayments SubscriptionPayment[]
+  accessLogs           AdminAccessLog[]
+  reviewedApplications GarageApplication[]
+  settingsChanged      SystemSetting[]
 
   @@map("admin_users")
 }
@@ -235,25 +245,28 @@ model Garage {
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  createdByAdmin  AdminUser        @relation(fields: [createdByAdminId], references: [id])
-  settings        GarageSettings?
-  branches        Branch[]
-  users           User[]
-  auditLogs       AuditLog[]
-  notifications   Notification[]
-  customers       GarageCustomer[]
-  vehicles        Vehicle[]
-  serviceTypes    ServiceType[]
-  suggestions     Suggestion[]
-  visits          Visit[]
-  serviceRecords  ServiceRecord[]
-  reminders       Reminder[]
-  files           File[]
-  offers          Offer[]
-  invoiceCounters InvoiceCounter[]
-  invoices        Invoice[]
-  invoiceItems    InvoiceItem[]
-  payments        Payment[]
+  createdByAdmin       AdminUser             @relation(fields: [createdByAdminId], references: [id])
+  settings             GarageSettings?
+  branches             Branch[]
+  users                User[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  customers            GarageCustomer[]
+  vehicles             Vehicle[]
+  serviceTypes         ServiceType[]
+  suggestions          Suggestion[]
+  visits               Visit[]
+  serviceRecords       ServiceRecord[]
+  reminders            Reminder[]
+  files                File[]
+  offers               Offer[]
+  invoiceCounters      InvoiceCounter[]
+  invoices             Invoice[]
+  invoiceItems         InvoiceItem[]
+  payments             Payment[]
+  subscriptionPayments SubscriptionPayment[]
+  adminAccessLogs      AdminAccessLog[]
+  applications         GarageApplication[]
 
   @@index([status, expiresAt])
   @@map("garages")
@@ -836,4 +849,96 @@ model AuditLog {
   @@index([garageId, createdAt(sort: Desc)])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5: admin completion (database.md 4.1). Platform tables: only gearva_platform
+// has rights on them. Those with a garage_id also get the tenant policy (defense in
+// depth), but gearva_app has no grant at all.
+// ---------------------------------------------------------------------------
+
+// A subscription payment recorded by an admin (flow.md 11.1). Append-only, like payments.
+model SubscriptionPayment {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  garageId      String        @map("garage_id") @db.Uuid
+  amountCents   Int           @map("amount_cents")
+  method        PaymentMethod
+  paidAt        DateTime      @map("paid_at") @db.Timestamptz(3)
+  // the paid period: from this date to the new expiry date
+  periodStart   DateTime      @map("period_start") @db.Date
+  newExpiryDate DateTime      @map("new_expiry_date") @db.Date
+  // extra branches included in this payment
+  extraBranches Int           @default(0) @map("extra_branches")
+  recordedById  String        @map("recorded_by_id") @db.Uuid
+  note          String?
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  garage     Garage    @relation(fields: [garageId], references: [id])
+  recordedBy AdminUser @relation(fields: [recordedById], references: [id])
+
+  @@index([garageId, paidAt(sort: Desc)])
+  @@index([paidAt])
+  @@map("subscription_payments")
+}
+
+// Every time an admin opens a garage's data (flow.md 11.3). Append-only.
+model AdminAccessLog {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  adminId   String   @map("admin_id") @db.Uuid
+  garageId  String   @map("garage_id") @db.Uuid
+  // VIEW_AS_GARAGE_START, VIEW_AS_GARAGE_END, RECORD_VIEWED
+  action    String
+  path      String?
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  admin  AdminUser @relation(fields: [adminId], references: [id])
+  garage Garage    @relation(fields: [garageId], references: [id])
+
+  @@index([garageId, createdAt(sort: Desc)])
+  @@index([adminId, createdAt(sort: Desc)])
+  @@map("admin_access_logs")
+}
+
+// Platform-wide settings (flow.md 11.4): reminder rules, trial days, prices...
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  updatedBy AdminUser? @relation(fields: [updatedById], references: [id])
+
+  @@map("system_settings")
+}
+
+// A garage asking to join from the public website (flow.md 11.6).
+model GarageApplication {
+  id           String            @id @default(uuid(7)) @db.Uuid
+  garageName   String            @map("garage_name")
+  ownerName    String            @map("owner_name")
+  // lower case
+  email        String
+  // E.164
+  phone        String
+  city         String
+  branchCount  Int               @map("branch_count")
+  message      String?
+  status       ApplicationStatus @default(NEW)
+  reviewedById String?           @map("reviewed_by_id") @db.Uuid
+  reviewedAt   DateTime?         @map("reviewed_at") @db.Timestamptz(3)
+  rejectReason String?           @map("reject_reason")
+  // the garage created on approval
+  garageId     String?           @map("garage_id") @db.Uuid
+  ip           String?
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  reviewedBy AdminUser? @relation(fields: [reviewedById], references: [id])
+  garage     Garage?    @relation(fields: [garageId], references: [id])
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([email])
+  @@index([phone])
+  @@map("garage_applications")
 }

@@ -44,8 +44,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | ✅ Done | 2026-11-09 |
 | 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | ✅ Done | 2026-11-09 |
 | 5 | 5.0 Doc fixes and Phase 5 decisions (website in garage-web, prices, simple counts) | ✅ Done | 2026-11-09 |
-| 5 | 5.1 Database: subscription payments, access logs, system settings, applications | Next | |
-| 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | | |
+| 5 | 5.1 Database: subscription payments, access logs, system settings, applications | ✅ Done | 2026-11-09 |
+| 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | Next | |
 | 5 | 5.3 API: system settings (constants move here) and global service types | | |
 | 5 | 5.4 API: monitoring lists, usage counts, business view | | |
 | 5 | 5.5 API: view as garage (read-only, access log) | | |
@@ -1286,7 +1286,45 @@ By the user: stopped the leftover test web server, ran the checks and committed.
 
 **Doc changes:** README 6 (Phase 5: website place, simple counts), 7 (price confirmed); flow.md 11.2, 11.4, 11.5, 11.6 (new); database.md 2 (platform tables), 4.1 (`garage_applications`), 5 (`ApplicationStatus`).
 
-**Verified:** `format:check` on the docs.
+**Verified:** `format:check` on the docs. By the user: the commit.
+**Commit:** `3030db7` — `Phase 5.0: Phase 5 decisions: website in garage-web, prices, simple monitoring counts`
+
+---
+
+## Phase 5 · Step 5.1 — Database: subscription payments, access logs, system settings, applications
+**When:** 2026-11-09 (~30 min)
+
+**Implements:** database.md 2, 4.1 (`subscription_payments`, `admin_access_logs`, `system_settings`, `garage_applications`), 5 (`ApplicationStatus`), 6.1.
+
+**Summary:** One migration adds the four platform tables of Phase 5 and the `ApplicationStatus` enum.
+- **Rights:**
+  - Payments and access logs are append-only, even for `gearva_platform`, which may read and add rows but never change or delete one.
+  - Settings and applications: `gearva_platform` may read, add and change rows, never delete.
+  - `gearva_app` may only read `system_settings`; it has no right on the other three.
+- **Checks:**
+  - A payment is above 0, with 0 or more extra branches, and a new expiry date not before the period start.
+  - An application has 1 to 50 branches; an approved one points at its garage, and a rejected one has a reason.
+
+**Decisions**
+- **Row-level security as a second guard.** Three of the tables carry a `garage_id`, so they also get the tenant policy and are listed in `tenant-tables.ts`. The guard-rail test requires that of every table with that column. The garage app still has no grant on them.
+- **The setting defaults are seeded in 5.3,** the step that first reads them (database.md 9: "added with the phases that read them").
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma` | Four models, the enum, relations |
+| `packages/database/prisma/migrations/20261109100000_phase5_admin/migration.sql` (new) | Tables, checks, grants, RLS |
+| `packages/database/src/tenant-tables.ts` | The three tables with a `garage_id` |
+| `packages/database/test/rls.test.ts` | 2 tests: `gearva_app` rights, append-only tables |
+
+**Doc changes:** database.md 2 (the exception for these three tables), 4.1 (rights and checks of each table).
+
+**Verified:** by me:
+- The migration applied to a fresh test database, and `prisma migrate diff` from it to the schema is empty.
+- 25 database tests (2 new), 218 API tests, `test:tenancy` (46).
+- `format:check`, lint and typecheck of everything.
+
+By the user: the migration on the development database, then the commit.
 **Commit:** _(filled in at the next step)_
 
 ---

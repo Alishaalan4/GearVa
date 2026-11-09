@@ -63,6 +63,34 @@ describe('RLS coverage', () => {
   });
 });
 
+describe('Phase 5 platform tables', () => {
+  it('gearva_app cannot touch them, except reading the system settings', async () => {
+    for (const table of ['subscription_payments', 'admin_access_logs', 'garage_applications']) {
+      await expect(app.$queryRawUnsafe(`SELECT 1 FROM "${table}" LIMIT 1`), table).rejects.toThrow(
+        /permission denied/,
+      );
+    }
+    await app.$queryRawUnsafe('SELECT 1 FROM "system_settings" LIMIT 1');
+    await expect(
+      app.$executeRawUnsafe(
+        `INSERT INTO "system_settings" ("key", "value", "updated_at") VALUES ('x', '1', now())`,
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it('payments and access logs are append-only, even for gearva_platform', async () => {
+    for (const table of ['subscription_payments', 'admin_access_logs']) {
+      await expect(platform.$executeRawUnsafe(`DELETE FROM "${table}"`), table).rejects.toThrow(
+        /permission denied/,
+      );
+      await expect(
+        platform.$executeRawUnsafe(`UPDATE "${table}" SET "created_at" = now()`),
+        table,
+      ).rejects.toThrow(/permission denied/);
+    }
+  });
+});
+
 describe('RLS behavior', () => {
   const adminId = randomUUID();
   const garageA = randomUUID();

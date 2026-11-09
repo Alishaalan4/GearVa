@@ -458,7 +458,7 @@ stateDiagram-v2
 - **Expiring soon:** garages whose `expiresAt` is within about 3 weeks, **plus trial garages whose `trialEndsAt` is within about 7 days**, with a short usage summary to help the renewal or conversion conversation.
 - **Paid vs unpaid:** yearly revenue at a glance.
 - **Usage per garage:** counts of customers, vehicles, invoices, reminders and broadcasts sent, and last login. Computed with the platform role as counts only.
-- **WhatsApp/notification volume per garage:** messages per channel, cost estimate per message versus what the garage pays.
+- **Message volume per garage:** emails sent and failed, and WhatsApp messages marked sent by staff, this month. Counts only: no cost estimate while no paid channel exists (decision 2026-11-09); add it with a paid channel.
 - **Delivery and failure logs:** which messages failed and why.
 - **Inactive garages:** no login for N days.
 - **System health:** failed BullMQ jobs and errors (queue dashboard + Sentry).
@@ -470,10 +470,17 @@ stateDiagram-v2
 4. Any mutation is blocked unless explicitly allowed for a support action, which is audit logged under the admin's identity.
 
 ### 11.4 System settings
-Default service types (Arabic and English names, default km/miles/months intervals, which garages can override), default invoice template and message wording, notification templates, reminder rules (daily send time, daytime window, fair-use caps), subscription prices. All stored in `system_settings` / `service_types`, never hardcoded.
+Default service types (Arabic and English names, default km/miles/months intervals, which garages can override), default invoice template and message wording, notification templates, reminder rules (daytime window, follow-ups, fair-use cap), the default daily km, trial days, subscription prices. All stored in `system_settings` / `service_types`, never hardcoded. Phase 5 moves the values that are constants in `contracts` until then (README 7, flow.md 9) into `system_settings`, with the same defaults.
+
+### 11.6 Applications and the public website (decision 2026-10-29, placed 2026-11-09)
+The public website is a few pages inside `garage-web` (no separate app): a landing page with what Gearva does and the prices (from `system_settings`), and an **Apply** form. A visitor who is not signed in and opens the app's start page sees the landing page, which links to sign in.
+
+1. **Apply:** garage name, owner name, email, phone, city or area, number of branches, and an optional message. No account is created. The form is public, so it is rate limited per IP and has a hidden honeypot field; an application is stored in `garage_applications` with status `NEW`. Nothing is shown to the visitor beyond "we will contact you".
+2. **Admin Applications page:** new applications first. **Approve** opens the create-garage form already filled in (trial by default), and creating the garage marks the application `APPROVED` and links it to the garage; the owner gets the invite email as in section 2.1. **Reject** needs a reason and marks it `REJECTED`. Both are audit logged.
+3. The same email or phone can apply again later; the admin sees earlier applications from it.
 
 ### 11.5 Business view
-Subscription revenue per month and year, growth (garages new, renewed, lost), and the cost of notifications per garage versus what that garage pays.
+Subscription revenue per month and year, and growth (garages new, renewed, lost). The cost of notifications per garage comes with a paid channel (decision 2026-11-09).
 
 ---
 

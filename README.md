@@ -288,7 +288,8 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 
 ### Phase 5: Admin completion
 - Subscription payments, expiring-soon list, paid/unpaid list, usage monitoring, system settings (default service types, reminder rules), view-as-garage with access log, business view
-- Public website with an application form, and an admin **Applications** page: approving an application creates the garage and sends the owner's invite link (decision 2026-10-29, from the design prototype)
+- Public website with an application form, and an admin **Applications** page: approving an application creates the garage and sends the owner's invite link (decision 2026-10-29, from the design prototype). The website is public pages inside `garage-web`, not a separate app (decision 2026-11-09: no extra service to host; it can move out later). See flow.md 11.6
+- Monitoring shows simple counts per garage (messages sent and failed, last login, customers, cars, invoices), with no cost estimate while no paid channel exists (decision 2026-11-09)
 - **Done when:** the admin can run the whole subscription lifecycle without touching the database.
 - **Deploy a first version to Render now (section 9),** on free instances while only test users use it.
 
@@ -309,7 +310,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Decision | Default used in docs | Needed by |
 |---|---|---|
 | Staff login identifier | email + password | Phase 1 |
-| Subscription price | about $200/year, +$100 per extra branch (set in admin, not hardcoded) | Phase 5 |
+| Subscription price | **Confirmed 2026-11-09:** $200/year, +$100 per extra branch, paid in cash or Whish; defaults in `system_settings`, editable by the admin | Phase 5 |
 | Reminder lead time | 500 km or 7 days before due (garage-editable) | Phase 4 |
 | Default daily km for a car with no history | **Confirmed 2026-10-23:** 35 km/day, a constant in `contracts` until `system_settings` exists (Phase 5); a garage can override it with `garage_settings.defaultDailyKm` | Phase 2 |
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |

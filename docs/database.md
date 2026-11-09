@@ -26,7 +26,7 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 
 | Group | Tables | Tenant (`garage_id`)? | RLS |
 |---|---|---|---|
-| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `owners`, `owner_otps`, `device_tokens` | No | No (only reachable from admin/auth code) |
+| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `owner_otps`, `device_tokens` | No | No (only reachable from admin/auth code) |
 | Tenant root | `garages` | It is the tenant (`id`) | Yes, `id = app.garage_id` |
 | Tenant data | `garage_settings`, `branches`, `users`, `garage_customers`, `vehicles`, `service_types`*, `suggestions`, `visits`, `service_records`, `reminders`, `invoices`, `invoice_items`, `invoice_counters`, `payments`, `offers`, `notifications`, `files`, `audit_logs` | Yes | Yes |
 
@@ -126,6 +126,26 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 
 #### `admin_access_logs`
 Append-only. `id`, `adminId` FK, `garageId` FK, `action` (`VIEW_AS_GARAGE_START`, `VIEW_AS_GARAGE_END`, `RECORD_VIEWED`), `path`, `ip`, `createdAt`. Every time an admin opens a garage's data, a row is written.
+
+#### `garage_applications` (Phase 5, flow.md 11.6)
+A garage asking to join from the public website. Not a tenant table.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| garageName, ownerName | text | |
+| email | text | lower case |
+| phone | text | E.164 |
+| city | text | city or area |
+| branchCount | int | 1 or more |
+| message | text? | |
+| status | ApplicationStatus | `NEW`, `APPROVED`, `REJECTED` |
+| reviewedById | uuid? FK | admin user |
+| reviewedAt | timestamptz? | |
+| rejectReason | text? | |
+| garageId | uuid? FK | the garage created on approval |
+| ip | text? | for rate limiting and abuse checks |
+| createdAt / updatedAt | timestamptz | |
 
 #### `system_settings`
 Key/value (`key` PK, `value` jsonb). Examples (until then, the reminder values are constants in `contracts`, flow.md 9): `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`.
@@ -460,6 +480,7 @@ NotificationType    SERVICE_REMINDER | MONTHLY_REMINDER | INVOICE | OFFER | INVI
 NotificationStatus  QUEUED | SENT | DELIVERED | FAILED | SKIPPED
 SuggestionField     OIL_BRAND | OIL_GRADE | FILTER_BRAND | BATTERY_BRAND | TIRE_BRAND | BRAKE_PAD_BRAND | SERVICE_NAME | VEHICLE_MAKE | VEHICLE_MODEL
 OfferTarget         ALL | OVERDUE | INACTIVE_6M
+ApplicationStatus   NEW | APPROVED | REJECTED
 ```
 
 Enum values are mirrored in `packages/contracts` so the API, web and mobile apps share them.

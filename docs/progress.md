@@ -43,8 +43,15 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 4 | 4.3 Reminder scan job (due rule, rounds, follow-ups, warranty, monthly) | ✅ Done | 2026-11-05 |
 | 4 | 4.4 API: customer email, reminders due + mark sent, notification log, reminder settings | ✅ Done | 2026-11-09 |
 | 4 | 4.5 garage-web: email field, Reminders due (WhatsApp), log, settings (Done-when check) | ✅ Done | 2026-11-09 |
-| 5 | Admin completion (split at the start of the phase) | Next | |
-| 5 | … then the first deployment to Render, on free instances (README 9) | | |
+| 5 | 5.0 Doc fixes and Phase 5 decisions (website in garage-web, prices, simple counts) | ✅ Done | 2026-11-09 |
+| 5 | 5.1 Database: subscription payments, access logs, system settings, applications | Next | |
+| 5 | 5.2 API: subscription lifecycle (payments, trial extension, daily expiry job) | | |
+| 5 | 5.3 API: system settings (constants move here) and global service types | | |
+| 5 | 5.4 API: monitoring lists, usage counts, business view | | |
+| 5 | 5.5 API: view as garage (read-only, access log) | | |
+| 5 | 5.6 Applications API and the public website pages in garage-web | | |
+| 5 | 5.7 admin web screens (Done-when check) | | |
+| Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | | |
 
 ---
 
@@ -1250,7 +1257,36 @@ All tests passed 4 times in a row: 203 API tests, 69 `contracts` tests, and `tes
 - 218 API tests and `test:tenancy` (46).
 - The browser check above. It is not in the repo and does not run in CI.
 
-By the user: commit commands pending.
+By the user: stopped the leftover test web server, ran the checks and committed.
+**Commit:** `ef070b8` — `Phase 4.5: customer email field, Reminders due with WhatsApp, messages log and reminder settings screens`
+
+---
+
+## Phase 5 · Step 5.0 — Doc fixes and Phase 5 decisions
+**When:** 2026-11-09 (~20 min)
+
+**Summary:** Phase 4 is done. The user answered the open Phase 5 questions, and the docs now describe the phase before any code.
+
+**Decisions (user, 2026-11-09)**
+- **The public website lives inside `garage-web`:** a landing page with the prices, and an Apply form. There is no separate app, so there is no extra service to host; it can move out later.
+- **Prices as written:** $200 a year, +$100 per extra branch, paid in cash or Whish. These are defaults in `system_settings` that the admin can edit (README 7, now confirmed).
+- **Monitoring shows simple counts:** emails sent and failed, WhatsApp messages marked sent, last login, customers, cars, invoices. There is no cost estimate while no paid channel exists.
+- **Real email waits for the deployment** that follows Phase 5, together with domain setup. The user did not ask to move it earlier.
+
+**Decisions (mine, in the docs for review)**
+- **Applications** (flow.md 11.6):
+  - The form asks for: garage name, owner name, email, phone, city, number of branches, and a message.
+  - It is rate limited per IP and has a hidden honeypot field, with no captcha.
+  - Approving opens the create-garage form already filled in, as a trial; Reject needs a reason.
+  - It is stored in a new platform table, `garage_applications`.
+- **The constants move to `system_settings`:** the reminder daytime window, follow-ups, fair-use cap, default daily km and trial days, with the same values as today.
+- **Phase 5 is split into eight steps** (5.0–5.7, in the status table), then the deployment step: free Render instances, Resend email and R2 files.
+
+**Files changed:** docs only.
+
+**Doc changes:** README 6 (Phase 5: website place, simple counts), 7 (price confirmed); flow.md 11.2, 11.4, 11.5, 11.6 (new); database.md 2 (platform tables), 4.1 (`garage_applications`), 5 (`ApplicationStatus`).
+
+**Verified:** `format:check` on the docs.
 **Commit:** _(filled in at the next step)_
 
 ---

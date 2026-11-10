@@ -13,6 +13,7 @@ import { ApiErrorAlert } from '@/components/api-error';
 import { Button, buttonClass, Input, Select } from '@gearva/ui';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api } from '@/lib/api';
+import { useDates } from '@/lib/format';
 import { StatusBadge } from './status-badge';
 
 const PAGE_SIZE = 20;
@@ -41,6 +42,7 @@ export function GarageList() {
 
   const pages = garages.data ? Math.max(1, Math.ceil(garages.data.total / PAGE_SIZE)) : 1;
   const date = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium' });
+  const { endDay } = useDates();
 
   return (
     <div className="space-y-4">
@@ -118,9 +120,9 @@ export function GarageList() {
                 </td>
                 <td className="px-4 py-3 text-muted">
                   {g.expiresAt
-                    ? t('paidUntil', { date: date(g.expiresAt) })
+                    ? t('paidUntil', { date: endDay(g.expiresAt) })
                     : g.trialEndsAt
-                      ? t('trialUntil', { date: date(g.trialEndsAt) })
+                      ? t('trialUntil', { date: endDay(g.trialEndsAt) })
                       : tCommon('none')}
                 </td>
                 <td className="px-4 py-3">{format.number(g.branchCount)}</td>

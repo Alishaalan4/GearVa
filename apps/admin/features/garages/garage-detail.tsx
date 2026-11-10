@@ -15,7 +15,10 @@ import { ApiErrorAlert } from '@/components/api-error';
 import { Alert, Button, Card, Field, Textarea } from '@gearva/ui';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPost } from '@/lib/api';
+import { useDates } from '@/lib/format';
 import { StatusBadge } from './status-badge';
+import { SubscriptionCard } from './subscription-card';
+import { ViewAsCard } from './view-as-card';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -26,12 +29,16 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** One garage: account details, owner access links, suspension, branches (flow.md 2.1, 11.1). */
+/**
+ * One garage: account details, owner access links, suspension, subscription, view as
+ * garage, branches (flow.md 2.1, 11.1, 11.3).
+ */
 export function GarageDetail({ garageId }: { garageId: string }) {
   const t = useTranslations('garageDetail');
   const tCommon = useTranslations('common');
   const tLocales = useTranslations('locales');
   const format = useFormatter();
+  const { endDay } = useDates();
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -86,7 +93,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
       {notice && <Alert tone="success">{notice}</Alert>}
       <ApiErrorAlert error={action.error} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title={t('overview')}>
           <dl className="divide-y divide-line">
             <Row label={t('email')}>
@@ -100,8 +107,8 @@ export function GarageDetail({ garageId }: { garageId: string }) {
             <Row label={t('timezone')}>
               <span dir="ltr">{g.timezone}</span>
             </Row>
-            {g.trialEndsAt && <Row label={t('trialEnds')}>{date(g.trialEndsAt)}</Row>}
-            {g.expiresAt && <Row label={t('paidUntil')}>{date(g.expiresAt)}</Row>}
+            {g.trialEndsAt && <Row label={t('trialEnds')}>{endDay(g.trialEndsAt)}</Row>}
+            {g.expiresAt && <Row label={t('paidUntil')}>{endDay(g.expiresAt)}</Row>}
             <Row label={t('createdAt')}>{date(g.createdAt)}</Row>
             <Row label={t('lastLogin')}>{dateTime(g.lastLoginAt)}</Row>
           </dl>
@@ -196,6 +203,10 @@ export function GarageDetail({ garageId }: { garageId: string }) {
             </form>
           )}
         </Card>
+
+        <SubscriptionCard garage={g} />
+
+        <ViewAsCard garageId={g.id} garageName={g.name} />
 
         <Card title={t('branches')}>
           <ul className="divide-y divide-line text-sm">

@@ -58,6 +58,10 @@ export function PanelShell({ children }: { children: ReactNode }) {
       nav={
         <>
           {item('/garages', t('nav.garages'))}
+          {item('/applications', t('nav.applications'))}
+          {item('/monitoring', t('nav.monitoring'))}
+          {item('/business', t('nav.business'))}
+          {item('/settings', t('nav.settings'))}
           {item('/account', t('nav.account'))}
         </>
       }

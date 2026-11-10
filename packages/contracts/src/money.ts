@@ -25,3 +25,23 @@ export function lineTotalCents(quantity: number | string, unitPriceCents: number
   if (!Number.isSafeInteger(product)) throw new Error('Line total is too large');
   return Math.floor((product + 50) / 100);
 }
+
+/** "4950" cents -> "49.50", as exact decimal text: money never goes through a float. */
+export function centsToDecimal(cents: number): string {
+  const sign = cents < 0 ? '-' : '';
+  const abs = Math.abs(cents);
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
+}
+
+/**
+ * Dollars typed by a person ("45", "45.5", "45.50") as integer cents, without a float:
+ * the digits are read as text. Empty = 0 (a service may be free, flow.md 13); anything
+ * else that is not an amount = null.
+ */
+export function dollarsToCents(text: string): number | null {
+  const value = text.trim().replace(',', '.');
+  if (value === '') return 0;
+  const match = /^(\d{1,7})(?:\.(\d{1,2}))?$/.exec(value);
+  if (!match) return null;
+  return Number(match[1]) * 100 + Number((match[2] ?? '').padEnd(2, '0'));
+}

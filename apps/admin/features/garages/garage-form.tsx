@@ -5,17 +5,18 @@ import {
   type CreateGarageInput,
   type GarageDetail,
   LOCALES,
-  TRIAL_DAYS,
   createGarageSchema,
 } from '@gearva/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
 import { Button, Card, Field, Input, Select } from '@gearva/ui';
 import { useRouter } from '@/i18n/navigation';
 import { ApiError, apiPost } from '@/lib/api';
+import { useSystemSettings } from '../settings/use-system-settings';
 
 type FormInput = z.input<typeof createGarageSchema>;
 type FieldName =
@@ -28,12 +29,30 @@ type FieldName =
   | 'ownerName'
   | 'paidUntil';
 
-/** flow.md 2.1 step 1: the "New garage" form, validated with the API's own schema. */
-export function GarageForm() {
+/**
+ * flow.md 2.1 step 1: the "New garage" form, validated with the API's own schema.
+ * Approving an application (flow.md 11.6) uses it too: filled in from the application,
+ * and sent to the approve endpoint, which creates the garage and marks the application.
+ */
+export function GarageForm({
+  initial,
+  submitPath = '/admin/v1/garages',
+  title,
+  before,
+  onCreated,
+}: {
+  initial?: Partial<FormInput>;
+  submitPath?: string;
+  title?: string;
+  /** shown above the form (the application being approved) */
+  before?: ReactNode;
+  onCreated?: () => void;
+} = {}) {
   const t = useTranslations('garageForm');
   const tLocales = useTranslations('locales');
   const router = useRouter();
   const queryClient = useQueryClient();
+  const settings = useSystemSettings();
 
   const form = useForm<FormInput, unknown, CreateGarageInput>({
     resolver: zodResolver(createGarageSchema),
@@ -47,6 +66,7 @@ export function GarageForm() {
       timezone: 'Asia/Beirut',
       defaultLocale: 'ar',
       ownerName: '',
+      ...initial,
     },
   });
   const plan = useWatch({ control: form.control, name: 'plan' });
@@ -54,9 +74,10 @@ export function GarageForm() {
   const errorFor = (name: FieldName) => (errors[name] ? t(`invalid.${name}`) : undefined);
 
   const create = useMutation({
-    mutationFn: (values: CreateGarageInput) => apiPost<GarageDetail>('/admin/v1/garages', values),
+    mutationFn: (values: CreateGarageInput) => apiPost<GarageDetail>(submitPath, values),
     onSuccess: (garage) => {
       void queryClient.invalidateQueries({ queryKey: ['garages'] });
+      onCreated?.();
       queryClient.setQueryData(['garage', garage.id], garage);
       router.push(`/garages/${garage.id}`);
     },
@@ -73,7 +94,8 @@ export function GarageForm() {
       noValidate
       onSubmit={form.handleSubmit((values) => create.mutate(values))}
     >
-      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
+      <h1 className="text-2xl font-extrabold">{title ?? t('title')}</h1>
+      {before}
 
       <Card title={t('sectionGarage')}>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -132,7 +154,9 @@ export function GarageForm() {
           <div className="flex flex-wrap gap-6 text-sm">
             <label className="flex items-center gap-2">
               <input type="radio" value="TRIAL" {...form.register('plan')} />
-              {t('planTrial', { days: TRIAL_DAYS })}
+              {settings.data
+                ? t('planTrial', { days: settings.data.trialDays })
+                : t('planTrialPlain')}
             </label>
             <label className="flex items-center gap-2">
               <input type="radio" value="PAID" {...form.register('plan')} />

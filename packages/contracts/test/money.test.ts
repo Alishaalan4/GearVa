@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineTotalCents, quantityToHundredths } from '../src/money';
+import { centsToDecimal, dollarsToCents, lineTotalCents, quantityToHundredths } from '../src/money';
 
 describe('lineTotalCents (quantity x unit price, integer cents)', () => {
   it('multiplies whole quantities exactly', () => {
@@ -33,5 +33,22 @@ describe('lineTotalCents (quantity x unit price, integer cents)', () => {
     expect(quantityToHundredths('2')).toBe(200);
     expect(quantityToHundredths('2.5')).toBe(250);
     expect(quantityToHundredths(0.05)).toBe(5);
+  });
+});
+
+describe('typed dollars and cents, without floats', () => {
+  it('reads dollars as text', () => {
+    expect(dollarsToCents('200')).toBe(20_000);
+    expect(dollarsToCents('45.5')).toBe(4550);
+    expect(dollarsToCents('0,07')).toBe(7);
+    expect(dollarsToCents('')).toBe(0);
+    expect(dollarsToCents('12.345')).toBeNull();
+    expect(dollarsToCents('-5')).toBeNull();
+  });
+
+  it('writes cents as exact decimal text', () => {
+    expect(centsToDecimal(20_000)).toBe('200.00');
+    expect(centsToDecimal(4507)).toBe('45.07');
+    expect(centsToDecimal(-150)).toBe('-1.50');
   });
 });

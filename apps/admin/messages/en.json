@@ -28,14 +28,21 @@
     "OWNER_ALREADY_ACTIVE": "The owner already set a password. Send a password reset instead.",
     "OWNER_NOT_ACTIVATED": "The owner has not set a password yet. Resend the invite instead.",
     "GARAGE_ALREADY_SUSPENDED": "This garage is already suspended.",
-    "GARAGE_NOT_SUSPENDED": "This garage is not suspended."
+    "GARAGE_NOT_SUSPENDED": "This garage is not suspended.",
+    "GARAGE_NOT_IN_TRIAL": "Only a garage that has never paid can have its trial extended.",
+    "SERVICE_TYPE_CODE_EXISTS": "A service type with this code already exists.",
+    "APPLICATION_ALREADY_REVIEWED": "This application was already approved or rejected."
   },
   "nav": {
     "brand": "Gearva Admin",
     "garages": "Garages",
     "account": "Account",
     "signOut": "Sign out",
-    "switchLanguage": "العربية"
+    "switchLanguage": "العربية",
+    "applications": "Applications",
+    "monitoring": "Monitoring",
+    "business": "Business",
+    "settings": "Settings"
   },
   "authSide": {
     "heading": "Run every garage from one place.",
@@ -147,7 +154,8 @@
       "defaultLocale": "Choose a language.",
       "ownerName": "Enter the owner's name.",
       "paidUntil": "Choose today or a later date."
-    }
+    },
+    "planTrialPlain": "Free trial"
   },
   "garageDetail": {
     "notFound": "This garage does not exist.",
@@ -184,5 +192,215 @@
     "reactivate": "Reactivate garage",
     "suspended": "The garage was suspended.",
     "reactivated": "The garage was reactivated."
+  },
+  "subscription": {
+    "title": "Subscription",
+    "noPayments": "No payments yet.",
+    "paidOn": "Paid on",
+    "amount": "Amount",
+    "amountUsd": "Amount (USD)",
+    "method": "Method",
+    "methods": {
+      "CASH": "Cash",
+      "WHISH": "Whish"
+    },
+    "period": "Paid period",
+    "extraBranches": "Extra branches",
+    "recordedBy": "Recorded by",
+    "note": "Note (optional)",
+    "recordTitle": "Record a payment",
+    "priceHint": "Price: {year} a year + {branches} extra {branches, plural, one {branch} other {branches}} × {branch} = {total}",
+    "newExpiry": "New expiry date (last day included)",
+    "newExpiryHint": "Suggested: 12 months after the current paid period, or from today.",
+    "record": "Record payment",
+    "paymentSaved": "Payment recorded. The garage is paid until {date}.",
+    "extendTitle": "Extend the trial",
+    "extendHint": "The trial ends on {date}. Only a garage that has never paid can be extended.",
+    "trialEndsOn": "New last trial day",
+    "extend": "Extend trial",
+    "trialExtended": "Trial extended.",
+    "invalid": {
+      "amount": "Enter an amount, for example 200 or 200.50.",
+      "paidOn": "Choose a date that is not in the future.",
+      "newExpiryDate": "Choose today or later, and not before the payment date.",
+      "extraBranches": "From 0 to 50.",
+      "note": "At most 500 characters.",
+      "trialEndsOn": "Choose a day after the current trial end, today or later."
+    }
+  },
+  "viewAs": {
+    "title": "View as garage",
+    "hint": "Opens the garage's own app in a new tab, read only, for one hour. Every page you open is logged.",
+    "getLink": "Get a view link",
+    "open": "Open {name} (read only)",
+    "expires": "The link works once, until {time}."
+  },
+  "applications": {
+    "title": "Applications",
+    "search": "Garage, owner, email or phone",
+    "searchButton": "Search",
+    "allStatuses": "All statuses",
+    "status": {
+      "NEW": "New",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "columns": {
+      "garage": "Garage",
+      "contact": "Owner",
+      "city": "City",
+      "status": "Status",
+      "received": "Received"
+    },
+    "branches": "{count, plural, one {# branch} other {# branches}}",
+    "empty": "No applications.",
+    "total": "{count, plural, one {# application} other {# applications}}",
+    "notFound": "This application does not exist.",
+    "backToList": "← Applications",
+    "details": "Application",
+    "fields": {
+      "ownerName": "Owner",
+      "email": "Email",
+      "phone": "Phone",
+      "city": "City or area",
+      "branchCount": "Branches",
+      "received": "Received"
+    },
+    "decision": "Decision",
+    "approveHint": "Approving opens the new garage form, filled in from this application. Creating the garage sends the owner's invite.",
+    "approve": "Approve…",
+    "rejectReason": "Reason for rejecting",
+    "rejectReasonInvalid": "Write a reason (3 to 500 characters).",
+    "reject": "Reject",
+    "reviewedBy": "Reviewed by",
+    "reviewedAt": "Reviewed on",
+    "garage": "Garage",
+    "openGarage": "Open the garage",
+    "earlier": "Earlier applications from this email or phone",
+    "noEarlier": "None.",
+    "approveTitle": "Approve: {name}",
+    "approveIntro": "Check the details and create the garage. They asked for {branches, plural, one {# branch} other {# branches}}; extra branches are added by the owner later.",
+    "backToApplication": "Back to the application",
+    "alreadyReviewed": "This application was already approved or rejected."
+  },
+  "monitoring": {
+    "title": "Monitoring",
+    "tabs": {
+      "expiring": "Expiring soon",
+      "usage": "Usage",
+      "failures": "Failed messages"
+    },
+    "paidEnding": "Paid periods ending in the next 3 weeks",
+    "trialsEnding": "Trials ending in the next 7 days",
+    "noneExpiring": "None.",
+    "columns": {
+      "garage": "Garage",
+      "ends": "Ends",
+      "customers": "Customers",
+      "vehicles": "Cars",
+      "invoices": "Invoices (month)",
+      "emails": "Emails sent / failed",
+      "whatsapp": "WhatsApp",
+      "lastLogin": "Last sign-in",
+      "lastVisit": "Last visit",
+      "when": "When",
+      "message": "Message",
+      "error": "Error"
+    },
+    "search": "Garage name",
+    "searchButton": "Search",
+    "allStatuses": "All statuses",
+    "paidAll": "Paid or not",
+    "paidYes": "Has paid",
+    "paidNo": "Never paid",
+    "activityAll": "Any activity",
+    "inactiveFor": "No use for {days} days",
+    "noGarages": "No garages.",
+    "usageNote": "Messages and invoices count this month. Counts only: customers' details stay with their garage.",
+    "garageCount": "{count, plural, one {# garage} other {# garages}}",
+    "failuresHint": "Messages that could not be sent, newest first. The recipient and the text stay with the garage.",
+    "noFailures": "No failed messages.",
+    "failureCount": "{count, plural, one {# failed message} other {# failed messages}}"
+  },
+  "business": {
+    "title": "Business",
+    "thisYear": "Revenue this year",
+    "lastYear": "Revenue last year",
+    "paidOnce": "Garages that have paid",
+    "neverPaid": "{count} never paid",
+    "garages": "Garages",
+    "byMonth": "The last 12 months",
+    "columns": {
+      "month": "Month",
+      "revenue": "Revenue",
+      "payments": "Payments",
+      "newGarages": "New garages"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "readOnly": "Only a super admin can change these settings.",
+    "groups": {
+      "subscription": "Subscription",
+      "reminders": "Reminders",
+      "usage": "Cars"
+    },
+    "fields": {
+      "trialDays": "Free trial (days)",
+      "yearPriceCents": "Price per year (USD)",
+      "extraBranchPriceCents": "Price per extra branch, per year (USD)",
+      "reminderDaytimeStartHour": "Send from (hour)",
+      "reminderDaytimeEndHour": "Send until (hour)",
+      "reminderFollowUps": "Follow-up reminders",
+      "reminderFollowUpDays": "Days between follow-ups",
+      "reminderMaxPerGaragePerMonth": "Reminder emails per garage per month",
+      "defaultDailyKm": "Daily km of a car with no history"
+    },
+    "hints": {
+      "trialDays": "For garages created from now on.",
+      "yearPriceCents": "Shown on the website.",
+      "extraBranchPriceCents": "Shown on the website.",
+      "reminderDaytimeStartHour": "Garage time, 0 to 23.",
+      "reminderDaytimeEndHour": "Garage time, not included; after the start.",
+      "reminderFollowUps": "After the first reminder, 0 to 5.",
+      "reminderFollowUpDays": "1 to 365.",
+      "reminderMaxPerGaragePerMonth": "Fair-use cap; 0 stops automatic emails.",
+      "defaultDailyKm": "When the garage set none."
+    },
+    "invalid": "Not a valid value.",
+    "save": "Save settings",
+    "saved": "Settings saved. They apply within a minute."
+  },
+  "serviceTypes": {
+    "title": "Default service types",
+    "hint": "Every garage starts from these. A garage that changed a type keeps its own version; a hidden type is no longer offered.",
+    "columns": {
+      "name": "Name",
+      "interval": "Interval",
+      "order": "Order",
+      "garages": "Overrides"
+    },
+    "months": "{count, plural, one {# month} other {# months}}",
+    "overrides": "{count, plural, =0 {None} one {# garage} other {# garages}}",
+    "hidden": "Hidden",
+    "edit": "Edit",
+    "add": "Add a service type",
+    "addTitle": "New service type",
+    "editTitle": "Edit {name}",
+    "fields": {
+      "code": "Code",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "sortOrder": "Order",
+      "km": "Every … km",
+      "mi": "Every … miles",
+      "months": "Every … months",
+      "isActive": "Offered to garages"
+    },
+    "codeHint": "Capital letters, digits and _; it never changes.",
+    "invalid": "Not valid.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "{name} saved."
   }
 }

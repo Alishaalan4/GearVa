@@ -63,6 +63,14 @@ export function addMonths(date: string, months: number): string {
   return `${year}-${pad(month)}-${pad(Math.min(d, lastDay))}`;
 }
 
+/** A calendar date plus whole days: 2026-02-27 + 2 = 2026-03-01. */
+export function addDays(date: string, days: number): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`Not a YYYY-MM-DD date: ${date}`);
+  const at = new Date(`${date}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}
+
 export interface NextDueInput {
   /** odometer at service time, km */
   odometerKm: number;

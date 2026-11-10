@@ -28,14 +28,21 @@
     "OWNER_ALREADY_ACTIVE": "المالك عيّن كلمة مرور بالفعل. أرسل رابط إعادة تعيين كلمة المرور بدلًا من ذلك.",
     "OWNER_NOT_ACTIVATED": "لم يعيّن المالك كلمة مرور بعد. أعد إرسال الدعوة بدلًا من ذلك.",
     "GARAGE_ALREADY_SUSPENDED": "هذا الكراج معلّق بالفعل.",
-    "GARAGE_NOT_SUSPENDED": "هذا الكراج غير معلّق."
+    "GARAGE_NOT_SUSPENDED": "هذا الكراج غير معلّق.",
+    "GARAGE_NOT_IN_TRIAL": "لا يمكن تمديد التجربة إلا لكراج لم يدفع من قبل.",
+    "SERVICE_TYPE_CODE_EXISTS": "يوجد نوع خدمة بهذا الرمز.",
+    "APPLICATION_ALREADY_REVIEWED": "تمت الموافقة على هذا الطلب أو رفضه من قبل."
   },
   "nav": {
     "brand": "إدارة Gearva",
     "garages": "الكراجات",
     "account": "الحساب",
     "signOut": "تسجيل الخروج",
-    "switchLanguage": "English"
+    "switchLanguage": "English",
+    "applications": "الطلبات",
+    "monitoring": "المراقبة",
+    "business": "الأعمال",
+    "settings": "الإعدادات"
   },
   "authSide": {
     "heading": "أدر كل الكراجات من مكان واحد.",
@@ -147,7 +154,8 @@
       "defaultLocale": "اختر لغة.",
       "ownerName": "أدخل اسم المالك.",
       "paidUntil": "اختر تاريخ اليوم أو تاريخًا لاحقًا."
-    }
+    },
+    "planTrialPlain": "تجربة مجانية"
   },
   "garageDetail": {
     "notFound": "هذا الكراج غير موجود.",
@@ -184,5 +192,215 @@
     "reactivate": "إعادة تفعيل الكراج",
     "suspended": "تم تعليق الكراج.",
     "reactivated": "تمت إعادة تفعيل الكراج."
+  },
+  "subscription": {
+    "title": "الاشتراك",
+    "noPayments": "لا دفعات بعد.",
+    "paidOn": "تاريخ الدفع",
+    "amount": "المبلغ",
+    "amountUsd": "المبلغ (دولار)",
+    "method": "الطريقة",
+    "methods": {
+      "CASH": "نقدًا",
+      "WHISH": "Whish"
+    },
+    "period": "الفترة المدفوعة",
+    "extraBranches": "فروع إضافية",
+    "recordedBy": "سجّلها",
+    "note": "ملاحظة (اختياري)",
+    "recordTitle": "تسجيل دفعة",
+    "priceHint": "السعر: {year} في السنة + {branches} {branches, plural, one {فرع إضافي} other {فروع إضافية}} × {branch} = {total}",
+    "newExpiry": "تاريخ الانتهاء الجديد (آخر يوم مشمول)",
+    "newExpiryHint": "المقترح: 12 شهرًا بعد الفترة المدفوعة الحالية، أو من اليوم.",
+    "record": "تسجيل الدفعة",
+    "paymentSaved": "سُجّلت الدفعة. الكراج مدفوع حتى {date}.",
+    "extendTitle": "تمديد التجربة",
+    "extendHint": "تنتهي التجربة في {date}. لا يمكن التمديد إلا لكراج لم يدفع من قبل.",
+    "trialEndsOn": "آخر يوم جديد للتجربة",
+    "extend": "تمديد التجربة",
+    "trialExtended": "مُدّدت التجربة.",
+    "invalid": {
+      "amount": "أدخل مبلغًا، مثل 200 أو 200.50.",
+      "paidOn": "اختر تاريخًا ليس في المستقبل.",
+      "newExpiryDate": "اختر اليوم أو بعده، وليس قبل تاريخ الدفع.",
+      "extraBranches": "من 0 إلى 50.",
+      "note": "500 حرف كحدّ أقصى.",
+      "trialEndsOn": "اختر يومًا بعد نهاية التجربة الحالية، اليوم أو بعده."
+    }
+  },
+  "viewAs": {
+    "title": "العرض ككراج",
+    "hint": "يفتح تطبيق الكراج نفسه في علامة تبويب جديدة، للقراءة فقط، لمدة ساعة. كل صفحة تفتحها تُسجَّل.",
+    "getLink": "الحصول على رابط العرض",
+    "open": "فتح {name} (قراءة فقط)",
+    "expires": "يعمل الرابط مرة واحدة، حتى {time}."
+  },
+  "applications": {
+    "title": "الطلبات",
+    "search": "الكراج أو المالك أو البريد أو الهاتف",
+    "searchButton": "بحث",
+    "allStatuses": "كل الحالات",
+    "status": {
+      "NEW": "جديد",
+      "APPROVED": "مقبول",
+      "REJECTED": "مرفوض"
+    },
+    "columns": {
+      "garage": "الكراج",
+      "contact": "المالك",
+      "city": "المدينة",
+      "status": "الحالة",
+      "received": "تاريخ الوصول"
+    },
+    "branches": "{count, plural, one {فرع واحد} two {فرعان} few {# فروع} other {# فرعًا}}",
+    "empty": "لا طلبات.",
+    "total": "{count, plural, one {طلب واحد} two {طلبان} few {# طلبات} other {# طلبًا}}",
+    "notFound": "هذا الطلب غير موجود.",
+    "backToList": "→ الطلبات",
+    "details": "الطلب",
+    "fields": {
+      "ownerName": "المالك",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "city": "المدينة أو المنطقة",
+      "branchCount": "الفروع",
+      "received": "تاريخ الوصول"
+    },
+    "decision": "القرار",
+    "approveHint": "الموافقة تفتح نموذج الكراج الجديد معبّأً من هذا الطلب. إنشاء الكراج يرسل دعوة المالك.",
+    "approve": "موافقة…",
+    "rejectReason": "سبب الرفض",
+    "rejectReasonInvalid": "اكتب سببًا (من 3 إلى 500 حرف).",
+    "reject": "رفض",
+    "reviewedBy": "راجعه",
+    "reviewedAt": "تاريخ المراجعة",
+    "garage": "الكراج",
+    "openGarage": "فتح الكراج",
+    "earlier": "طلبات سابقة من هذا البريد أو الهاتف",
+    "noEarlier": "لا شيء.",
+    "approveTitle": "موافقة: {name}",
+    "approveIntro": "تحقّق من البيانات وأنشئ الكراج. طلبوا {branches, plural, one {فرعًا واحدًا} two {فرعين} few {# فروع} other {# فرعًا}}؛ يضيف المالك الفروع الإضافية لاحقًا.",
+    "backToApplication": "العودة إلى الطلب",
+    "alreadyReviewed": "تمت الموافقة على هذا الطلب أو رفضه من قبل."
+  },
+  "monitoring": {
+    "title": "المراقبة",
+    "tabs": {
+      "expiring": "تنتهي قريبًا",
+      "usage": "الاستخدام",
+      "failures": "رسائل فاشلة"
+    },
+    "paidEnding": "فترات مدفوعة تنتهي خلال 3 أسابيع",
+    "trialsEnding": "تجارب تنتهي خلال 7 أيام",
+    "noneExpiring": "لا شيء.",
+    "columns": {
+      "garage": "الكراج",
+      "ends": "تنتهي",
+      "customers": "الزبائن",
+      "vehicles": "السيارات",
+      "invoices": "الفواتير (الشهر)",
+      "emails": "رسائل مُرسلة / فاشلة",
+      "whatsapp": "واتساب",
+      "lastLogin": "آخر دخول",
+      "lastVisit": "آخر زيارة",
+      "when": "الوقت",
+      "message": "الرسالة",
+      "error": "الخطأ"
+    },
+    "search": "اسم الكراج",
+    "searchButton": "بحث",
+    "allStatuses": "كل الحالات",
+    "paidAll": "دفع أو لا",
+    "paidYes": "دفع",
+    "paidNo": "لم يدفع أبدًا",
+    "activityAll": "أي نشاط",
+    "inactiveFor": "بلا استخدام منذ {days} يومًا",
+    "noGarages": "لا كراجات.",
+    "usageNote": "الرسائل والفواتير لهذا الشهر. أعداد فقط: بيانات الزبائن تبقى عند كراجها.",
+    "garageCount": "{count, plural, one {كراج واحد} two {كراجان} few {# كراجات} other {# كراجًا}}",
+    "failuresHint": "رسائل لم تُرسَل، الأحدث أولًا. المستلم والنص يبقيان عند الكراج.",
+    "noFailures": "لا رسائل فاشلة.",
+    "failureCount": "{count, plural, one {رسالة فاشلة واحدة} two {رسالتان فاشلتان} few {# رسائل فاشلة} other {# رسالة فاشلة}}"
+  },
+  "business": {
+    "title": "الأعمال",
+    "thisYear": "إيرادات هذه السنة",
+    "lastYear": "إيرادات السنة الماضية",
+    "paidOnce": "كراجات دفعت",
+    "neverPaid": "{count} لم يدفع أبدًا",
+    "garages": "الكراجات",
+    "byMonth": "آخر 12 شهرًا",
+    "columns": {
+      "month": "الشهر",
+      "revenue": "الإيرادات",
+      "payments": "الدفعات",
+      "newGarages": "كراجات جديدة"
+    }
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "readOnly": "وحده المدير الأعلى يستطيع تغيير هذه الإعدادات.",
+    "groups": {
+      "subscription": "الاشتراك",
+      "reminders": "التذكيرات",
+      "usage": "السيارات"
+    },
+    "fields": {
+      "trialDays": "التجربة المجانية (أيام)",
+      "yearPriceCents": "السعر في السنة (دولار)",
+      "extraBranchPriceCents": "سعر الفرع الإضافي في السنة (دولار)",
+      "reminderDaytimeStartHour": "الإرسال من (الساعة)",
+      "reminderDaytimeEndHour": "الإرسال حتى (الساعة)",
+      "reminderFollowUps": "تذكيرات المتابعة",
+      "reminderFollowUpDays": "الأيام بين المتابعات",
+      "reminderMaxPerGaragePerMonth": "رسائل التذكير لكل كراج في الشهر",
+      "defaultDailyKm": "الكيلومترات اليومية لسيارة بلا سجل"
+    },
+    "hints": {
+      "trialDays": "للكراجات التي تُنشأ من الآن.",
+      "yearPriceCents": "يظهر على الموقع.",
+      "extraBranchPriceCents": "يظهر على الموقع.",
+      "reminderDaytimeStartHour": "بتوقيت الكراج، من 0 إلى 23.",
+      "reminderDaytimeEndHour": "بتوقيت الكراج، غير مشمولة؛ بعد البداية.",
+      "reminderFollowUps": "بعد التذكير الأول، من 0 إلى 5.",
+      "reminderFollowUpDays": "من 1 إلى 365.",
+      "reminderMaxPerGaragePerMonth": "حدّ الاستخدام العادل؛ 0 يوقف الرسائل التلقائية.",
+      "defaultDailyKm": "عندما لم يحدّد الكراج قيمة."
+    },
+    "invalid": "قيمة غير صالحة.",
+    "save": "حفظ الإعدادات",
+    "saved": "حُفظت الإعدادات. تُطبَّق خلال دقيقة."
+  },
+  "serviceTypes": {
+    "title": "أنواع الخدمات الافتراضية",
+    "hint": "يبدأ كل كراج من هذه الأنواع. الكراج الذي عدّل نوعًا يحتفظ بنسخته؛ النوع المخفي لا يُعرض بعد الآن.",
+    "columns": {
+      "name": "الاسم",
+      "interval": "المدة",
+      "order": "الترتيب",
+      "garages": "تعديلات الكراجات"
+    },
+    "months": "{count, plural, one {شهر واحد} two {شهران} few {# أشهر} other {# شهرًا}}",
+    "overrides": "{count, plural, =0 {لا شيء} one {كراج واحد} two {كراجان} few {# كراجات} other {# كراجًا}}",
+    "hidden": "مخفي",
+    "edit": "تعديل",
+    "add": "إضافة نوع خدمة",
+    "addTitle": "نوع خدمة جديد",
+    "editTitle": "تعديل {name}",
+    "fields": {
+      "code": "الرمز",
+      "nameEn": "الاسم (بالإنجليزية)",
+      "nameAr": "الاسم (بالعربية)",
+      "sortOrder": "الترتيب",
+      "km": "كل … كم",
+      "mi": "كل … ميل",
+      "months": "كل … أشهر",
+      "isActive": "معروض للكراجات"
+    },
+    "codeHint": "أحرف إنجليزية كبيرة وأرقام و_؛ لا يتغيّر أبدًا.",
+    "invalid": "غير صالح.",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "saved": "حُفظ {name}."
   }
 }

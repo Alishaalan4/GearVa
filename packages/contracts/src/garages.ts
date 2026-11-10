@@ -11,7 +11,7 @@ export type GarageStatus = (typeof GARAGE_STATUSES)[number];
 export const LOCALES = ['ar', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
 
-/** Free trial length until system settings exist (Phase 5: `trial.days`). */
+/** The default free trial length; the `trial.days` system setting overrides it (step 5.3). */
 export const TRIAL_DAYS = 30;
 
 const today = () => new Date().toISOString().slice(0, 10);

@@ -50,8 +50,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.4 API: monitoring lists, usage counts, business view | ✅ Done | 2026-11-09 |
 | 5 | 5.5 API: view as garage (read-only, access log) | ✅ Done | 2026-11-09 |
 | 5 | 5.6 Applications API and the public website pages in garage-web | ✅ Done | 2026-11-10 |
-| 5 | 5.7 admin web screens (Done-when check) | Next | |
-| Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | | |
+| 5 | 5.7 admin web screens (Done-when check) | ✅ Done | 2026-11-10 |
+| Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | Next | |
 
 ---
 
@@ -1596,7 +1596,7 @@ By the user: the first `npm test` run (all passed, but showed the audit errors a
 - All API tests twice in a row (262), `test:tenancy` (46), `format:check`, lint and typecheck.
 
 By the user: the commit commands.
-**Commit:** _(filled in at the next step)_
+**Commit:** `82f1ce8` — `Phase 5.6: applications and the public website`
 
 ---
 
@@ -1621,6 +1621,71 @@ The cure, `npm run db:reset`, failed. It ran `prisma migrate reset`, which dropp
 **Doc changes:** README section 4 (scripts).
 
 **Verified:** by me: on the user's database (no grant yet) it refuses and changes nothing; typecheck, lint and format. By the user: the grant, then `npm run db:reset`.
-**Commit:** with step 5.6.
+**Commit:** `830d874` — `Phase 5.6: applications and the public website; fix db:reset`
+
+---
+
+## Phase 5 · Step 5.7 — Admin screens, and the Phase 5 "Done when" check
+**When:** 2026-11-10 (~3 h)
+
+**Implements:** flow.md 11.1 to 11.6; README 6 (Phase 5 "Done when").
+
+**Summary:** The admin app now has a screen for everything Phase 5 added to the API:
+1. **Garage page:**
+   - A **Subscription** card lists the payments and records a new one. The amount is filled in from the prices in the settings, and the new expiry from the suggested date.
+   - **Extend trial** shows only for a garage that has never paid.
+   - **View as garage** gets a one-time link that opens the garage's app, read only.
+2. **Applications** (new menu item):
+   - The list, new first, with search and a status filter.
+   - The detail page shows the earlier applications from the same email or phone, and rejects with a reason.
+   - **Approve** opens the new-garage form, filled in from the application; creating the garage approves it.
+3. **Monitoring:** three tabs:
+   - garages expiring soon (paid and trials);
+   - usage per garage, with filters for status, paid and inactive days;
+   - failed messages.
+4. **Business:** revenue this year and last year, by method; garages that have paid and by status; and the last 12 months.
+5. **Settings:** the platform settings and the default service types (add, edit, hide). Super admins edit; other admins only read, as the API already enforces.
+6. **The new-garage form** shows the trial length from the settings, not the old fixed 30 days.
+
+**Decisions**
+- **The view-as link is fetched, then clicked.** A tab opened after a request is blocked as a pop-up, and the link works for 2 minutes anyway.
+- **End dates are shown as the UTC calendar day.** Access ends at the end of that day in UTC, which is already the next morning in Beirut. Shown in local time, "paid until" was one day late. This had been so since Phase 1 in the garage list and page, and is fixed everywhere.
+- **The money helpers moved to contracts.** `centsToDecimal` and `dollarsToCents` are now shared by both apps; garage-web re-exports them, so its imports did not change. `addDays` is new next to `addMonths`.
+
+**Problems hit and fixed**
+- **The success message after a payment named the wrong date:** the next suggestion (2028) instead of the new expiry. Seen in a screenshot, fixed, and now checked in the browser.
+- **The garage page scrolled sideways on a phone:** the grid column grew to fit the payments table. `grid-cols-1` lets the column shrink, so the table scrolls inside its own frame.
+- **A browser-check run stopped on the website:** the Apply rate limit (5 an hour per address) had blocked it, as designed. I cleared the test stack's counters.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/admin/features/garages/subscription-card.tsx`, `view-as-card.tsx` (new), `garage-detail.tsx`, `garage-list.tsx`, `garage-form.tsx` | Payments, trial, view as garage; end dates; the form reused for approvals, with the trial days from the settings |
+| `apps/admin/features/applications/*` (new) | List, detail with reject, approve |
+| `apps/admin/features/monitoring/monitoring-page.tsx`, `business/business-page.tsx` (new) | Monitoring tabs, business view |
+| `apps/admin/features/settings/*` (new) | Settings form, default service types, the settings query |
+| `apps/admin/app/[locale]/(panel)/{applications,monitoring,business,settings}/**` (new), `components/panel-shell.tsx` | Pages and menu |
+| `apps/admin/components/pager.tsx`, `table.tsx`, `lib/format.ts` (new), `lib/api.ts` | Shared list pieces, money and date formats, `apiPatch` |
+| `apps/admin/messages/*.json` | Texts (English and Arabic), and three error codes |
+| `packages/contracts/src/money.ts`, `next-due.ts`, `garages.ts`; `test/money.test.ts`, `test/next-due.test.ts` | Money helpers moved here, `addDays`, tests; the `TRIAL_DAYS` comment |
+| `apps/garage-web/lib/format.ts` | Re-exports the moved helpers |
+
+**Doc changes:** flow.md 11.1 (end dates shown as the UTC day; what the payment form fills in).
+
+**Verified:** by me:
+- **The Phase 5 "Done when" in real Chrome,** in Beirut time, against a throwaway stack: 26 of 26 checks.
+  - Two visitors apply on the website. The admin rejects one with a reason, and approves the other through the filled-in form, with a trial of the settings' length; the owner invite is queued.
+  - The trial is extended a week. A payment at the settings' price makes the garage active and paid for a year, shown as the right day.
+  - View as garage opens its app read only. Suspend and reactivate work.
+  - Monitoring finds the garage; the business view shows the revenue; a super admin changes the price, and the service types are listed.
+  - Five admin pages in Arabic fit a phone without sideways scrolling.
+  - Nothing was changed in the database by hand: it was only read, to check each step.
+- All tests: 262 API, 46 tenancy, contracts (79) and database. `format:check`, lint and typecheck.
+- **Not in the browser:** a trial ending turns the garage `EXPIRED` through the hourly job (tested in step 5.2).
+
+**Phase 5 "Done when" — the admin can run the whole subscription lifecycle without touching the database:** met.
+
+By the user: stop the two leftover test web servers (ports 3100 and 3101), then the commit commands.
+**Commit:** _(filled in at the next step)_
 
 ---

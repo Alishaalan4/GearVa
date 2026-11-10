@@ -21,6 +21,8 @@ export const ERROR_CODES = {
   GARAGE_NOT_IN_TRIAL: 'GARAGE_NOT_IN_TRIAL',
   /** A default service type with this code already exists (flow.md 11.4). */
   SERVICE_TYPE_CODE_EXISTS: 'SERVICE_TYPE_CODE_EXISTS',
+  /** The application was already approved or rejected (flow.md 11.6). */
+  APPLICATION_ALREADY_REVIEWED: 'APPLICATION_ALREADY_REVIEWED',
   /** An admin viewing a garage cannot change anything (flow.md 11.3). */
   VIEW_ONLY: 'VIEW_ONLY',
   GARAGE_LOCKED: 'GARAGE_LOCKED',

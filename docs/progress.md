@@ -49,8 +49,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.3 API: system settings (constants move here) and global service types | ✅ Done | 2026-11-09 |
 | 5 | 5.4 API: monitoring lists, usage counts, business view | ✅ Done | 2026-11-09 |
 | 5 | 5.5 API: view as garage (read-only, access log) | ✅ Done | 2026-11-09 |
-| 5 | 5.6 Applications API and the public website pages in garage-web | Next | |
-| 5 | 5.7 admin web screens (Done-when check) | | |
+| 5 | 5.6 Applications API and the public website pages in garage-web | ✅ Done | 2026-11-10 |
+| 5 | 5.7 admin web screens (Done-when check) | Next | |
 | Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | | |
 
 ---
@@ -1542,6 +1542,60 @@ By the user: the checks, then the commit.
 - All tests 3 times in a row (251 API tests), `test:tenancy` (46), `format:check`, lint and typecheck; after the audit fix, a full run with 0 "Audit write failed" lines.
 
 By the user: the first `npm test` run (all passed, but showed the audit errors above); after the fix, the commit commands.
+**Commit:** `133db7f` — `Phase 5.5: view as garage, read only, with access logs`
+
+---
+
+## Phase 5 · Step 5.6 — Applications and the public website
+**When:** 2026-11-10 (~2 h)
+
+**Implements:** flow.md 11.6; database.md 4.1 (`garage_applications`, `system_settings`); README 6 (Phase 5: website inside garage-web).
+
+**Summary:** Garages can now ask to join, and admins can review them through the API:
+1. **The website:** `/welcome` in garage-web shows what Gearva does, the prices from the system settings ($200 a year, $100 per extra branch, the free trial days), and the Apply form. A visitor opening `/` lands there. The sign-in page links to it.
+2. **Apply:** garage name, owner, email, phone, city or area, branches, and an optional message. The visitor only sees "we will contact you". It is limited to 5 an hour per IP and has a hidden honeypot field.
+3. **Admin API:** a list with new applications first; a detail with earlier applications from the same email or phone; approve, which creates the garage and its owner invite from the filled-in create form; and reject, with a reason. The admin screens come in 5.7.
+
+**Decisions**
+- **One landing page,** with the form at its end, as in the design prototype, instead of separate pages.
+- **The website claims only what exists now:** reminders by email and WhatsApp. No mobile app and no offers until Phases 6 and 7.
+- **Approve takes the create-garage form,** so the admin can correct what the visitor typed. The garage and the application's mark are saved in one transaction.
+- **No migration:** the table has existed since 5.1.
+
+**Problems hit and fixed**
+- **One full test run** had the tenancy suite's setup time out (30 s), while my browser-check servers (API and Next dev) were running on the same machine. With them stopped, two full runs in a row passed. The setup waits for two invoice PDFs, so it is sensitive to CPU load. Not changed; worth remembering if it happens in CI.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/applications.ts` (new), `index.ts`, `errors.ts` | `applySchema`, `PublicPricing`, list, reject and detail types, `APPLICATION_ALREADY_REVIEWED` |
+| `apps/api/src/applications/*` (new), `app.module.ts` | Public pricing and Apply (rate limit, honeypot) |
+| `apps/api/src/admin/applications/*` (new), `admin.module.ts` | List, detail, approve, reject |
+| `apps/api/src/admin/garages/admin-garages.service.ts` | `create` takes a step to run in its transaction |
+| `apps/garage-web/app/[locale]/welcome/page.tsx`, `features/website/*` (new) | The landing page and the Apply form |
+| `apps/garage-web/components/app-shell.tsx`, `features/auth/login-form.tsx`, `lib/format.ts`, `messages/*.json` | `/` to the website when signed out, the Apply link, whole-dollar prices, texts (English and Arabic) |
+| `apps/api/test/applications.spec.ts` (new), `test/tenancy.spec.ts` | 11 tests; the two public routes |
+
+**Doc changes:** flow.md 11.6 (how it works).
+
+**Verified:** by me:
+- The 11 new tests cover:
+  - the prices come from the settings;
+  - an application is stored as NEW, with no account;
+  - the honeypot stores nothing;
+  - the form checks, and admin-only review;
+  - new first, with filters, and earlier applications;
+  - approve creates the garage, its invite and the audit row, once only;
+  - a failed creation leaves the application NEW;
+  - two approvals at once create one garage;
+  - reject needs a reason and is final.
+- Real Chrome against a throwaway stack (12 of 12 checks):
+  - `/` goes to the website with the real prices, and other pages still go to sign in;
+  - field errors show, the honeypot is out of sight, and sending stores one NEW row with the phone in E.164;
+  - Arabic is right to left, with no sideways scroll at phone width.
+- All API tests twice in a row (262), `test:tenancy` (46), `format:check`, lint and typecheck.
+
+By the user: the commit commands.
 **Commit:** _(filled in at the next step)_
 
 ---

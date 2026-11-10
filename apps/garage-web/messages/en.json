@@ -79,7 +79,9 @@
     "submit": "Sign in",
     "emailInvalid": "Enter a valid email.",
     "passwordRequired": "Enter your password.",
-    "forgot": "Forgot your password? Ask the garage owner to send you a reset link."
+    "forgot": "Forgot your password? Ask the garage owner to send you a reset link.",
+    "newGarage": "New garage?",
+    "apply": "Apply to use Gearva"
   },
   "setPassword": {
     "title": "Set your password",
@@ -540,5 +542,130 @@
     "noCode": "This link is incomplete. Open \"View as garage\" again from the admin app.",
     "banner": "You are viewing {garage} as a Gearva admin. Read only; every page you open is logged.",
     "exit": "Leave"
+  },
+  "website": {
+    "signIn": "Sign in",
+    "applyNow": "Apply now",
+    "nav": {
+      "features": "Features",
+      "how": "How it works",
+      "pricing": "Pricing"
+    },
+    "hero": {
+      "title": "Your customers forget.",
+      "titleAccent": "Gearva remembers and brings them back.",
+      "lead": "The simple system for garages: a private customer database, a reminder for every service, and an invoice for every visit.",
+      "apply": "Apply for your garage",
+      "how": "See how it works"
+    },
+    "sample": {
+      "sent": "Reminder sent today at 9:00",
+      "message": "Hello Karim, your Toyota Corolla is due for an oil change at 10,500 km.",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "car": "Toyota Corolla · A 123456",
+      "km": "9,800 km",
+      "dueLabel": "Oil change due at",
+      "due": "10,500 km"
+    },
+    "features": {
+      "title": "Everything a garage needs, nothing it doesn't",
+      "lead": "Built to be fast for mechanics. If entering a service takes more than a few seconds, nobody uses it, so entry is the first thing we made quick.",
+      "quick": {
+        "title": "Quick entry in seconds",
+        "text": "Search by plate or phone, pick the service, confirm. The next change is worked out for you."
+      },
+      "reminders": {
+        "title": "A reminder for every service",
+        "text": "Oil, filters, brakes, battery and more. Each service has its own interval in km or months."
+      },
+      "channels": {
+        "title": "Email and WhatsApp",
+        "text": "Reminders go out by email on their own, in the daytime. Or send one on WhatsApp in a tap."
+      },
+      "invoices": {
+        "title": "An invoice for every visit",
+        "text": "A clean PDF in Arabic or English, partial payments, and a list of who still owes you."
+      },
+      "staff": {
+        "title": "Branches and staff",
+        "text": "Add branches and staff accounts, and give each role only what it needs."
+      },
+      "private": {
+        "title": "Private by design",
+        "text": "Only your garage sees your customers. Nothing can be exported, and every access is logged."
+      }
+    },
+    "how": {
+      "title": "How it works",
+      "lead": "From application to your first reminder in a few days.",
+      "apply": {
+        "title": "Apply",
+        "text": "Fill in the form below. We contact you and show you around."
+      },
+      "account": {
+        "title": "We create your account",
+        "text": "You get an email with a link to set your password."
+      },
+      "customers": {
+        "title": "Add your customers",
+        "text": "Enter each customer and their cars, or add them as they come in."
+      },
+      "reminders": {
+        "title": "Reminders run by themselves",
+        "text": "Customers are reminded on time and come back. You see everything on your screen."
+      }
+    },
+    "pricing": {
+      "title": "One price for every garage",
+      "perYear": "per year",
+      "details": "Each extra branch {branch} a year. The first {days} days are free. Pay in cash or with Whish.",
+      "ask": "Ask us for the price when we contact you.",
+      "included": {
+        "customers": "Unlimited customers and cars",
+        "reminders": "Reminders by email and WhatsApp",
+        "invoices": "Invoices, payments and debts",
+        "staff": "Staff accounts for every role"
+      },
+      "yes": "Included"
+    },
+    "questions": {
+      "title": "Questions",
+      "app": {
+        "q": "Do my customers need an app?",
+        "a": "No. They get their reminders by email or WhatsApp."
+      },
+      "data": {
+        "q": "Who owns the customer data?",
+        "a": "You do. Only your garage can see your customers, and nothing can be exported."
+      },
+      "start": {
+        "q": "How do I get started?",
+        "a": "Apply below. Once approved, you get an email to set your password and can start adding customers."
+      }
+    },
+    "apply": {
+      "title": "Apply to use Gearva",
+      "lead": "Tell us about your garage. We review every application and contact you to set up your account.",
+      "garageName": "Garage name",
+      "garageNameError": "Enter the garage name.",
+      "ownerName": "Owner name",
+      "ownerNameError": "Enter the owner's name.",
+      "email": "Email",
+      "emailError": "Enter a valid email.",
+      "phone": "Phone (WhatsApp)",
+      "phoneError": "Enter a valid phone number.",
+      "city": "City or area",
+      "cityError": "Enter the city or area.",
+      "branches": "Branches",
+      "branchesError": "From 1 to 50 branches.",
+      "message": "Message (optional)",
+      "messageError": "At most 1,000 characters.",
+      "submit": "Send application",
+      "sentTitle": "Application received.",
+      "sentText": "Thank you. We will contact you by phone or email shortly.",
+      "again": "Send another application"
+    },
+    "footer": "Gearva · Keep you moving"
   }
 }

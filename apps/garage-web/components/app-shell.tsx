@@ -19,9 +19,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const staff = useStaff();
 
   const notSignedIn = staff.error instanceof ApiError && staff.error.status === 401;
+  // flow.md 11.6: a visitor opening the start page sees the website; other pages ask to sign in.
   useEffect(() => {
-    if (notSignedIn) router.replace('/login');
-  }, [notSignedIn, router]);
+    if (notSignedIn) router.replace(pathname === '/' ? '/welcome' : '/login');
+  }, [notSignedIn, pathname, router]);
 
   const signOut = useMutation({
     mutationFn: () => apiPost<void>('/v1/auth/logout'),

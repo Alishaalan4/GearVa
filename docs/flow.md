@@ -488,6 +488,12 @@ The public website is a few pages inside `garage-web` (no separate app): a landi
 2. **Admin Applications page:** new applications first. **Approve** opens the create-garage form already filled in (trial by default), and creating the garage marks the application `APPROVED` and links it to the garage; the owner gets the invite email as in section 2.1. **Reject** needs a reason and marks it `REJECTED`. Both are audit logged.
 3. The same email or phone can apply again later; the admin sees earlier applications from it.
 
+How it works (step 5.6):
+- **The website** is `/welcome` in garage-web. A visitor who is not signed in and opens `/` is sent there; every other app page still sends them to sign in. The sign-in page links to the Apply form (`/welcome#apply`). The prices come from `GET /v1/public/pricing` (year price, extra branch price, trial days).
+- **Apply:** `POST /v1/public/applications`, at most 5 per hour from one IP. The answer is always `202` with nothing in it. When the hidden `website` field (the honeypot) is filled in, nothing is stored and only a warning is logged. The visitor is nobody, so there is no audit row; the application keeps the IP.
+- **Admin API:** `GET /admin/v1/applications` (new first, then newest; filter by status, search by garage, owner, email or phone), `GET /admin/v1/applications/:id` (with up to 20 earlier applications from the same email or phone), `POST …/:id/approve` (the body is the create-garage form; the garage and the application's `APPROVED` mark are saved in one transaction, so a garage that cannot be created leaves the application `NEW`, and two admins approving at once create one garage), and `POST …/:id/reject` (a reason, 3 to 500 characters). An application that was already reviewed answers `409 APPLICATION_ALREADY_REVIEWED`. Every admin may review.
+- The audit row of an approval is the new garage's (`application.approve`), like `garage.create`; a rejection's is the application's (`application.reject`).
+
 ### 11.5 Business view
 Subscription revenue per month and year, and growth (garages new, renewed, lost). The cost of notifications per garage comes with a paid channel (decision 2026-11-09). API (step 5.4): `GET /admin/v1/business`: the last 12 months (revenue, payments, new garages), this year's and last year's revenue, this year's revenue by method, garages per status, and how many have paid at least once.
 

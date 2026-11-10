@@ -62,8 +62,13 @@ export class AdminGaragesService {
   /**
    * flow.md 2.1: garage + default settings + main branch BR1 + OWNER without password,
    * in one transaction, plus the queued invite email. The email is sent after commit.
+   * `alsoInTx` runs in the same transaction with the new garage's id (approving an
+   * application, flow.md 11.6), so both happen or neither does.
    */
-  async create(input: CreateGarageInput): Promise<GarageDetail> {
+  async create(
+    input: CreateGarageInput,
+    alsoInTx?: (tx: Prisma.TransactionClient, garageId: string) => Promise<void>,
+  ): Promise<GarageDetail> {
     const adminId = this.context.actor?.id;
     if (!adminId) throw new Error('create garage needs an admin actor');
     const now = new Date();
@@ -107,6 +112,7 @@ export class AdminGaragesService {
           },
         });
         const notification = await this.links.issue(tx, owner, garage.name, 'invite');
+        await alsoInTx?.(tx, garage.id);
         return { garageId: garage.id, invite: notification };
       }));
     } catch (error) {

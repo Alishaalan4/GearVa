@@ -7,6 +7,7 @@ import type Redis from 'ioredis';
 import { ClsModule } from 'nestjs-cls';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AdminModule } from './admin/admin.module';
+import { ApplicationsModule } from './applications/applications.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { StaffGuard } from './auth/staff.guard';
@@ -70,6 +71,7 @@ import { VisitsModule } from './visits/visits.module';
     VisitsModule,
     RemindersModule,
     SubscriptionsModule,
+    ApplicationsModule,
     HealthModule,
   ],
   providers: [

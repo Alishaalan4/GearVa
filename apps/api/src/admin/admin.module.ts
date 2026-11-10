@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { AdminGuard } from './admin.guard';
+import { AdminApplicationsController } from './applications/admin-applications.controller';
+import { AdminApplicationsService } from './applications/admin-applications.service';
 import { AdminAuthController } from './auth/admin-auth.controller';
 import { AdminAuthService } from './auth/admin-auth.service';
 import { AdminGaragesController } from './garages/admin-garages.controller';
@@ -23,6 +25,7 @@ import {
     AdminSettingsController,
     AdminServiceTypesController,
     AdminMonitoringController,
+    AdminApplicationsController,
   ],
   providers: [
     AdminAuthService,
@@ -31,6 +34,7 @@ import {
     AdminSubscriptionsService,
     AdminServiceTypesService,
     AdminMonitoringService,
+    AdminApplicationsService,
   ],
 })
 export class AdminModule {}

@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
-import { useRouter } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { apiPost, lockReasonOf } from '@/lib/api';
 import { AuthLayout } from './auth-layout';
 import { STAFF_QUERY_KEY } from './use-staff';
@@ -61,6 +61,12 @@ export function LoginForm() {
           {t('submit')}
         </Button>
         <p className="text-center text-xs text-muted">{t('forgot')}</p>
+        <p className="text-center text-sm">
+          {t('newGarage')}{' '}
+          <Link href="/welcome#apply" className="font-semibold text-brand-ink underline">
+            {t('apply')}
+          </Link>
+        </p>
       </form>
     </AuthLayout>
   );

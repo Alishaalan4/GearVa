@@ -32,6 +32,9 @@ const NO_TENANT_DATA: Record<string, string> = {
   'POST /v1/auth/logout': 'revokes only the presented refresh token',
   'POST /v1/auth/view-as':
     'the one-time code decides admin and garage; view-as sessions are tested in view-as.spec.ts',
+  'GET /v1/public/pricing': 'the platform prices from system settings; no garage data',
+  'POST /v1/public/applications':
+    'a visitor applying from the website; writes only garage_applications (applications.spec.ts)',
 };
 
 interface Side {

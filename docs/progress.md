@@ -1599,3 +1599,28 @@ By the user: the commit commands.
 **Commit:** _(filled in at the next step)_
 
 ---
+
+## Phase 5 · Fix — `db:reset` on the development database
+**When:** 2026-11-10 (~30 min)
+
+**Summary:** The user's `npm run dev` logged a reminder scan error per garage every hour, and old test emails. The cause was data left in the development database from 19 to 22 October, before tests had their own database (step 1.7): 115 `[test]` garages, 48 of them without a settings row. The old test invites still waiting were "sent" (console only) once, at startup.
+
+The cure, `npm run db:reset`, failed. It ran `prisma migrate reset`, which dropped the `public` schema and then could not create it again: `gearva_migrator` owns the schema but has no CREATE right on the database. It also would not restore the app roles' USAGE grant on the schema. It had been broken since the roles were split in Phase 1, and left the development database empty this time.
+
+**Fix:**
+- `db:reset` is now `reset-dev-db.ts`. It runs only against a local host, and checks the CREATE right before it drops anything. Without the right it prints the one-time grant command and changes nothing. It then drops and recreates the schema, restores the grant, applies the migrations and seeds.
+- `docker-init.sh` gives that right on new volumes.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/src/scripts/reset-dev-db.ts` (new), `package.json` | The reset |
+| `packages/database/sql/docker-init.sh` | CREATE on the database for the migrator (local only) |
+| `README.md` | Section 4: what `db:reset` does and needs |
+
+**Doc changes:** README section 4 (scripts).
+
+**Verified:** by me: on the user's database (no grant yet) it refuses and changes nothing; typecheck, lint and format. By the user: the grant, then `npm run db:reset`.
+**Commit:** with step 5.6.
+
+---

@@ -19,7 +19,7 @@
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "reset": "prisma migrate reset",
+    "reset": "npm run build && node dist/scripts/reset-dev-db.js && prisma db seed",
     "studio": "prisma studio",
     "seed": "npm run build && prisma db seed",
     "rls:sql": "tsc -p tsconfig.build.json && node dist/scripts/print-rls-sql.js",

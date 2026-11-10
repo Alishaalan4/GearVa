@@ -146,6 +146,8 @@ test:tenancy          # the tenant-isolation suite, must always pass
 
 `db:seed` and `test:tenancy` are added in Phase 1, when there is something to seed and test.
 
+`db:reset` (local only) empties the development database, applies every migration and seeds it. It is a script of its own, not `prisma migrate reset`, which needs rights the migrator role does not have and loses the app roles' schema grant. It needs the migrator to have CREATE on the database: new Docker volumes get it from `docker-init.sh`; an older volume needs it once (the script prints the command).
+
 ### Environment variables (`.env.example`)
 
 ```

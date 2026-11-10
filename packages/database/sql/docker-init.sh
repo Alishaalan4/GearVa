@@ -11,3 +11,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
 # Local only: `prisma migrate dev` creates a shadow database, so the migrator needs CREATEDB.
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   -c "ALTER ROLE gearva_migrator CREATEDB;"
+
+# Local only: `npm run db:reset` drops and recreates the public schema.
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+  -c "GRANT CREATE ON DATABASE \"$POSTGRES_DB\" TO gearva_migrator;"

@@ -56,6 +56,9 @@ export function tenantPolicySql(table: string): string {
     `CREATE POLICY tenant_isolation ON "${table}"`,
     `  USING (${column} = ${CURRENT_GARAGE})`,
     `  WITH CHECK (${column} = ${CURRENT_GARAGE});`,
+    // database.md 6.1: the platform role, even without BYPASSRLS (managed Postgres).
+    `CREATE POLICY platform_access ON "${table}" TO gearva_platform`,
+    `  USING (true) WITH CHECK (true);`,
   ];
   if ((GLOBAL_DEFAULT_TABLES as readonly string[]).includes(table)) {
     // Permissive policies are OR-ed for SELECT only: global rows become readable, while

@@ -4,7 +4,7 @@ import { ACCESS_TTL_SECONDS, MFA_TTL_SECONDS, REFRESH_TTL_SECONDS } from './sess
 /**
  * Auth cookies (README 5.2): httpOnly, SameSite=Lax, Secure in production, and
  * host-only (no Domain). The web apps forward /admin/v1/* and /v1/* to the API, so the
- * browser sees the cookies as belonging to admin.gearva.online / app.gearva.online.
+ * browser sees the cookies as belonging to admin.gearva.online / gearva.online.
  * Paths keep each cookie off requests that do not need it.
  */
 export const ADMIN_COOKIES = {

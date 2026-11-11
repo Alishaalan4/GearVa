@@ -1,0 +1,128 @@
+# Render Blueprint (README 9): the whole Gearva setup in one file.
+# Render dashboard > New > Blueprint > this repo. Values marked `sync: false` are asked for
+# once, when the Blueprint is created; the step-by-step list is in docs/deploy.md.
+#
+# Everything starts on the free plan (decision 2026-11-05): services sleep after 15 minutes
+# without visitors, the database is deleted 30 days after it is created, and Redis keeps
+# nothing across restarts. Change each plan to a paid one before a real garage uses it.
+
+envVarGroups:
+  - name: gearva-shared
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      # The web apps send it with each forwarded request, so the API trusts the visitor
+      # IP they pass on (README 9, "Real client IPs").
+      - key: PROXY_SECRET
+        generateValue: true
+
+services:
+  - type: web
+    name: gearva-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    # devDependencies (TypeScript, Nest CLI, Prisma CLI) are needed to build, and the
+    # Prisma CLI also at start, for the migrations.
+    buildCommand: npm ci --include=dev && npx turbo run build --filter=@gearva/api
+    # The free plan has no pre-deploy command: migrations and the seed run at each start.
+    startCommand: npm run start:render -w @gearva/api
+    healthCheckPath: /health
+    domains:
+      - api.gearva.online
+    envVars:
+      - fromGroup: gearva-shared
+      # From `npm run bootstrap:render -w @gearva/database` (database.md 6.1).
+      - key: DATABASE_URL
+        sync: false
+      - key: MIGRATION_DATABASE_URL
+        sync: false
+      - key: PLATFORM_DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: gearva-redis
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: TOTP_ENCRYPTION_KEY # 32 random bytes in base64, as generateValue makes
+        generateValue: true
+      - key: APP_URL_GARAGE
+        value: https://gearva.online
+      - key: EMAIL_ADAPTER
+        value: resend
+      - key: EMAIL_FROM
+        value: Gearva <no-reply@gearva.online>
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FILES_ADAPTER
+        value: s3
+      - key: S3_ENDPOINT # https://<account id>.r2.cloudflarestorage.com
+        sync: false
+      - key: S3_BUCKET
+        value: gearva-files
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      # Puppeteer downloads Chrome during `npm ci`; inside the project it survives from
+      # the build to the running service (README 9).
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/src/.cache/puppeteer
+      # The first super-admin, created by the seed at the first start (kept if it exists).
+      - key: SEED_ADMIN_EMAIL
+        value: admin@gearva.online
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: gearva-garage-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npx turbo run build --filter=@gearva/garage-web
+    startCommand: npm run start -w @gearva/garage-web
+    # The website and the garage app. Render also sends www.gearva.online here.
+    domains:
+      - gearva.online
+    envVars:
+      - fromGroup: gearva-shared
+      - key: API_URL
+        value: https://api.gearva.online
+      - key: PUPPETEER_SKIP_DOWNLOAD # Chrome is only for the API
+        value: 'true'
+
+  - type: web
+    name: gearva-admin
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npx turbo run build --filter=@gearva/admin
+    startCommand: npm run start -w @gearva/admin
+    domains:
+      - admin.gearva.online
+    envVars:
+      - fromGroup: gearva-shared
+      - key: API_URL
+        value: https://api.gearva.online
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: 'true'
+
+  - type: keyvalue
+    name: gearva-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: [] # reachable only from Render services in the same region
+    # BullMQ needs every job kept: never evict keys when memory is full.
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: gearva-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: '17'
+    databaseName: gearva
+    user: gearva_admin

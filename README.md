@@ -97,6 +97,7 @@ gearva/
 ├── docs/                         # flow.md, database.md
 ├── .github/workflows/ci.yml      # CI: lint, typecheck, test, test:tenancy (section 8)
 ├── docker-compose.yml            # Postgres + Redis for local development
+├── render.yaml                   # Render Blueprint: every production service (section 9)
 ├── turbo.json
 ├── package.json                  # npm workspaces
 ├── .env.example
@@ -173,17 +174,21 @@ SEED_ADMIN_PASSWORD=
 SEED_DEMO_OWNER_EMAIL=owner@demo.gearva.local       # development only: demo garage owner login
 SEED_DEMO_OWNER_PASSWORD=                            # 10+ characters; empty = no demo garage
 
-# Email (adapter: console | resend | ses)
+# Email (adapter: console | resend)
 EMAIL_ADAPTER=console
 EMAIL_FROM="Gearva <no-reply@gearva.online>"
-RESEND_API_KEY=
+RESEND_API_KEY=                                      # required with EMAIL_ADAPTER=resend
 
-# Files (adapter: local | s3)
+# Files (adapter: local | s3); s3 = Cloudflare R2 in production, all four required
 FILES_ADAPTER=local
-S3_ENDPOINT=
+S3_ENDPOINT=                                         # https://<account id>.r2.cloudflarestorage.com
 S3_BUCKET=
 S3_ACCESS_KEY=
 S3_SECRET_KEY=
+
+# Shared by the API and both web apps (32+ characters, required in production): the web
+# apps pass the visitor's IP on to the API with it (section 9). Empty locally.
+PROXY_SECRET=
 
 # Later
 WHATSAPP_ADAPTER=disabled
@@ -208,7 +213,7 @@ Anyone writing code here (human or AI) must follow these.
 - Admin roles: `SUPER_ADMIN`, `ADMIN`. Admin TOTP 2FA is optional per admin and recommended (flow.md 2.3). Admin endpoints live only under `apps/api/src/admin` with `AdminGuard`.
 - Owners (mobile) log in with an email and password given by their garage (decision 2026-10-29, replacing phone + one-time code; designed in Phase 6, see flow.md 2.4).
 - Access tokens are JWTs that last 15 minutes. Refresh tokens are random values that last 30 days; only their hash is stored in `sessions`. Every refresh replaces the token, and presenting an already-replaced one revokes all of that person's sessions (it means the token was copied).
-- Both live in httpOnly, SameSite=Lax cookies (Secure in production) that are **host-only**: each web app forwards its API paths to the API (`admin` forwards `/admin/v1/*`, `garage-web` forwards `/v1/*`), so the browser sees the cookies as belonging to `admin.gearva.online` or `app.gearva.online` and never sends admin cookies to the garage app or the other way round. No CORS and no shared cookie domain are needed.
+- Both live in httpOnly, SameSite=Lax cookies (Secure in production) that are **host-only**: each web app forwards its API paths to the API (`admin` forwards `/admin/v1/*`, `garage-web` forwards `/v1/*`), so the browser sees the cookies as belonging to `admin.gearva.online` or `gearva.online` and never sends admin cookies to the garage app or the other way round. No CORS and no shared cookie domain are needed.
 
 ### 5.3 Subscription lock
 A global guard rejects every garage request when the garage is `SUSPENDED` or `expiresAt < now`, with error code `GARAGE_LOCKED`. The web app shows a lock screen. No manual work is needed after the date passes.
@@ -333,36 +338,44 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 
 ---
 
-## 9. Deployment on Render (when the first slice works)
+## 9. Deployment on Render
 
-Everything runs on **Render**, managed from one dashboard. Render is chosen to avoid server work. The code stays host-independent, so it can move to a VPS later if costs matter.
+Everything runs on **Render**, managed from one dashboard, and is defined in `render.yaml` (a Blueprint). Render is chosen to avoid server work. The code stays host-independent, so it can move to a VPS later if costs matter. The first deployment, step by step, is in `docs/deploy.md`.
 
-### Services (one Render workspace, one project)
+### Services (one Render workspace, region Frankfurt)
 
-| Render service | Type | Root directory | Notes |
+| Render service | Type | Domain | Notes |
 |---|---|---|---|
-| `gearva-api` | Web Service (Node) | `apps/api` | Health check path `/health`. Start on Starter; move to a bigger plan if Puppeteer runs out of memory |
-| `gearva-garage-web` | Web Service (Node) | `apps/garage-web` | Next.js (V1) |
-| `gearva-admin` | Web Service (Node) | `apps/admin` | Next.js (V2), separate service and domain |
-| `gearva-db` | Managed Postgres (paid plan) | n/a | Do not use the free database, it expires after 30 days |
-| `gearva-redis` | Key-Value (Redis-compatible) | n/a | Used by BullMQ and rate limiting |
-| `gearva-worker` (later) | Background Worker | `apps/api` | Runs `worker.ts` once the BullMQ jobs become heavy. Until then workers run inside the API process |
+| `gearva-api` | Web Service (Node) | `api.gearva.online` | Health check `/health`. Runs the migrations and the seed at every start, then the API (with its BullMQ workers and Chrome for PDFs) |
+| `gearva-garage-web` | Web Service (Node) | `gearva.online` (and `www`) | Next.js (V1): the website and the garage app |
+| `gearva-admin` | Web Service (Node) | `admin.gearva.online` | Next.js (V2), separate service and domain |
+| `gearva-db` | Render Postgres 17 | n/a | Three roles, made once with `npm run bootstrap:render -w @gearva/database` (database.md 6.1) |
+| `gearva-redis` | Key Value (Redis-compatible) | n/a | BullMQ and rate limits. `noeviction`, reachable only inside Render |
+| `gearva-worker` (later) | Background Worker | n/a | Runs `worker.ts` once the BullMQ jobs become heavy. Until then workers run inside the API process |
 
-Keep **one repo**. Each service points at its folder inside the monorepo and builds from the repo root.
+Outside Render: **Resend** sends the emails (`EMAIL_ADAPTER=resend`), and **Cloudflare R2** keeps logos and invoice PDFs (`FILES_ADAPTER=s3`, bucket `gearva-files`). The domain's DNS stays where the domain was bought.
 
-### How to deploy
-1. Add a `render.yaml` (Blueprint) at the repo root that defines the services above, so the whole setup is created in one step.
-2. Build command (from the repo root): `npm ci && npx turbo run build --filter=<workspace-name>`. Start command: for example `node apps/api/dist/main.js` for the API and `npm run start --workspace apps/garage-web` for the web apps.
-3. Run migrations as the API's **pre-deploy command**: `npx prisma migrate deploy` (it uses `MIGRATION_DATABASE_URL`).
-4. Put environment variables in a Render **environment group** shared by the services. Never commit secrets.
-5. Deploys happen automatically on every push to `main`. Use a separate Render project or branch for staging if you need one.
-6. Custom domains: `app.gearva.online` (garage-web), `admin.gearva.online` (admin), `api.gearva.online` (api), and `API_URL=https://api.gearva.online` for the two web apps. Login cookies are host-only and travel through each web app's forwarding (section 5.2), so they work on any domain; the custom domains are for the product, not for cookies.
+Keep **one repo**. Every service builds from the repo root, with no root directory set.
 
-### Things to check when you set it up
-- **Postgres roles:** the design uses three DB roles (database.md section 6). Confirm that Render's Postgres lets you create roles. If it does not allow `BYPASSRLS`, use the policy fallback described in database.md section 6.1.
-- **Puppeteer:** Chrome must be available at runtime. Either set `PUPPETEER_CACHE_DIR` to a folder inside the project so the build keeps the download, or deploy the API with a Dockerfile.
-- **Free instances sleep** after 15 minutes without traffic, so use them for demos only. Real garages need paid always-on services.
-- **Starting free (decision 2026-11-05):** the first version runs on free instances for test users, and moves to paid plans before a real garage uses it. The plan of each service can be changed later without rebuilding anything. Check these free-plan limits when deploying, on Render's current pricing page: the free Postgres is deleted after 30 days (recreate it, or take the smallest paid plan); a sleeping service takes about a minute to wake; 512 MB may not be enough for the API with Chrome; and features such as the pre-deploy command and private services may need a paid plan, so migrations might have to run in the start command at first.
+### How it deploys
+1. **Build** (each service): `npm ci --include=dev && npx turbo run build --filter=<workspace>`. `--include=dev` because `NODE_ENV=production` would otherwise skip TypeScript, the Nest CLI and the Prisma CLI.
+2. **Start:** the API runs `npm run start:render -w @gearva/api`: `prisma migrate deploy` (as `gearva_migrator`), the seed (super-admin and global service types; existing rows are kept), then `node dist/main.js`. The free plan has no pre-deploy command, so migrations run here; on a paid plan they can move to the pre-deploy command. The web apps run `next start`.
+3. **Settings:** shared ones (`NODE_ENV`, `NODE_VERSION`, `PROXY_SECRET`) in the environment group `gearva-shared`; the rest on each service. Secrets are generated by Render (`JWT_ACCESS_SECRET`, `TOTP_ENCRYPTION_KEY`, `PROXY_SECRET`) or typed in once (`sync: false`). Never commit secrets.
+4. Deploys happen automatically on every push to `main`. Use a separate Render project or branch for staging if you need one.
+5. **Domains:** `API_URL=https://api.gearva.online` for the two web apps, `APP_URL_GARAGE=https://gearva.online` for the links in emails. Login cookies are host-only and travel through each web app's forwarding (section 5.2), so they work on any domain.
+
+### Decisions and checks
+- **Postgres roles (checked 2026-11-11 on a Postgres set up like Render's):** Render gives a database user that is not a superuser. `bootstrap:render` creates the three roles from your computer, with the External Database URL, and prints the API's three connection URLs (internal host). If the host refuses `BYPASSRLS`, `gearva_platform` is made without it: every table with RLS has a `platform_access` policy for that role (database.md 6.1), so it works either way. The whole test suite passes with `gearva_platform NOBYPASSRLS`.
+- **Puppeteer:** `PUPPETEER_CACHE_DIR` points inside the project, so the Chrome downloaded during `npm ci` is still there at runtime. The web apps skip the download. If Chrome does not start on Render, deploy the API with a Dockerfile instead.
+- **Starting free (decision 2026-11-05):** the first version runs on free plans for test users, and moves to paid plans before a real garage uses it. The plan of each service can be changed later without rebuilding anything. Free-plan limits (Render docs, 2026-11-11):
+  - Services sleep after 15 minutes without visitors and take about a minute to wake. The hourly jobs (reminders, garage expiry) only run while the API is awake.
+  - The free Postgres (1 GB) is **deleted 30 days after it is created**, with 14 days of grace to upgrade. Take the smallest paid plan before that, or the data is lost.
+  - The free Key Value (25 MB) keeps nothing across restarts: queued jobs are lost, and the hourly jobs are set up again at start.
+  - Each service has 512 MB, which may be tight for the API with Chrome. No shell and no pre-deploy command.
+  - The Hobby workspace includes 2 custom domains; each further one costs about $0.25 a month.
+- **Files:** logos and invoice PDFs live in R2, never on Render's disk, which is wiped on every deploy and every free-plan spin-down.
+- **Real client IPs (found in the 2026-10-23 review, done in the deploy step):** browsers reach the API through the web apps' forwarding, so Render's proxy sees the web app, not the visitor. Each web app's `proxy.ts` sends the visitor's address (`cf-connecting-ip`, set by Render's Cloudflare edge, or else the last `X-Forwarded-For` entry) in `x-gearva-client-ip`, together with `PROXY_SECRET`. The API uses it only with the right secret (`app.setup.ts`), so rate limits, sessions and audit rows get the visitor's IP, and nobody can choose their own. `PROXY_SECRET` is required in production. After the first deployment, check that a new admin session shows your own IP.
+- **Production settings:** `NODE_ENV=production` on every service (auth cookies are only `Secure` in production, and the seed refuses demo data there), `JWT_ACCESS_SECRET` of 32+ characters, and security headers on both web apps in `next.config.ts` (`X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `Strict-Transport-Security`).
 - **Backups:** turn on the database plan's backups and **test a restore** before the first real garage goes live. Optionally also run a nightly `pg_dump` to object storage.
 - **Files:** keep invoice PDFs and photos in object storage (Cloudflare R2), not on Render's disk, which is lost on redeploy unless you attach a paid disk.
 - **Monitoring:** Sentry for errors, plus an uptime monitor on `/health`.
@@ -371,7 +384,7 @@ Keep **one repo**. Each service points at its folder inside the monorepo and bui
 - **Emails stuck in `QUEUED`:** a notification row is written in the request's transaction and queued in Redis after commit. If Redis fails in between, the row stays `QUEUED` (the request still succeeds and the failure is logged, step 1.8). Phase 4's retries must include a job that re-queues old `QUEUED` rows; until then, check for them after any Redis outage.
 
 ### Expected cost
-Roughly $30-45 per month for three small services, Postgres and Redis. A larger API plan for Puppeteer adds about $20. Check Render's pricing page for current prices.
+On the free plans (the start): about $0.50 per month for the two custom domains beyond the included two. Paid, roughly $30-45 per month for three small services, Postgres and Redis. A larger API plan for Puppeteer adds about $20. Check Render's pricing page for current prices.
 
 ---
 

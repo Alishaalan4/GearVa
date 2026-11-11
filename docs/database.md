@@ -503,16 +503,16 @@ Enum values are mirrored in `packages/contracts` so the API, web and mobile apps
 | `gearva_platform` | Admin module and auth credential lookups (`PLATFORM_DATABASE_URL`) | `BYPASSRLS`. Used only for: admin usage counts, login lookups, daily jobs that iterate garages. Any use that reads garage records must write an `admin_access_logs` row |
 
 **Creating the roles.** Roles are cluster-level and need a superuser (or `CREATEROLE`), which `gearva_migrator` must not have, so they are **not** created in a Prisma migration. Instead:
-- A one-time bootstrap script `packages/database/sql/bootstrap-roles.sql` creates the three roles (passwords from env) and makes `gearva_migrator` the owner of the database's `public` schema. Locally, Docker Compose runs it on first start of an empty Postgres volume. On Render, run it once as the admin user from the dashboard's shell or `psql`.
+- A one-time bootstrap script `packages/database/sql/bootstrap-roles.sql` creates the three roles (passwords from env) and makes `gearva_migrator` the owner of the database's `public` schema. Locally, Docker Compose runs it on first start of an empty Postgres volume. On Render (no shell on the free plan) the same is done from your computer by `npm run bootstrap:render -w @gearva/database -- "<External Database URL>"`, which also gives the roles random passwords and prints the API's three connection URLs.
 - Every Prisma migration (run as `gearva_migrator`) grants rights on **the tables it creates**, by name: `SELECT, INSERT, UPDATE, DELETE` to `gearva_app` and `gearva_platform` (platform tables from section 2 go to `gearva_platform` only, unless the table's section says the API needs them under tenant context), or `SELECT, INSERT` only for append-only tables (`audit_logs`, `payments`). There are no default privileges, so a new table has no access until its migration grants it, and neither runtime role has any right on `_prisma_migrations`. Keep the passwords in env variables.
 
-**Managed Postgres note (Render):** managed databases usually do not let you grant `BYPASSRLS`. If that is the case, do not give `gearva_platform` that attribute. Instead add an explicit policy for that role on every tenant table:
+**Managed Postgres (Render), in place since the deploy step (2026-11-11):** managed databases usually do not let you grant `BYPASSRLS`, so `gearva_platform` must not depend on it. Every table with RLS has an explicit policy for that role (migration `platform_access_policies`; `tenantPolicySql` adds it for new tenant tables):
 
 ```sql
 CREATE POLICY platform_access ON vehicles TO gearva_platform USING (true) WITH CHECK (true);
 ```
 
-The isolation guarantees stay the same, because `gearva_app` still only matches its own `garage_id`. `owners` has RLS enabled too (section 6.6), so it needs the same `platform_access` policy. Also confirm early (Phase 1) that the hosting plan lets you create the three roles. If it only gives one database user, tell me and we will adjust the role design.
+The isolation guarantees stay the same, because a policy applies only to the roles it names, and `gearva_app` still only matches its own `garage_id`. `owners` has RLS enabled too (section 6.6), so it has the same `platform_access` policy. Table grants still limit what `gearva_platform` may do (payments and access logs stay append-only). `bootstrap:render` asks for `BYPASSRLS` and creates the role without it if refused; the test suite passes both ways, and `rls.test.ts` fails if a table with RLS lacks the policy. Creating roles needs `CREATEROLE`; if a host only gives one database user, the script says so and changes nothing.
 
 ### 6.2 Policy pattern
 

@@ -51,7 +51,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.5 API: view as garage (read-only, access log) | ✅ Done | 2026-11-09 |
 | 5 | 5.6 Applications API and the public website pages in garage-web | ✅ Done | 2026-11-10 |
 | 5 | 5.7 admin web screens (Done-when check) | ✅ Done | 2026-11-10 |
-| Deploy | First deployment to Render on free instances, real email (Resend) and files (R2) (README 9) | Next | |
+| Deploy | D.1 Code ready for hosting: Blueprint, Resend and R2 adapters, visitor IPs, headers, Render DB setup | ✅ Done | 2026-11-11 |
+| Deploy | D.2 The user creates the accounts and services (docs/deploy.md), then the live checks | Next | |
 
 ---
 
@@ -1686,6 +1687,84 @@ The cure, `npm run db:reset`, failed. It ran `prisma migrate reset`, which dropp
 **Phase 5 "Done when" — the admin can run the whole subscription lifecycle without touching the database:** met.
 
 By the user: stop the two leftover test web servers (ports 3100 and 3101), then the commit commands.
+**Commit:** `72deedd`
+
+---
+
+## Deploy · Step D.1 — Code ready for hosting at gearva.online
+**When:** 2026-11-11 (~2.5 h)
+
+**Implements:** README 9 (Deployment on Render); database.md 6.1 (roles, the managed-Postgres fallback); README 5.5 (email adapter) and 3 (files).
+
+**Summary:** Everything the code needs to run on Render at **gearva.online**. The user creates the accounts and services next, following `docs/deploy.md`.
+1. **`render.yaml` (Blueprint), all on free plans in Frankfurt:**
+   - `gearva-api` at `api.gearva.online`, `gearva-garage-web` at `gearva.online` (website and garage app), `gearva-admin` at `admin.gearva.online`;
+   - Postgres 17 `gearva-db`, and Key Value `gearva-redis` (`noeviction`, internal only);
+   - the environment group `gearva-shared`. Render generates the secrets; the rest is typed in once.
+2. **The API starts the Render way:** `start:render` runs `prisma migrate deploy`, then the seed, then the API. The free plan has no pre-deploy command and no shell.
+3. **Real email:** `EMAIL_ADAPTER=resend` sends through Resend's HTTP API with `fetch` (no SDK). A rate limit or a Resend outage is retried; a refused email is final.
+4. **Files in R2:** `FILES_ADAPTER=s3` (`@aws-sdk/client-s3`, path-style URLs). Render's disk is wiped on every deploy and every spin-down.
+5. **Visitor IPs:** both web apps' `proxy.ts` now also handle the forwarded API paths.
+   - They send the visitor's address (`cf-connecting-ip`, or else the last `X-Forwarded-For` entry) with the shared `PROXY_SECRET`.
+   - The API uses it only with the right secret, so rate limits, sessions and audit rows get the visitor's IP, and nobody can choose their own.
+   - `PROXY_SECRET` is required in production.
+6. **Security headers** on both web apps: `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, HSTS, and no `X-Powered-By`.
+7. **Database on Render:**
+   - `npm run bootstrap:render -w @gearva/database -- "<External URL>"`, run from the user's computer, creates the three roles with random passwords and prints the API's three connection URLs (internal host).
+   - The new migration `platform_access_policies` gives `gearva_platform` an explicit policy on every table with RLS, so it works without `BYPASSRLS`, which managed hosts may refuse.
+
+**Decisions**
+- **The garage app lives on the bare domain** `gearva.online`, not `app.gearva.online`, because the website is part of it (step 5.6). Render redirects `www` there. The docs and email links follow.
+- **The platform policies are always there,** not added only if Render refuses `BYPASSRLS`. One design either way, tested both ways, and no second round trip during the deployment.
+- **Region Frankfurt:** the closest Render region to Lebanon.
+- **Empty optional settings count as unset** (`S3_ENDPOINT=` in `.env` is not an invalid URL).
+
+**Problems hit and fixed**
+- **The first full test run failed in 20 files:** `S3_ENDPOINT=` (empty, from `.env`) was read as an invalid URL. Fixed with the empty-means-unset rule.
+- **MinIO's image is no longer on Docker Hub** (pull access denied). The storage check used Adobe's S3Mock instead.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `render.yaml` (new) | The Blueprint |
+| `docs/deploy.md` (new) | The user's step-by-step list |
+| `apps/api/src/config/env.ts` | `resend`, `s3`, `RESEND_API_KEY`, `S3_*`, `PROXY_SECRET`; required together; empty means unset |
+| `apps/api/src/notifications/adapters/resend-email.channel.ts` (new), `notifications.module.ts` | The Resend adapter, picked by `EMAIL_ADAPTER` |
+| `apps/api/src/files/file-storage.ts`, `files.module.ts` | `S3FileStorage`, picked by `FILES_ADAPTER` |
+| `apps/api/src/app.setup.ts` | Trusts the forwarded visitor IP only with the secret |
+| `apps/api/package.json`, `package-lock.json` | `@aws-sdk/client-s3`; the `start:render` script |
+| `apps/api/test/deploy-adapters.spec.ts` (new) | Resend adapter and IP forwarding tests |
+| `apps/{garage-web,admin}/proxy.ts`, `lib/forward-api.ts` (new), `next.config.ts` | Visitor IP to the API; security headers |
+| `packages/database/prisma/migrations/20261111090000_platform_access_policies/` (new) | `platform_access` on all 23 tables with RLS |
+| `packages/database/src/tenant-tables.ts`, `test/rls.test.ts` | The generator adds the policy; a test fails if a table with RLS lacks it |
+| `packages/database/src/scripts/bootstrap-render-db.ts` (new), `package.json` | `bootstrap:render` |
+| `apps/api/src/auth/cookies.ts`, `.env.example` | Comment; the new settings |
+
+**Doc changes:**
+- README 9 rewritten: services, how it deploys, free-plan limits, the decisions above. The repository tree, the environment list and the cost line are updated.
+- database.md 6.1: `bootstrap:render`, and the platform policies now in place.
+- flow.md 1: links on `gearva.online`.
+
+**Verified:** by me:
+- **The whole test suite with `gearva_platform NOBYPASSRLS`:** 262 API, 46 tenancy, database and contracts. Then again with the role restored, plus the 6 new tests. Typecheck and lint pass.
+- **A Render-like database:** a throwaway Postgres 17 whose admin user has only `CREATEROLE`, like Render's.
+  - `bootstrap:render` created the roles (BYPASSRLS refused, fallback used) and handed the schema to the migrator.
+  - `start:render`, with `NODE_ENV=production`, applied all 8 migrations, seeded the super-admin and 11 service types, and started the API (`/health` ok).
+- **The production builds of both web apps against that API:**
+  - An admin login through the admin app stored the visitor IP from `cf-connecting-ip`, and ignored a forged `x-gearva-client-ip`.
+  - The same forged header sent straight to the API was ignored.
+  - A garage-web login went through its forwarding.
+  - All the security headers are present.
+- **R2 code:** a put and get round trip against S3Mock; a missing file comes back as none.
+- **Not checked yet (needs the real services):**
+  - Resend actually delivering;
+  - Chrome starting on Render;
+  - Render's real header for the visitor IP;
+  - the Blueprint itself.
+
+  These are Part F of `docs/deploy.md`.
+
+By the user: the commit commands, then `docs/deploy.md`.
 **Commit:** _(filled in at the next step)_
 
 ---

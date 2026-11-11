@@ -61,6 +61,22 @@ describe('RLS coverage', () => {
       expect(row, row.relname).toMatchObject({ enabled: true, forced: true, has_policy: true });
     }
   });
+
+  it('every table with RLS lets gearva_platform in by policy, not only by BYPASSRLS', async () => {
+    // database.md 6.1: Render may refuse BYPASSRLS, so the platform role must not need it.
+    const rows = await platform.$queryRaw<{ relname: string; has_policy: boolean }[]>`
+      SELECT c.relname,
+             EXISTS (SELECT 1 FROM pg_policies p
+                     WHERE p.schemaname = 'public' AND p.tablename = c.relname
+                       AND p.policyname = 'platform_access'
+                       AND p.roles = '{gearva_platform}'
+                       AND p.qual = 'true' AND p.with_check = 'true') AS has_policy
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity`;
+
+    expect(rows.length).toBeGreaterThan(TENANT_TABLES.length);
+    for (const row of rows) expect(row, row.relname).toMatchObject({ has_policy: true });
+  });
 });
 
 describe('Phase 5 platform tables', () => {

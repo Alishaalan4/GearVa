@@ -2,16 +2,18 @@ import { hasLocale } from 'next-intl';
 import createMiddleware from 'next-intl/middleware';
 import { type NextRequest, NextResponse } from 'next/server';
 import { LOCALE_COOKIE, routing } from './i18n/routing';
+import { forwardToApi } from './lib/forward-api';
 
 const handleI18n = createMiddleware(routing);
 
 /**
- * Next 16 "proxy" (formerly middleware): adds the /en or /ar prefix to page URLs. A URL
+ * Next 16 "proxy" (formerly middleware): passes the visitor's IP on to the API, and adds the /en or /ar prefix to page URLs. A URL
  * without one (such as the invite link /set-password?token=...) opens in the language the
  * person last chose with the language switch, or in English when they never chose.
  */
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname.startsWith('/v1/')) return forwardToApi(request);
   const prefixed = routing.locales.some(
     (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`),
   );
@@ -25,6 +27,6 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Not for the forwarded API (/v1), Next internals or files with an extension.
-  matcher: ['/((?!v1/|_next|_vercel|.*\\..*).*)'],
+  // Pages and the forwarded API (/v1); not Next internals or files with an extension.
+  matcher: ['/v1/:path*', '/((?!v1/|_next|_vercel|.*\\..*).*)'],
 };

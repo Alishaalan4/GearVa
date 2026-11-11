@@ -3,6 +3,10 @@ import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 import { z } from 'zod';
 
+/** An optional variable; `NAME=` with nothing after it (as in .env.example) counts as unset. */
+const unsetIfEmpty = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
+
 // Only the variables the API uses so far. Each step adds its own (README section 4).
 const envSchema = z
   .object({
@@ -11,12 +15,20 @@ const envSchema = z
     DATABASE_URL: z.url(),
     PLATFORM_DATABASE_URL: z.url(),
     REDIS_URL: z.url(),
-    // Only the console adapter exists until the first deployment (Phase 3).
-    EMAIL_ADAPTER: z.enum(['console']).default('console'),
+    // `console` prints emails (development, tests); `resend` sends them (production).
+    EMAIL_ADAPTER: z.enum(['console', 'resend']).default('console'),
     EMAIL_FROM: z.string().min(1),
-    // Only the local adapter exists until the first deployment (step 3.8).
-    FILES_ADAPTER: z.enum(['local']).default('local'),
+    RESEND_API_KEY: unsetIfEmpty(z.string()),
+    // `local` keeps files in a folder (development, tests); `s3` in Cloudflare R2 (production).
+    FILES_ADAPTER: z.enum(['local', 's3']).default('local'),
     FILES_LOCAL_DIR: z.string().min(1).default('.storage'),
+    S3_ENDPOINT: unsetIfEmpty(z.url()),
+    S3_BUCKET: unsetIfEmpty(z.string()),
+    S3_ACCESS_KEY: unsetIfEmpty(z.string()),
+    S3_SECRET_KEY: unsetIfEmpty(z.string()),
+    // Shared with the two web apps. A request carrying it comes through their forwarding,
+    // so its x-gearva-client-ip header is the visitor's address (README 9). Empty: off.
+    PROXY_SECRET: unsetIfEmpty(z.string().min(32)),
     // Redis key prefix of the BullMQ queues (BullMQ's default). A test that swaps a
     // notification channel uses its own, so other test files' workers never take its jobs.
     QUEUE_PREFIX: z.string().min(1).default('bull'),
@@ -43,6 +55,17 @@ const envSchema = z
         path: ['JWT_ACCESS_SECRET'],
         message: 'must be at least 32 characters in production',
       });
+    }
+    const missing = (name: keyof typeof env, when: string) => {
+      if (!env[name])
+        ctx.addIssue({ code: 'custom', path: [name], message: `is required ${when}` });
+    };
+    if (env.NODE_ENV === 'production') missing('PROXY_SECRET', 'in production');
+    if (env.EMAIL_ADAPTER === 'resend') missing('RESEND_API_KEY', 'with EMAIL_ADAPTER=resend');
+    if (env.FILES_ADAPTER === 's3') {
+      for (const name of ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY', 'S3_SECRET_KEY'] as const) {
+        missing(name, 'with FILES_ADAPTER=s3');
+      }
     }
   });
 

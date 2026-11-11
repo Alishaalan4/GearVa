@@ -42,7 +42,7 @@ This matrix is enforced by a `RolesGuard` in the API. The web app hides what a r
 ### 2.1 Admin creates a garage
 1. Admin opens "New garage" in V2 and enters business name, email, phone, location text, and either ticks a free trial (30 days) or enters a **paid-until date** (required when there is no trial).
 2. API (`POST /admin/v1/garages`), in one transaction, creates: `garages` row (`status = TRIAL` with `trialEndsAt`, or `status = ACTIVE` with `isPaid = true` and `expiresAt` = the paid-until date), `garage_settings` with defaults, one main `branches` row (`code = BR1`), and one `users` row with `role = OWNER`, no password yet.
-3. API generates a single-use invite token (stored hashed, expires in 7 days) and queues an `INVITE` email to the garage's email with a link to `app.gearva.online/set-password?token=...`.
+3. API generates a single-use invite token (stored hashed, expires in 7 days) and queues an `INVITE` email to the garage's email with a link to `gearva.online/set-password?token=...`.
 4. The owner opens the link, sets a password, and is logged in.
 5. Admin can regenerate the invite or trigger a password reset from V2 at any time.
 
@@ -50,14 +50,14 @@ Details (Phase 1, step 1.5):
 - The garage email is also the owner's login email (`users.email` is globally unique, so an email that is already a login is refused with `EMAIL_ALREADY_USED` and nothing is created). The admin also enters the owner's name.
 - Trial: `trialEndsAt = now + 30 days` (constant until `trial.days` exists in Phase 5). Paid: the admin picks the last paid day; `expiresAt` is the end of that day (UTC).
 - Main branch: `code = BR1`, named after the garage.
-- Links: the invite lasts 7 days; a password reset lasts 24 hours. Both are `app.gearva.online/set-password?token=...` and share `users.inviteTokenHash` (only the token's SHA-256 is stored); a new link replaces the previous one. Resend invite only while the owner has no password (`OWNER_ALREADY_ACTIVE`), reset only after (`OWNER_NOT_ACTIVATED`).
+- Links: the invite lasts 7 days; a password reset lasts 24 hours. Both are `gearva.online/set-password?token=...` and share `users.inviteTokenHash` (only the token's SHA-256 is stored); a new link replaces the previous one. Resend invite only while the owner has no password (`OWNER_ALREADY_ACTIVE`), reset only after (`OWNER_NOT_ACTIVATED`).
 - Endpoints: `POST /admin/v1/garages`, `GET /admin/v1/garages` (`q`, `status`, pagination), `GET /admin/v1/garages/:garageId`, `POST .../:garageId/invite`, `.../password-reset`, `.../suspend` (reason required), `.../reactivate` (back to `TRIAL` if unpaid with a trial, else `ACTIVE`). Each mutation writes an audit row with the garage id.
 
 ### 2.2 Login (garage staff)
 1. `POST /v1/auth/login` with email and password.
 2. Auth looks up the user by email (platform DB role), checks `isActive`, verifies the argon2 hash, and loads the garage.
 3. If the garage is `SUSPENDED` or expired, return `GARAGE_LOCKED` (the web app shows a lock screen with the garage's renewal message).
-4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies, host-only on `app.gearva.online` through the app's API forwarding (README 5.2).
+4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies, host-only on `gearva.online` through the app's API forwarding (README 5.2).
 5. Login attempts are rate limited per IP and per email.
 
 Details (Phase 1, step 1.6):

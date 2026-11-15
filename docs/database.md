@@ -99,17 +99,18 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| phone | text U | E.164, the login identity |
+| phone | text U | E.164, the identity of the person across garages |
 | name | text | name given by the first garage that added them |
-| email | text? | the owner's own email, for the owner app login (Phase 6); garages' contact emails are on `garage_customers` |
+| email | text? U | the owner's own email, the owner app login (Phase 6); set by the first invite (flow.md 2.4), lower case. Garages' contact emails stay on `garage_customers` |
 | locale | text | `ar` or `en`, used for invoices and notifications |
 | lastLoginAt | timestamptz? | null means the app was never used |
 
-#### `owner_otps`
-`id`, `ownerId` FK, `codeHash`, `expiresAt`, `attempts` int, `consumedAt?`. Max 5 attempts, 10 minute expiry.
+Added in step 6.1 (decision 2026-11-15, flow.md 2.4): `passwordHash` text? (argon2id; null until the owner sets it), `inviteTokenHash` text? U and `inviteExpiresAt` timestamptz? (the set-password link, for the invite and for a reset), `passwordSetAt` timestamptz?. Deleting the app account clears `email`, `passwordHash` and the token, and removes the sessions and device tokens.
 
-#### `device_tokens` (phase 6)
-`id`, `ownerId` FK, `token` U, `platform` (`ios`/`android`), `lastSeenAt`.
+`owner_otps` (phone + one-time code) is **dropped** in step 6.1: the login is email + password since 2026-10-29.
+
+#### `device_tokens` (step 6.4)
+`id`, `ownerId` FK, `token` U (the Firebase Cloud Messaging registration token), `platform` (`ios`/`android`), `lastSeenAt`. Removed on logout, on account deletion, and when FCM reports the token dead.
 
 #### `subscription_payments`
 Append-only (step 5.1): `gearva_platform` has `SELECT, INSERT` only, like `payments`. Checks: amount above 0, extra branches 0 or more, new expiry date not before the period start.

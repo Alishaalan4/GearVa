@@ -11,7 +11,7 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Super admin / admin | V2 `admin` | Email + password, plus a TOTP code if the admin turned on 2FA (optional, recommended) |
 | Garage OWNER | V1 `garage-web` | Email + password (invite link sets the password) |
 | MANAGER, MECHANIC, RECEPTIONIST | V1 `garage-web` | Email + password |
-| Car owner (customer) | V3 `mobile` | Phone number + one-time code |
+| Car owner (customer) | V3 owner app (Flutter) | Email + password, set through an invite link from their garage (section 2.4) |
 | System | background jobs | n/a |
 
 ### Garage permission matrix (V1)
@@ -85,11 +85,15 @@ Same as above. **Two-factor authentication (TOTP) is optional per admin** (decis
 7. 10 failed password or 2FA attempts for one email lock it for 15 minutes, on top of the per-IP limit.
 
 ### 2.4 Owner (customer) login on mobile (Phase 6)
-**Changed 2026-10-29 (user decision, design prototype):** owners log in with an **email and password given by their garage**, not with phone + one-time code. The steps below describe the old design and are rewritten at the start of Phase 6, together with database.md (`owners` gets a login email and password hash; `owner_otps` is dropped). Open points for then: whether staff type the password or the owner gets an invite link to set it, password reset, and an owner who is a customer at two garages (one global login).
+**Decided 2026-10-29 and 2026-11-15 (user):** owners log in with an **email and password**, which they set themselves through an invite link from their garage; not phone + one-time code. The full API is in `docs/mobile-api.md` (section 2).
 
-1. Owner enters their phone number. The API creates an `owner_otps` row and sends a code (email or SMS now, WhatsApp later). Same response whether or not the number exists, to avoid revealing who is a customer.
-2. Owner enters the code (max 5 attempts, 10 minute expiry). On success, issue tokens for `SubjectType.OWNER`.
-3. The `owners` row already exists because a garage created it when adding the customer. A number nobody added cannot log in.
+1. **Invite.** Staff (OWNER, MANAGER, RECEPTIONIST) open a customer who has an email (`garage_customers.email`) and tap **Invite to the app**. The API, in one transaction: refuses if the person already has an active app account (`OWNER_APP_ALREADY_ACTIVE`: their cars from this garage already appear in their app); refuses if another owner already uses that email for the app (`EMAIL_ALREADY_USED`); else sets `owners.email`, stores a hashed one-time token (7 days, a new invite replaces the old one), sets `garage_customers.inviteSentAt`, writes an audit row, and queues an `INVITE` email (template `owner-invite`) with the link `gearva.online/owner/set-password?token=...`.
+2. **Set password.** The web page checks the token, takes a password (10+ characters), stores its argon2id hash and ends the token. It then says to download the app.
+3. **Log in.** In the app, email + password. The API returns a 15-minute access token and a 30-day refresh token (Bearer, not cookies: a native app has no cookie jar to protect), for `SubjectType.OWNER`. A refresh token works once; reusing one ends all sessions of that device. Same error for a wrong password, an unknown email and an account without a password.
+4. **Forgot password.** Always answers the same, whether or not the email has an account; if it has one, a reset link (24 hours) to the same page.
+5. **Several garages.** The owner is one person (`owners`, by phone). A second garage's invite to someone who already has an account sends nothing; their cars there simply appear. Each garage sees only its own records; only the owner app shows them together.
+6. **Delete account.** The owner can delete their app account in the app (the stores require it): the email, password hash, sessions and device tokens are removed; the garages keep their own records.
+7. **A locked garage** (subscription ended, 2.5): its customers still see their history and invoices from it in the app (read only); its offers are hidden and it sends no reminders.
 
 ### 2.5 Subscription lock
 Every garage request passes this check after authentication:
@@ -549,8 +553,8 @@ Subscription revenue per month and year, and growth (garages new, renewed, lost)
 /admin/v1/monitoring/*, /admin/v1/settings/*, /admin/v1/business/*
 /admin/v1/view-as/:garageId
 
-/mobile/v1/auth/*             phone + OTP
-/mobile/v1/me, /mobile/v1/vehicles, /mobile/v1/invoices, /mobile/v1/offers, /mobile/v1/notifications
+/mobile/v1/*                  owner app, specified in docs/mobile-api.md (auth, me, garages,
+                              vehicles, visits, invoices, notifications, devices, offers)
 ```
 
 Every new endpoint must have: a Zod schema in `packages/contracts`, a role check, a tenant-isolation test, and an audit row if it mutates data.

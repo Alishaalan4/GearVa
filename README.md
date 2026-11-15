@@ -12,7 +12,7 @@ This repository is the single monorepo for everything. **Read this file first, t
 |---|---|---|---|---|
 | V1 | **Garage System** (`garage-web`) | Garage owner, manager, mechanic, receptionist | Responsive web (phone + laptop), Arabic/English, RTL | Customers, vehicles, quick service entry, invoices, payments, reminders, offers |
 | V2 | **Admin System** (`admin`) | The platform owner (super-admin) + optional admins | Web, separate domain, optional 2FA, Arabic/English | Create garage accounts, subscriptions, usage monitoring, system settings |
-| V3 | **Owner App** (`mobile`) | Car owners (garage customers) | React Native (Expo) | See cars, service history, invoices, offers, notifications. Login by email + password given by the garage (decision 2026-10-29) |
+| V3 | **Owner App** (`gearva-mobile`, its own repository) | Car owners (garage customers) | Flutter (Android and iOS), built by an outside developer (decision 2026-11-15) | See cars, service history, invoices, offers, notifications. Login by email + password, set through an invite link from the garage (decisions 2026-10-29, 2026-11-15). The API it uses is specified in `docs/mobile-api.md` |
 
 One backend (`api`) serves all three.
 
@@ -38,7 +38,7 @@ TypeScript everywhere. Use the current stable major version of each tool, and ch
 | Web apps | **Next.js 16** (App Router) + **Tailwind CSS** | |
 | Web UI kit | shadcn/ui, TanStack Query, TanStack Table, react-hook-form | |
 | i18n | `next-intl`, Arabic + English, RTL | Use Tailwind logical utilities (`ms-`, `me-`, `ps-`, `pe-`, `text-start`) and never `ml-`/`mr-` |
-| Mobile | **Expo (React Native)** | Built last |
+| Mobile | **Flutter** | Decided 2026-11-15 (was Expo): built by an outside Flutter developer in its own repository, `gearva-mobile`, against `docs/mobile-api.md`. Push through Firebase Cloud Messaging |
 | PDF | **Puppeteer** (HTML to PDF) in a BullMQ worker | Handles Arabic RTL well |
 | Email | Behind a channel adapter (Resend, Amazon SES or Brevo) | |
 | Files | S3-compatible storage (Cloudflare R2 in production, local disk in dev) | |
@@ -88,13 +88,12 @@ gearva/
 │   │   ├── lib/                  # api client, auth, utils
 │   │   └── messages/             # ar.json, en.json
 │   ├── admin/                    # Next.js, V2 (separate deployment and domain)
-│   └── mobile/                   # Expo app (create in phase 6)
 ├── packages/
 │   ├── database/                 # Prisma schema, migrations, seed, RLS SQL, client factory
 │   ├── contracts/                # Zod schemas, DTO types, enums, constants, km/miles helpers
 │   ├── ui/                       # small Tailwind components shared by garage-web and admin
 │   └── config/                   # shared tsconfig, eslint, prettier
-├── docs/                         # flow.md, database.md
+├── docs/                         # flow.md, database.md, mobile-api.md (owner app contract), mobile-brief.md
 ├── .github/workflows/ci.yml      # CI: lint, typecheck, test, test:tenancy (section 8)
 ├── docker-compose.yml            # Postgres + Redis for local development
 ├── render.yaml                   # Render Blueprint: every production service (section 9)
@@ -301,11 +300,17 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - **Deploy a first version to Render now (section 9),** on free instances while only test users use it.
 
 ### Phase 6: Owner mobile app
-- Expo app, email + password login (given by the garage), cars, history, invoices, in-app notifications (the `IN_APP` adapter and inbox, moved here from Phase 4), push, offers
-- Owner-scoped access (see `database.md`)
+The app is **Flutter**, built by an outside developer in its own repository (`gearva-mobile`); this repository builds the API it uses, `/mobile/v1`, specified in `docs/mobile-api.md` (decision 2026-11-15). The developer starts from `docs/mobile-brief.md` and the contract, against their examples, while the API is built step by step:
+- **6.0** The contract (`docs/mobile-api.md`) and the brief for the developer; docs changed for Flutter and the owner login decisions.
+- **6.1** Owner accounts: login columns on `owners` (`owner_otps` dropped), "Invite to the app" in the garage app (needs the customer's email), the set-password page for owners on `gearva.online`, and the privacy policy page (`/privacy`, needed by the app stores).
+- **6.2** Owner auth API: login, refresh (Bearer tokens, not cookies), logout, forgot password, profile, preferences per garage, change password, delete account.
+- **6.3** Owner read API with the `owner_read` policies (database.md 6.4): cars, next services, history, invoices and their PDFs, garage logos.
+- **6.4** In-app notifications (the `IN_APP` adapter and inbox, moved here from Phase 4), push through Firebase Cloud Messaging, device tokens.
+- **6.5** Offers: creating and editing offers in the garage app (moved here from Phase 7, decision 2026-11-15), and the offers in the owner app.
+- **Done when:** an owner invited by a garage logs in to the Flutter app on a real phone, sees cars, history and invoices from two garages, gets a reminder as a push and in the inbox, and sees an offer; and the tenancy suite proves an owner reaches nothing that is not theirs.
 
 ### Phase 7: Offers, revenue screens, polish
-- Offer screens, targeting, broadcasts and the redemption report (the `offers` table and typed invoice discounts already exist since Phase 3), the full revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen
+- Offer targeting, broadcasts and the redemption report (creating offers and showing them in the owner app moved to step 6.5), the full revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen
 
 ### Later (not in scope now)
 WhatsApp channel, appointment booking, parts and inventory, monthly report, customer approval for repairs, document expiry reminders, referral tracking, sales reps, fleet plan.
@@ -323,7 +328,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |
 | Fair-use message cap per garage | 2,000 reminder emails per month by default; a system setting the admin changes from real cost data (step 5.3) | Phase 5 |
 | VAT on invoices | **Decided 2026-11-02:** off by default; a garage setting turns it on after its accountant confirms | Phase 3 |
-| Owner app login | **Decided 2026-10-29:** email + password given by the garage (from the design prototype), not phone + one-time code. To settle in Phase 6: who sets the password (typed by staff, or an invite link like staff accounts), reset, and an owner who is a customer at two garages | Phase 6 |
+| Owner app login | **Decided 2026-10-29:** email + password, not phone + one-time code. **Settled 2026-11-15:** the garage sends an invite link (the customer's email is needed) and the owner sets the password on a web page; reset by the same link; one login per person shows every garage they are a customer of | Phase 6 |
 
 ---
 

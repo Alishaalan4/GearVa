@@ -54,7 +54,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.1 Code ready for hosting: Blueprint, Resend and R2 adapters, visitor IPs, headers, Render DB setup | ✅ Done | 2026-11-11 |
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | Later | |
-| 6 | Owner mobile app | Next | |
+| 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
+| 6 | 6.1 Owner accounts, invite, set-password and privacy pages | Next | |
 
 ---
 
@@ -1803,6 +1804,48 @@ By me, from outside:
 - That a new admin session stores the visitor's own IP.
 
 The user will confirm these during the next phase's tests.
+
+**Commit:** `d53701c`
+
+---
+
+## Phase 6 · Step 6.0 — Owner app contract and the Flutter developer's brief
+**When:** 2026-11-15
+
+**Implements:** README 6 (Phase 6, rewritten); flow.md 2.4; database.md 4.1 (`owners`, `device_tokens`).
+
+**Summary:** The owner app is now a **Flutter** app, built by an outside developer in its own repository, `gearva-mobile` (user decision 2026-11-15; the docs said Expo). So that the developer can start at once, the API it will use is specified first:
+- `docs/mobile-api.md`, **the contract**: conventions, errors, auth, profile, cars, history, invoices and PDFs, notifications and push, offers, with JSON examples and a changelog.
+- `docs/mobile-brief.md`, **the brief**: the product, the 12 screens, design tokens, technical rules, the order of work and the accounts.
+
+Both are sent to the developer as one PDF. The API is then built to the contract in steps 6.1 to 6.5, and each step that goes live is sent to him as a new PDF version.
+
+**Decisions (user, 2026-11-15)**
+- **Contract first,** then the PDF, then the API, built while he makes the screens against the examples.
+- **Owners get an invite link by email** and set their password on a web page. Staff never see it; it needs the customer's email.
+- **One login per person shows every garage** they are a customer of, each item labelled with its garage.
+- **Version 1 has:** cars and history, invoices with PDFs, notifications with push (Firebase Cloud Messaging), and offers. Creating offers in the garage app moves from Phase 7 to step 6.5.
+
+**Decisions (mine, in the contract; open to change)**
+- **Bearer tokens for the app** (15 minutes access, 30 days refresh, rotated, reuse ends the device's sessions), not cookies.
+- **The set-password page lives on `gearva.online`.** No deep links in version 1.
+- **Account deletion in the app** (store requirement), and a privacy policy page at `/privacy` (step 6.1).
+- **A locked garage's customers still see their history and invoices** from it; its offers are hidden.
+- **The server computes the next-service status** (`OK`, `SOON`, `OVERDUE`) and ready-made detail labels, so the app needs no service-type logic.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `docs/mobile-api.md` (new) | The owner app API contract, version 1.0 |
+| `docs/mobile-brief.md` (new) | The Flutter developer's brief, version 1.0 |
+| `README.md` | Products and stack: Flutter, `gearva-mobile`; repository tree; Phase 6 split into 6.0 to 6.5 with its "Done when"; offers moved; the owner login decision |
+| `docs/flow.md` | Actors table; 2.4 rewritten (invite, set password, tokens, several garages, deletion, locked garage); 14 |
+| `docs/database.md` | `owners` login columns planned for 6.1, `owner_otps` dropped, `device_tokens` |
+
+**Verified:**
+- The contract's codes and shapes follow the existing ones: the error body, pagination (max 50), money in cents, km with a per-car unit, and the reminder rules (flow.md 9.1) for `SOON` and `OVERDUE`.
+- The PDF was generated and read through.
+- No code changed.
 
 **Commit:** _(filled in at the next step)_
 

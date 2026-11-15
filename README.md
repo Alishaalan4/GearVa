@@ -307,7 +307,7 @@ The app is **Flutter**, built by an outside developer in its own repository (`ge
 - **6.3** Owner read API with the `owner_read` policies (database.md 6.4): cars, next services, history, invoices and their PDFs, garage logos.
 - **6.4** In-app notifications (the `IN_APP` adapter and inbox, moved here from Phase 4), push through Firebase Cloud Messaging, device tokens.
 - **6.5** Offers: creating and editing offers in the garage app (moved here from Phase 7, decision 2026-11-15), and the offers in the owner app.
-- **Done when:** an owner invited by a garage logs in to the Flutter app on a real phone, sees cars, history and invoices from two garages, gets a reminder as a push and in the inbox, and sees an offer; and the tenancy suite proves an owner reaches nothing that is not theirs.
+- **Done when** (decision 2026-11-15: this project delivers the API and the documents; the Flutter app is the developer's own work and schedule): every endpoint in `docs/mobile-api.md` is live on the server and covered by tests, including an owner of two garages who sees both and a tenancy suite proving an owner reaches nothing that is not theirs; a push reaches a test device token through Firebase; and the final contract PDF, with a test owner login, is handed over.
 
 ### Phase 7: Offers, revenue screens, polish
 - Offer targeting, broadcasts and the redemption report (creating offers and showing them in the owner app moved to step 6.5), the full revenue screens per day/month/year/service/branch, customer value, data-protection checks, audit log screen

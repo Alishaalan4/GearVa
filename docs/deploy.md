@@ -72,6 +72,8 @@ git push
 
 1. Render dashboard: **New**, then **Blueprint**.
 2. Pick the **GearVa** repository, branch **main**. Blueprint name: `gearva`.
+   - **Check the page title** says *"You are deploying from a Blueprint for …/GearVa"*. If the account can see other repositories, it is easy to pick the wrong one (its file may create paid services).
+   - Before **Apply**, check that every item in *Specified configurations* is on the **Free** plan.
 3. Render reads `render.yaml` and lists:
    - 3 web services: `gearva-api`, `gearva-garage-web` and `gearva-admin`;
    - `gearva-redis`;
@@ -90,9 +92,13 @@ git push
 
 5. Click **Apply**.
 
+**Render does not create a variable you leave empty.** The three database variables are then missing in `gearva-api`; Part D adds them with **+ Add**.
+
 **What you should see:** the database and Redis become *Available*, and the two web apps build and go *Live*. **`gearva-api` fails**, because it has no database settings yet. That is expected; Part D fixes it.
 
 If Render refuses the Blueprint because of the custom domains, check the card from B1, then apply again.
+
+Because `gearva-api` fails, Render **cancels the three "Add domain" items** ("canceled: another action failed"). After Part D, open **Blueprints, gearva**, click **Manual sync**, then **Approve**: the domains are added.
 
 ---
 
@@ -109,7 +115,7 @@ If Render refuses the Blueprint because of the custom domains, check the card fr
    **You should see:** "Connected ...", "Created role ..." three times, and then three lines starting with `DATABASE_URL=`, `MIGRATION_DATABASE_URL=` and `PLATFORM_DATABASE_URL=`.
    - "without BYPASSRLS" in the output is fine.
    - If it says **"This user may not create roles"**, stop and send Claude the output.
-4. On Render, open **gearva-api**, then **Environment**. For each of the three, click edit and paste the part **after** the `=`. Then **Save, rebuild, and deploy**.
+4. On Render, open **gearva-api**, then **Environment**, then **Edit**. Add the three with **+ Add** (key as printed, value = the part **after** the `=`). Then **Save, rebuild, and deploy**. The first start takes about 3 to 4 minutes after "Build successful".
 5. Open **gearva-api, Logs** and wait for:
    - `All migrations have been successfully applied.`
    - `Created super-admin admin@gearva.online.`
@@ -123,6 +129,8 @@ The three passwords exist only in Render now. If you ever need new ones, run the
 ---
 
 ## Part E: DNS (where you bought gearva.online)
+
+**Before anything else, check that the domain is not suspended.** A new domain must have its owner's email confirmed within 15 days, or the registrar suspends it: its nameservers become `verify-contact-details.namecheap.com` / `failed-whois-verification.namecheap.com`, and nothing below works. The **registrant** (the owner in the domain's contacts) clicks the link in the registrar's "verify your contact information" email, or uses *Resend verification email* in the registrar's domain list. Also check the domain's **Nameservers** setting is the registrar's own DNS (Namecheap: *Namecheap BasicDNS*), so the records below are used.
 
 1. On Render, open each web service and note its address at the top, like `gearva-api.onrender.com`. If Render added a suffix (`gearva-api-ab12.onrender.com`), use the address it shows.
 2. In your domain registrar's **DNS settings**:
@@ -138,14 +146,14 @@ The three passwords exist only in Render now. If you ever need new ones, run the
 | *(the Resend records)* | *exactly as the Resend page shows them* | |
 
    If the registrar offers `ALIAS` or `ANAME` for `@`, you may point `@` to `gearva-garage-web.onrender.com` instead of the `A` record. Either works.
-3. **Render:** each web service, **Settings, Custom Domains, Verify**. Render then issues the HTTPS certificates itself. This takes a few minutes; DNS can take up to an hour.
-4. **Resend:** open the domain page and click **Verify**. It turns *Verified*.
+3. **Render:** each web service, **Settings, Custom Domains**, then the **↻** button on each domain row. It turns *Verified*, then the certificate *Issued*. A **Certificate Error** right after the DNS changed is usually only timing: click **↻** again a few minutes later. Until `api.gearva.online` has its certificate, the two apps answer **500** on everything that needs the API (login included).
+4. **Resend:** open the domain page and click **Verify**. It shows *Checking DNS*, then *Verified* (about 5 to 30 minutes). An email sent before that fails for good (`Resend 403: The gearva.online domain is not verified`, under Monitoring, failed messages); send it again afterwards (for an invite: the garage page, **Resend invite**).
 
 ---
 
 ## Part F: Check that it works
 
-Free services sleep after 15 minutes without visitors. The first page after a pause can take **about a minute**; that is normal.
+Free services sleep after 15 minutes without visitors. The API took **about 90 seconds** to wake when measured on 2026-11-15 (it also checks the migrations, the seed and loads Chrome at start). Meanwhile the apps get **502** and may stay on "Loading…": refresh after a minute or two. A paid plan for `gearva-api` removes this.
 
 1. **Website:**
    - Open `https://gearva.online`: the website appears with a padlock (HTTPS).
@@ -165,6 +173,14 @@ Free services sleep after 15 minutes without visitors. The first page after a pa
 **Then message Claude:** "done", plus anything that did not work. For a failing service, copy the last 50 lines of its **Logs**.
 
 ---
+
+## Handing over to the buyer (decided 2026-11-15: at the end of the project)
+
+The running setup is in the developer's accounts and serves as the test environment. At the end of the project it moves to the buyer's accounts:
+- **Namecheap:** already the buyer's. **Resend and Cloudflare:** the buyer is a member and pays with his card, so the keys keep working.
+- **Render:** a Hobby workspace has only one member, so the buyer creates **his own Render account** and Part C to E run again there (about 45 minutes). First delete the old services, so the names (`gearva-api`, …) and the domains are free and the DNS records stay the same.
+- **GitHub:** Render can only read a repository its owner allowed, so the repository moves to the buyer's GitHub account (or an organization owned by both) before Part C.
+- The database starts empty (the test data is not moved).
 
 ## Later: before the free database runs out
 

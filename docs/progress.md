@@ -52,7 +52,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.6 Applications API and the public website pages in garage-web | ✅ Done | 2026-11-10 |
 | 5 | 5.7 admin web screens (Done-when check) | ✅ Done | 2026-11-10 |
 | Deploy | D.1 Code ready for hosting: Blueprint, Resend and R2 adapters, visitor IPs, headers, Render DB setup | ✅ Done | 2026-11-11 |
-| Deploy | D.2 The user creates the accounts and services (docs/deploy.md), then the live checks | Next | |
+| Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
+| Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | Later | |
+| 6 | Owner mobile app | Next | |
 
 ---
 
@@ -1765,6 +1767,43 @@ By the user: stop the two leftover test web servers (ports 3100 and 3101), then 
   These are Part F of `docs/deploy.md`.
 
 By the user: the commit commands, then `docs/deploy.md`.
+**Commit:** `33da2fb` (CI green)
+
+---
+
+## Deploy · Step D.2 — Live at gearva.online (free plans, test environment)
+**When:** 2026-11-11 to 2026-11-15, done by the user with Claude guiding step by step.
+
+**Summary:** Gearva runs on Render at `https://gearva.online` (website and garage app; `www` redirects), `https://admin.gearva.online` and `https://api.gearva.online`, all with HTTPS, in Frankfurt, on free plans. Real email through Resend (domain verified), files in Cloudflare R2.
+
+**What happened on the way** (all now in `docs/deploy.md`):
+1. **The wrong repository was picked first** in the Blueprint (another project of the same Render account, with paid plans). Caught on the review page before Apply.
+2. **Variables left empty are not created** by the Blueprint: the three database URLs were added by hand after `bootstrap:render`. `gearva-api` failed until then, as planned, and Render cancelled the three domain items; *Manual sync*, then *Approve*, added them.
+3. **`bootstrap:render` against Render's real database** worked as tested locally: the roles were created and the migrations, seed and API started (`/health` ok, prices read from the database).
+4. **The domain was suspended by Namecheap** since 2026-10-26: its owner had not confirmed his email within 15 days of buying it (nameservers `failed-whois-verification.namecheap.com`). The domain is in the account of its owner (Jihad Abdallah), shared with the user. After the switch to *Namecheap BasicDNS* and the verification, the registry changed on 2026-11-12 11:25 UTC.
+5. **Certificate Error** on the first try for each domain, right after the DNS change; a retry (↻) a few minutes later issued them. Until `api.gearva.online` had one, both apps answered 500.
+6. **The first invite failed for good** with `Resend 403: domain is not verified`, sent before Resend's check. After *Verify* (Verified on 2026-11-12), *Resend invite* delivered it.
+7. **Free-plan sleep:** a visit after a quiet hour gave 502s while the API woke. Measured on 2026-11-15: about **90 s** to wake (0.1 CPU; start runs migrate, seed, and loads Chrome). Refreshing after that works. Decision: stay free for testing; `gearva-api` is the first service to move to a paid plan.
+
+**Decisions (2026-11-15)**
+- **Hosting cost:** free while testing. Before 2026-12-11, upgrade the database (or re-create the free one, since it only holds test data). When the first real garage comes: the database and `gearva-api` on paid plans (about $14 a month); the garage app next; admin may stay free. Any plan change goes through `render.yaml` too, or the next Blueprint sync changes it back.
+- **Handover to the buyer at the end of the project,** not now: Render Hobby allows one member, so the buyer gets his own Render account and the Blueprint runs again there; the GitHub repository moves to him (or to an organization owned by both). Namecheap is already his; Resend and Cloudflare have him as a member, with his card.
+
+**Verified:** by the user, in the browser:
+- The website opens on gearva.online with HTTPS.
+- An application, its approval in admin, and the invite email from `no-reply@gearva.online` (after Resend's verification). The owner set a password and signed in.
+
+By me, from outside:
+- All five addresses answer over HTTPS. The security headers are present. `www` redirects with 301.
+- The API answers through both apps (401 without a session, as it should).
+- All 8 DNS records are visible on public DNS.
+
+**Not yet confirmed:**
+- A logo upload (R2) and an invoice PDF (Chrome on Render, 512 MB).
+- That a new admin session stores the visitor's own IP.
+
+The user will confirm these during the next phase's tests.
+
 **Commit:** _(filled in at the next step)_
 
 ---

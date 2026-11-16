@@ -13,8 +13,9 @@ export interface AccessClaims {
   sub: string;
   /** sessions.id: lets a guard reject a token whose session was revoked */
   sid: string;
-  /** `view-as`: an admin's read-only session in a garage's app (flow.md 11.3) */
-  typ: 'admin' | 'staff' | 'view-as';
+  /** `view-as`: an admin's read-only session in a garage's app (flow.md 11.3);
+   *  `owner`: a car owner in the owner app (flow.md 2.4) */
+  typ: 'admin' | 'staff' | 'view-as' | 'owner';
 }
 
 interface MfaClaims {
@@ -118,6 +119,18 @@ export class SessionService {
   async revokeAll(subjectType: SubjectType, subjectId: string): Promise<void> {
     await this.platformDb.client.session.updateMany({
       where: { subjectType, subjectId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /** Ends every session of this person except `keepSessionId` (a password change). */
+  async revokeOthers(
+    subjectType: SubjectType,
+    subjectId: string,
+    keepSessionId: string,
+  ): Promise<void> {
+    await this.platformDb.client.session.updateMany({
+      where: { subjectType, subjectId, revokedAt: null, id: { not: keepSessionId } },
       data: { revokedAt: new Date() },
     });
   }

@@ -30,3 +30,24 @@ export function runAsTenant<T>(
     return fn(tx);
   }, options);
 }
+
+/**
+ * The owner app's context (database.md 6.4): one transaction with app.owner_id set and
+ * app.garage_id left empty, so the garage policies match nothing and only the owner_*
+ * policies apply: the person's own rows, from every garage, read only (except their
+ * reminder and offer preferences). The only other place that calls set_config.
+ */
+export function runAsOwner<T>(
+  client: PrismaClient,
+  ownerId: string,
+  fn: (tx: TenantTx) => Promise<T>,
+  options?: TenantTxOptions,
+): Promise<T> {
+  if (!UUID.test(ownerId)) {
+    return Promise.reject(new Error('runAsOwner: ownerId must be a UUID'));
+  }
+  return client.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT set_config('app.owner_id', ${ownerId}, true)`;
+    return fn(tx);
+  }, options);
+}

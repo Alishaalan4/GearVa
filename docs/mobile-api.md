@@ -5,8 +5,9 @@ The contract between the API and the owner app (V3, Flutter). The API is built t
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-15 | First version (Phase 6.0): auth, profile, cars, history, invoices, notifications, push devices, offers |
+| 1.1 | 2026-11-16 | **Live:** login and account (2) and profile (3.1 to 3.5). 2.3: reusing a refresh token ends **all** of the owner's sessions, on every phone (it said "that phone's"). 2.2: also `RATE_LIMITED` after 10 wrong passwords for one email (15 minutes). 2.5: one reset email per address per minute. 3.3: send at least one of the two fields |
 
-Status of each group: **Planned**, being built, or **Live** on the test server. All groups are **Planned** at version 1.0; the changelog says when each goes live.
+Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** 2, 3.1 to 3.5. **Planned:** 3.6, 4, 5, 6, 7.
 
 ---
 
@@ -89,7 +90,7 @@ Password rule: at least 10 characters (the same check runs in the app and on the
   "owner": { "id": "0193…", "name": "Sara Haddad", "email": "sara@example.com", "locale": "ar" }
 }
 ```
-Errors: `INVALID_CREDENTIALS` (also for an email that has no account, or an account whose password was never set: the answer never reveals which), `RATE_LIMITED` (10 tries per minute per IP).
+Errors: `INVALID_CREDENTIALS` (also for an email that has no account, or an account whose password was never set: the answer never reveals which), `RATE_LIMITED` (10 tries per minute per IP, or 10 wrong passwords for one email: then that email waits 15 minutes).
 
 The access token lasts **15 minutes**, the refresh token **30 days**.
 
@@ -99,7 +100,7 @@ The access token lasts **15 minutes**, the refresh token **30 days**.
 { "refreshToken": "rt_7f1c…" }
 // 200: the same shape as login, with a NEW refresh token
 ```
-Each refresh token works **once**: always store the new one. Using an old one again is treated as theft and ends all of that phone's sessions (`INVALID_LINK`). If two requests get `401 UNAUTHORIZED` at the same time, refresh once and let both wait for it.
+Each refresh token works **once**: always store the new one. Using an old one again is treated as theft and ends **all** of the owner's sessions, on every phone (`INVALID_LINK`); they sign in again. An unknown or expired token, or a deleted account, also gives `INVALID_LINK`. If two requests get `401 UNAUTHORIZED` at the same time, refresh once and let both wait for it.
 
 ### 2.4 `POST /mobile/v1/auth/logout`
 ```json
@@ -111,7 +112,7 @@ Each refresh token works **once**: always store the new one. Using an old one ag
 ```json
 { "email": "sara@example.com" }
 ```
-Always **202**, whether or not the email has an account (so nobody can test which emails are customers). If it has one, Gearva emails a reset link to the same set-password web page, valid 24 hours.
+Always **202**, whether or not the email has an account (so nobody can test which emails are customers). If it has one, Gearva emails a reset link to the same set-password web page, valid 24 hours (at most one email per address per minute; a newer link replaces the older one). Limit: 5 requests per minute per IP.
 
 ---
 
@@ -151,7 +152,7 @@ Always **202**, whether or not the email has an account (so nobody can test whic
 ```json
 { "remindersOptOut": false, "marketingOptOut": true }
 ```
-200 with that garage's entry from 3.1. Stops reminders or offers **from that garage only**.
+200 with that garage's entry from 3.1. Stops reminders or offers **from that garage only**. Send one field or both (none: `VALIDATION_FAILED`). A garage the owner is not a customer of: `NOT_FOUND`.
 
 ### 3.4 `POST /mobile/v1/me/password`
 ```json

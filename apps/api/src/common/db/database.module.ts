@@ -1,6 +1,7 @@
 import { Global, Inject, Module, type OnApplicationShutdown } from '@nestjs/common';
 import type { PrismaClient } from '@gearva/database';
 import { RequestContext } from '../context/request-context';
+import { OwnerDb } from './owner-db';
 import { PlatformDb } from './platform-db';
 import {
   APP_PRISMA,
@@ -10,11 +11,18 @@ import {
 } from './prisma.providers';
 import { TenantDb } from './tenant-db';
 
-// The raw clients are not exported: other modules get TenantDb or PlatformDb only.
+// The raw clients are not exported: other modules get TenantDb, OwnerDb or PlatformDb only.
 @Global()
 @Module({
-  providers: [appPrismaProvider, platformPrismaProvider, RequestContext, TenantDb, PlatformDb],
-  exports: [RequestContext, TenantDb, PlatformDb],
+  providers: [
+    appPrismaProvider,
+    platformPrismaProvider,
+    RequestContext,
+    TenantDb,
+    OwnerDb,
+    PlatformDb,
+  ],
+  exports: [RequestContext, TenantDb, OwnerDb, PlatformDb],
 })
 export class DatabaseModule implements OnApplicationShutdown {
   constructor(

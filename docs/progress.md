@@ -55,8 +55,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | Later | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
-| 6 | 6.1 Owner accounts, invite, set-password and privacy pages | Written, awaiting the user's checks | |
-| 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | Next | |
+| 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
+| 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | Written, awaiting the user's checks | |
+| 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | Next | |
 
 ---
 
@@ -1904,6 +1905,62 @@ By me, on the test database:
 
 To do by the user: the migration on the dev database, the full test suite, and a browser check (invite, the email in the API console, the page in both languages, `/privacy`).
 
-**Commit:** _(pending)_ "Phase 6.1: owner app invite, set-password page for owners, privacy policy"
+**Commit:** `7f8b21d`
+
+---
+
+## Phase 6 · Step 6.2 — Owner auth API: login, refresh, logout, forgot password, profile, preferences, password, delete
+**When:** 2026-11-16 ~10:40 → ~11:25
+
+**Implements:** README 6 (step 6.2); mobile-api.md 2 and 3.1 to 3.5; flow.md 2.4 (new "Details (step 6.2)"); database.md 6.4 (the owner context, first part).
+
+**Summary:** The owner app can now sign in and manage its account. 11 endpoints under `/mobile/v1` are live:
+- `auth/login`, `auth/refresh`, `auth/logout`, `auth/forgot-password` (and `auth/set-password` from 6.1).
+- `GET` and `PATCH /me`, `POST /me/password`, `DELETE /me`, `PATCH /garages/:garageId/preferences`.
+
+**How it works**
+- **Tokens:** a 15-minute access JWT (type `owner`) and a 30-day refresh token in the JSON body, sent back as `Authorization: Bearer`. The same `sessions` table and rotation as staff: a reused refresh token ends all of the owner's sessions.
+- **`OwnerGuard`:** a global guard for every `/mobile/v1` controller, so no endpoint can skip it. It needs an open session and an existing account. A locked garage does not block owners.
+- **`OwnerDb` / `runAsOwner`:** the owner's reads use `gearva_app` with `app.owner_id` set and no garage. New policies give the owner their own account row, their customer rows, and the garages and garage settings where they are a customer. Changing preferences is the only change an owner can make to garage rows; a trigger refuses any other column.
+- **The account row** (language, password, deletion) is changed through the platform role, like the login.
+- **Lockout:** 10 wrong passwords per email lock it for 15 minutes (as for staff), counted at login, change password and delete.
+- **Forgot password:** always 202; one email per address per minute. The email row belongs to the garage whose invite set the login email, so no garage sees an email another garage entered.
+
+**Decision (mine, in the contract as 1.1):** a reused refresh token ends all of the owner's sessions, not only "that phone's". Sessions are not tracked per phone, and this is the existing rule for staff and admins (README 5.2).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/migrations/20261116120000_owner_context/migration.sql` (new) | Owner policies on `owners`, `garage_customers`, `garages`, `garage_settings`; the preferences trigger |
+| `packages/database/src/tenant.ts`, `index.ts` | `runAsOwner` |
+| `packages/database/test/rls.test.ts` | 3 tests: what an owner sees, what they may change, garages unaffected |
+| `packages/contracts/src/owners.ts` | Login, refresh, forgot, profile, preferences, password and delete schemas and types |
+| `apps/api/src/common/db/owner-db.ts` (new), `database.module.ts` | `OwnerDb` |
+| `apps/api/src/common/context/request-context.ts` | The owner's session id (kept on a password change) |
+| `apps/api/src/auth/session.service.ts`, `login-attempts.service.ts`, `staff-access.decorators.ts` | Token type `owner`, `revokeOthers`, the `owner` lockout counter |
+| `apps/api/src/owners/` | `owner.guard.ts`, `owner-auth.service.ts` and controller (auth), `owner-account.service.ts` and controller (`/me`, preferences), module |
+| `apps/api/src/app.module.ts` | `OwnerGuard` as a global guard |
+| `apps/api/test/helpers/owners.ts` (new) | An owner account made the real way (customer, invite, set password) |
+| `apps/api/test/owner-app.spec.ts` (new) | 11 tests for the endpoints |
+| `apps/api/test/tenancy-owner.spec.ts` (new) | Owner isolation: X against Y, every `/mobile/v1` route must have a case (run by `test:tenancy`) |
+
+**Doc changes**
+- mobile-api.md 1.1: groups 2 and 3.1 to 3.5 live; the reuse rule (above); the email lockout, the reset limit and the preferences body written down.
+- flow.md 2.4: step 3 wording (all sessions); "Details (step 6.2)".
+- database.md 6.4: what step 6.2 built. README 8: `test:tenancy` includes the owner suite.
+- The developer PDF is rebuilt at the end of Phase 6, with every group live.
+
+**Problems hit:** the full API suite on this machine had 5 suites time out (admin, staff, view-as) when all 25 ran at once. Alone they pass (43/43); none touches owners.
+
+**Verified**
+By me, on the test database:
+- RLS guard rails: 29 passed.
+- `owner-app`, `tenancy`, `tenancy-owner`, `customers`: 84 passed.
+- The rest of the API suite passes (the 5 slow suites rerun alone).
+- Typecheck and lint pass for api, database and contracts.
+
+To do by the user: the migration on the dev database, `npm test` and `npm run test:tenancy`, then push.
+
+**Commit:** _(pending)_ "Phase 6.2: owner app auth and profile API (Bearer tokens, owner RLS context)"
 
 ---

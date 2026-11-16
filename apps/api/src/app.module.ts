@@ -22,6 +22,7 @@ import { HealthModule } from './health/health.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { OwnerGuard } from './owners/owner.guard';
 import { OwnersModule } from './owners/owners.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
@@ -79,9 +80,11 @@ import { VisitsModule } from './visits/visits.module';
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
-    // Order matters: rate limit first, then the staff session + lock + roles for /v1.
+    // Order matters: rate limit first, then the staff session + lock + roles for /v1, and
+    // the owner's Bearer session for /mobile/v1. Each guard ignores the other's routes.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useExisting: StaffGuard },
+    { provide: APP_GUARD, useExisting: OwnerGuard },
   ],
 })
 export class AppModule {}

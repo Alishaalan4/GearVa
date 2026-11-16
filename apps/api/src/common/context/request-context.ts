@@ -19,6 +19,8 @@ export interface Actor {
 
 export interface RequestStore extends ClsStore {
   actor?: Actor;
+  /** sessions.id of a signed-in owner (OwnerGuard), to keep it when others are ended */
+  sessionId?: string;
   ip?: string;
   userAgent?: string;
 }
@@ -34,6 +36,14 @@ export class RequestContext {
 
   get actor(): Actor | undefined {
     return this.cls.isActive() ? this.cls.get('actor') : undefined;
+  }
+
+  setSessionId(sessionId: string): void {
+    this.cls.set('sessionId', sessionId);
+  }
+
+  get sessionId(): string | undefined {
+    return this.cls.isActive() ? this.cls.get('sessionId') : undefined;
   }
 
   get ip(): string | undefined {

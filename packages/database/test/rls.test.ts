@@ -274,6 +274,87 @@ describe('Phase 2 tables', () => {
     });
   });
 
+  // Step 6.2 (database.md 6.4): the owner app's context, app.owner_id without a garage.
+  describe('owner context (owner_* policies)', () => {
+    let ownerX: string;
+    let ownerY: string;
+    let xAtA: string;
+
+    const asOwner = <T>(ownerId: string, fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
+      app.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT set_config('app.owner_id', ${ownerId}, true)`;
+        return fn(tx);
+      });
+
+    beforeAll(async () => {
+      ownerX = await ownerIdFor(garageA, newPhone());
+      ownerY = await ownerIdFor(garageA, newPhone());
+      // X: customer of A and B. Y: customer of A only.
+      xAtA = (
+        await asGarage(garageA, (tx) =>
+          tx.garageCustomer.create({ data: { garageId: garageA, ownerId: ownerX, name: 'X' } }),
+        )
+      ).id;
+      await asGarage(garageB, (tx) =>
+        tx.garageCustomer.create({ data: { garageId: garageB, ownerId: ownerX, name: 'X' } }),
+      );
+      await asGarage(garageA, (tx) =>
+        tx.garageCustomer.create({ data: { garageId: garageA, ownerId: ownerY, name: 'Y' } }),
+      );
+    });
+
+    it('an owner sees their own account, customer rows and garages, nothing else', async () => {
+      const seen = await asOwner(ownerX, async (tx) => ({
+        owners: (await tx.owner.findMany()).map((o) => o.id),
+        customers: (await tx.garageCustomer.findMany()).map((c) => c.ownerId),
+        garages: (await tx.garage.findMany()).map((g) => g.id).sort(),
+        settings: await tx.garageSettings.count(),
+        vehicles: await tx.vehicle.count(),
+      }));
+      expect(seen.owners).toEqual([ownerX]);
+      expect(seen.customers).toEqual([ownerX, ownerX]);
+      expect(seen.garages).toEqual([garageA, garageB].sort());
+      // These garages were made without settings rows; cars come with step 6.3.
+      expect(seen.settings).toBe(0);
+      expect(seen.vehicles).toBe(0);
+    });
+
+    it('an owner changes only their own preferences, nothing else, and never another row', async () => {
+      await asOwner(ownerX, (tx) =>
+        tx.garageCustomer.update({ where: { id: xAtA }, data: { marketingOptOut: true } }),
+      );
+      expect(
+        (await platform.garageCustomer.findUniqueOrThrow({ where: { id: xAtA } })).marketingOptOut,
+      ).toBe(true);
+
+      await expect(
+        asOwner(ownerX, (tx) =>
+          tx.garageCustomer.update({ where: { id: xAtA }, data: { name: 'Renamed' } }),
+        ),
+      ).rejects.toThrow(/only their reminder and offer preferences/);
+      // Y's row is invisible to X, so nothing is updated.
+      const changed = await asOwner(ownerX, (tx) =>
+        tx.garageCustomer.updateMany({
+          where: { ownerId: ownerY },
+          data: { remindersOptOut: true },
+        }),
+      );
+      expect(changed.count).toBe(0);
+      // Owners still cannot write their own account row (the platform role does).
+      await expect(
+        asOwner(ownerX, (tx) => tx.owner.update({ where: { id: ownerX }, data: { locale: 'ar' } })),
+      ).rejects.toThrow(/permission denied/);
+    });
+
+    it('a garage context still sees only its own customers', async () => {
+      const rows = await asGarage(garageB, (tx) => tx.garageCustomer.findMany());
+      const owners = rows.map((c) => c.ownerId);
+      expect(owners).toContain(ownerX);
+      expect(owners).not.toContain(ownerY);
+      expect(rows.every((c) => c.garageId === garageB)).toBe(true);
+    });
+  });
+
   describe('service_types (global defaults + garage overrides)', () => {
     const code = `T_${randomUUID().slice(0, 8)}`;
     let globalId: string;

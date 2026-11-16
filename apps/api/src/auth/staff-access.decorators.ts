@@ -4,7 +4,10 @@ import type { StaffRole } from '@gearva/contracts';
 export const PUBLIC_KEY = 'gearva:public';
 export const ROLES_KEY = 'gearva:roles';
 
-/** A /v1 route that needs no staff session (login, set password, refresh, logout). */
+/**
+ * A route that needs no session (login, set password, refresh, logout), for /v1 (staff)
+ * and /mobile/v1 (owners, OwnerGuard).
+ */
 export const Public = () => SetMetadata(PUBLIC_KEY, true);
 
 /**

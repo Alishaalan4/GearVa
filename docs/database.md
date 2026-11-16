@@ -557,6 +557,13 @@ CREATE POLICY owner_read ON invoices FOR SELECT
 
 `invoice_items` and `payments` get the same through `EXISTS` on their invoice. The `ownerId` columns already exist from phase 2, so this needs no data migration. Owner policies are `SELECT` only.
 
+Built in step 6.2 (migration `owner_context`): `runAsOwner(client, ownerId, fn)` in `packages/database/src/tenant.ts` (the API's `OwnerDb`) sets `app.owner_id` and never `app.garage_id`, so every `tenant_isolation` policy matches nothing. All owner policies are `TO gearva_app`:
+- `owners`: `owner_self_read` (the owner's own row; changes to it go through the platform role).
+- `garage_customers`: `owner_read`, and `owner_preferences` (`FOR UPDATE`, own live rows). A trigger, `garage_customers_owner_update_guard`, refuses any change other than `remindersOptOut` and `marketingOptOut` when the owner context is set.
+- `garages` and `garage_settings`: `owner_read` for garages (not deleted) where the owner is a live customer.
+
+Step 6.3 adds `owner_read` on the tables listed above; step 6.4 on `notifications`.
+
 ### 6.5 Guard rails
 - A test queries `pg_tables`/`pg_policies` and **fails if any table with a `garage_id` column has no RLS policy**.
 - The tenancy suite (`npm run test:tenancy`) runs through the HTTP API with two garages.

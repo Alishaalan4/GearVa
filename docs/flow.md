@@ -89,7 +89,7 @@ Same as above. **Two-factor authentication (TOTP) is optional per admin** (decis
 
 1. **Invite.** Staff (OWNER, MANAGER, RECEPTIONIST) open a customer who has an email (`garage_customers.email`) and tap **Invite to the app**. The API, in one transaction: refuses if the person already has an active app account (`OWNER_APP_ALREADY_ACTIVE`: their cars from this garage already appear in their app); refuses if another owner already uses that email for the app (`EMAIL_ALREADY_USED`); else sets `owners.email`, stores a hashed one-time token (7 days, a new invite replaces the old one), sets `garage_customers.inviteSentAt`, writes an audit row, and queues an `INVITE` email (template `owner-invite`) with the link `gearva.online/owner/set-password?token=...`.
 2. **Set password.** The web page checks the token, takes a password (10+ characters), stores its argon2id hash and ends the token. It then says to download the app.
-3. **Log in.** In the app, email + password. The API returns a 15-minute access token and a 30-day refresh token (Bearer, not cookies: a native app has no cookie jar to protect), for `SubjectType.OWNER`. A refresh token works once; reusing one ends all sessions of that device. Same error for a wrong password, an unknown email and an account without a password.
+3. **Log in.** In the app, email + password. The API returns a 15-minute access token and a 30-day refresh token (Bearer, not cookies: a native app has no cookie jar to protect), for `SubjectType.OWNER`. A refresh token works once; reusing one ends all of the owner's sessions, as for staff and admins (README 5.2; sessions are not tracked per device). Same error for a wrong password, an unknown email and an account without a password.
 4. **Forgot password.** Always answers the same, whether or not the email has an account; if it has one, a reset link (24 hours) to the same page.
 5. **Several garages.** The owner is one person (`owners`, by phone). A second garage's invite to someone who already has an account sends nothing; their cars there simply appear. Each garage sees only its own records; only the owner app shows them together.
 6. **Delete account.** The owner can delete their app account in the app (the stores require it): the email, password hash, sessions and device tokens are removed; the garages keep their own records.
@@ -101,6 +101,14 @@ Details (step 6.1):
 - Set password: the page posts to `POST /mobile/v1/auth/set-password` (`token`, `password`), forwarded by garage-web like `/v1`. It answers `{ email }` and signs nobody in; the page then says to download the app and sign in with that email. A used, replaced or expired link gives `INVALID_LINK`. It ends every app session of that owner, and writes an `owner.set_password` audit row (actor `OWNER`, no garage).
 - The privacy policy is public at `gearva.online/privacy` (English and Arabic), linked from the website footer and the set-password page. The stores need its address for the app.
 - The WhatsApp invite recorded when a customer is added (section 3.1 step 5) stays as it is.
+
+Details (step 6.2):
+- Every `/mobile/v1` route goes through a global `OwnerGuard` (like `StaffGuard` for `/v1`, chosen by the controller's declared path): a Bearer access token of type `owner`, an open session, and an owner whose app account still exists. Only the `auth/*` routes are public. A locked garage blocks nothing here (step 7).
+- The owner's requests read garage tables through `OwnerDb` (database.md 6.4): `app.owner_id` is set, `app.garage_id` is not. Changes to the account itself (language, password, deletion) go through the platform role, like the login.
+- Login failures count per email as for staff (10, then 15 minutes), on top of 10 per minute per IP. Changing the password or deleting the account needs the current password and counts the same way.
+- Forgot password: one email per address per minute. The notification row belongs to the garage whose invite set the login email (the latest successful invite), so no garage's log shows an email another garage entered. It uses the `password-reset` template and the owner set-password page.
+- Changing the password keeps the current session and ends the others. Deleting the account clears the email, password, link and `passwordSetAt` and ends every session; the garage then sees the customer as `INVITED` again (its earlier invite date) and may invite them again.
+- Audit actions (actor `OWNER`, no garage): `owner.login`, `owner.session.refresh`, `owner.logout`, `owner.update`, `owner.change_password`, `owner.delete_account`; `owner.preferences` carries the garage. A forgot-password request has no actor and writes no row.
 
 ### 2.5 Subscription lock
 Every garage request passes this check after authentication:

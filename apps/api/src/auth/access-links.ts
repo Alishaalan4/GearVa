@@ -18,9 +18,17 @@ export function hashAccessToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function newAccessLink(appUrlGarage: string, kind: 'invite' | 'reset'): AccessLink {
+/**
+ * `path` is the page the link opens: staff use /set-password, car owners
+ * /<locale>/owner/set-password (flow.md 2.4).
+ */
+export function newAccessLink(
+  appUrlGarage: string,
+  kind: 'invite' | 'reset',
+  path = '/set-password',
+): AccessLink {
   const token = randomBytes(32).toString('base64url');
-  const url = new URL('/set-password', appUrlGarage);
+  const url = new URL(path, appUrlGarage);
   url.searchParams.set('token', token);
   const ttlMs =
     kind === 'invite' ? INVITE_LINK_DAYS * 24 * 60 * 60 * 1000 : RESET_LINK_HOURS * 60 * 60 * 1000;

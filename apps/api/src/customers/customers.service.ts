@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   type CreateCustomerInput,
   type CreateCustomerResponse,
@@ -6,20 +6,33 @@ import {
   type CustomerListItem,
   type CustomerListQuery,
   ERROR_CODES,
+  type OwnerAppStatus,
   type Paginated,
   type UpdateCustomerInput,
 } from '@gearva/contracts';
 import { type Notification, Prisma, type TenantTx } from '@gearva/database';
 import { AuditService } from '../audit/audit.service';
+import { newAccessLink } from '../auth/access-links';
 import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { paginated, toSkipTake } from '../common/pagination';
+import { ENV, type Env } from '../config/env';
 import { NotificationsService } from '../notifications/notifications.service';
 import { toCustomerSummary, toVehicleItem } from './mappers';
 
 export function customerNotFound(): AppException {
   return new AppException(HttpStatus.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Customer not found');
 }
+
+function appAlreadyActive(): AppException {
+  return new AppException(
+    HttpStatus.CONFLICT,
+    ERROR_CODES.OWNER_APP_ALREADY_ACTIVE,
+    'This person already uses the owner app; their cars from this garage appear there',
+  );
+}
+
+type InviteOutcome = 'INVITED' | 'ALREADY_ACTIVE' | 'EMAIL_USED';
 
 /**
  * A garage's customers (flow.md 3.1, database.md 4.3). The phone belongs to the global
@@ -34,6 +47,7 @@ export class CustomersService {
     private readonly db: TenantDb,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   /**
@@ -136,6 +150,80 @@ export class CustomersService {
     return this.load(customerId);
   }
 
+  /**
+   * flow.md 2.4 step 1, "Invite to the app": emails the customer a link to set the
+   * password of their owner app account. Uses the garage's contact email for the customer,
+   * which becomes the person's login. The owner row is changed only by invite_owner()
+   * (database.md 6.6), inside this garage's transaction.
+   */
+  async inviteToApp(customerId: string): Promise<CustomerDetail> {
+    const garageId = this.db.garageId;
+    const invite = await this.db.run(async (tx) => {
+      const customer = await tx.garageCustomer.findFirst({
+        where: { id: customerId, garageId, deletedAt: null },
+        include: { owner: true, garage: { select: { name: true } } },
+      });
+      if (!customer) throw customerNotFound();
+      if (customer.owner.passwordHash) throw appAlreadyActive();
+      const email = customer.email?.trim().toLowerCase();
+      if (!email) {
+        throw new AppException(
+          HttpStatus.BAD_REQUEST,
+          ERROR_CODES.CUSTOMER_EMAIL_REQUIRED,
+          'Add the customer’s email first',
+        );
+      }
+
+      const locale = customer.owner.locale === 'en' ? 'en' : 'ar';
+      const link = newAccessLink(
+        this.env.APP_URL_GARAGE,
+        'invite',
+        `/${locale}/owner/set-password`,
+      );
+      const [row] = await tx.$queryRaw<{ outcome: InviteOutcome }[]>`
+        SELECT invite_owner(${customer.ownerId}::uuid, ${email}, ${link.tokenHash},
+                            ${link.expiresAt}::timestamptz) AS outcome`;
+      if (row?.outcome === 'ALREADY_ACTIVE') throw appAlreadyActive();
+      if (row?.outcome === 'EMAIL_USED') {
+        throw new AppException(
+          HttpStatus.CONFLICT,
+          ERROR_CODES.EMAIL_ALREADY_USED,
+          'Another person uses this email for the owner app',
+        );
+      }
+      if (row?.outcome !== 'INVITED') throw new Error('invite_owner returned no outcome');
+
+      const sentAt = new Date();
+      await tx.garageCustomer.update({
+        where: { id: customer.id },
+        data: { inviteSentAt: sentAt },
+      });
+      const { notification } = await this.notifications.record(tx, {
+        garageId,
+        ownerId: customer.ownerId,
+        channel: 'EMAIL',
+        type: 'INVITE',
+        template: 'owner-invite',
+        locale,
+        recipient: email,
+        payload: { name: customer.name, garageName: customer.garage.name, link: link.url },
+        // One row per invite sent: "Send again" is a new intent.
+        dedupeKey: `OWNER_INVITE:${customer.id}:${sentAt.getTime()}`,
+        refType: 'customer',
+        refId: customer.id,
+      });
+      return notification;
+    });
+
+    try {
+      await this.notifications.dispatch(invite);
+    } catch (error) {
+      // The link is saved; the row stays QUEUED and the retry job picks it up (step 4.2).
+      this.logger.error(`Could not queue owner invite ${invite.id}`, error as Error);
+    }
+    return this.load(customerId);
+  }
+
   private async findOrLink(
     tx: TenantTx,
     input: CreateCustomerInput,
@@ -202,6 +290,13 @@ export class CustomersService {
       }),
     );
     if (!customer) throw customerNotFound();
+    // Whether the person uses the app, never their login email: another garage may have
+    // sent the invite that set it (database.md 4.3: one garage never sees another's data).
+    const appStatus: OwnerAppStatus = customer.owner.passwordHash
+      ? 'ACTIVE'
+      : customer.inviteSentAt
+        ? 'INVITED'
+        : 'NONE';
     return {
       ...toCustomerSummary(customer),
       notes: customer.notes,
@@ -210,6 +305,8 @@ export class CustomersService {
       marketingOptOut: customer.marketingOptOut,
       createdAt: customer.createdAt.toISOString(),
       vehicles: customer.vehicles.map(toVehicleItem),
+      appStatus,
+      inviteSentAt: customer.inviteSentAt?.toISOString() ?? null,
     };
   }
 }

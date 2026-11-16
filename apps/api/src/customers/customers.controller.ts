@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -24,6 +26,7 @@ import {
 import type { Response } from 'express';
 import { createZodDto } from 'nestjs-zod';
 import { Audit } from '../audit/audit.decorator';
+import { Roles } from '../auth/staff-access.decorators';
 import { CustomersService } from './customers.service';
 import { SearchService } from './search.service';
 
@@ -68,6 +71,19 @@ export class CustomersController {
     @Body() body: UpdateCustomerDto,
   ): Promise<CustomerDetail> {
     return this.customers.update(customerId, body);
+  }
+
+  /**
+   * flow.md 2.4: "Invite to the app" (and "Send again"). Not for mechanics, who do not
+   * manage customers' accounts. Each call sends an email, so it is limited per IP.
+   */
+  @Post(':customerId/app-invite')
+  @Roles('OWNER', 'MANAGER', 'RECEPTIONIST')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Audit('customer.app_invite', 'customer')
+  inviteToApp(@Param('customerId', ParseUUIDPipe) customerId: string): Promise<CustomerDetail> {
+    return this.customers.inviteToApp(customerId);
   }
 }
 

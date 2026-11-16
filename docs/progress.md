@@ -55,7 +55,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | Later | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
-| 6 | 6.1 Owner accounts, invite, set-password and privacy pages | Next | |
+| 6 | 6.1 Owner accounts, invite, set-password and privacy pages | Written, awaiting the user's checks | |
+| 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | Next | |
 
 ---
 
@@ -1847,6 +1848,62 @@ Both are sent to the developer as one PDF. The API is then built to the contract
 - The PDF was generated and read through.
 - No code changed.
 
-**Commit:** _(filled in at the next step)_
+**Commit:** `d2e4d6f` + `3b1ee64`
+
+---
+
+## Phase 6 · Step 6.1 — Owner accounts, the app invite, set-password and privacy pages
+**When:** 2026-11-16 ~09:40 → ~10:25
+
+**Implements:** README 6 (Phase 6, step 6.1); flow.md 2.4 (new "Details (step 6.1)"), 3.1 step 5; database.md 4.1 (`owners`), 6.6 (`invite_owner()`), 7; mobile-api.md 2.1.
+
+**Summary:** A garage can now invite a customer to the owner app, and the customer sets their app password on a web page.
+- **Invite to the app** on the customer page (OWNER, MANAGER, RECEPTIONIST). It needs the customer's email. It shows the app status: not invited, invited (with the date, and "Send again") or uses the app.
+- The email `owner-invite` (English and Arabic) links to `gearva.online/<en|ar>/owner/set-password?token=...`, valid 7 days. The page saves the password and tells the person to download the app and sign in with their email. It signs nobody in.
+- **`/privacy`**: a privacy policy in English and Arabic, linked from the website footer and the set-password page. The app stores need its address.
+- `owner_otps` was in the docs only, never in the database, so nothing was dropped.
+
+**How it works**
+- `owners` gets `passwordHash`, `inviteTokenHash` (unique), `inviteExpiresAt`, `passwordSetAt`; `email` becomes unique and lower case (CHECK).
+- Garage code may only read `owners` (database.md 6.6), so the invite changes the owner through a new `SECURITY DEFINER` function, `invite_owner()`, inside the garage's transaction. It checks that the owner is a live customer of that garage. It refuses an owner who already has a password (`OWNER_APP_ALREADY_ACTIVE`) and an email another owner uses (`EMAIL_ALREADY_USED`), including a race between two invites.
+- `POST /v1/customers/:customerId/app-invite` (10 per minute) and `POST /mobile/v1/auth/set-password` (the first `/mobile/v1` endpoint, in the new `owners/` module, 10 per minute). garage-web forwards only that one `/mobile/v1` path, the same way as `/v1`.
+- A link works once: the password is saved only by the request that still finds the token. Setting it ends the owner's app sessions. Audit: `customer.app_invite` (staff) and `owner.set_password` (actor `OWNER`, no garage).
+- A garage sees whether the person uses the app, but never their login email, which another garage may have set.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma` | `Owner`: login columns, `email` unique |
+| `packages/database/prisma/migrations/20261116090000_owner_accounts/migration.sql` (new) | Columns, unique indexes, lower-case CHECK, `invite_owner()` and its grant |
+| `packages/contracts/src/errors.ts` | `OWNER_APP_ALREADY_ACTIVE`, `CUSTOMER_EMAIL_REQUIRED` |
+| `packages/contracts/src/customers.ts` | `CustomerDetail.appStatus`, `inviteSentAt`; `OwnerAppStatus` |
+| `packages/contracts/src/owners.ts` (new), `index.ts` | The owner set-password schema and answer |
+| `apps/api/src/customers/customers.service.ts`, `customers.controller.ts` | The invite; app status in the customer detail |
+| `apps/api/src/auth/access-links.ts` | The link's page is a parameter (staff or owner page) |
+| `apps/api/src/notifications/templates/owner-invite.ts` (new), `index.ts` | The `owner-invite` email |
+| `apps/api/src/owners/` (new: module, controller, service), `app.module.ts` | `POST /mobile/v1/auth/set-password` |
+| `apps/api/test/customers.spec.ts` | 5 tests: email needed, roles, invite, resend, set password once, expiry, second garage, email used |
+| `apps/api/test/tenancy.spec.ts` | Case for the invite route, also checking B's owner row |
+| `apps/garage-web/features/customers/customer-page.tsx` | The "Gearva app" card |
+| `apps/garage-web/features/owner/owner-set-password-form.tsx`, `app/[locale]/owner/set-password/page.tsx` (new) | The owner set-password page |
+| `apps/garage-web/features/website/privacy-page.tsx`, `app/[locale]/privacy/page.tsx` (new), `landing-page.tsx` | The privacy policy and its footer link |
+| `apps/garage-web/proxy.ts`, `next.config.ts`, `lib/api.ts` | Forward `/mobile/v1/auth/set-password` |
+| `apps/garage-web/messages/en.json`, `ar.json` | Texts for the above, 2 error codes |
+
+**Doc changes**
+- database.md: `owners` columns as built, `owner_otps` "never created" (also removed from the table groups), `invite_owner()` in 6.6, indexes.
+- flow.md 2.4: the details of step 6.1. **Code and docs disagreed** on 3.1 step 5 ("email if known"): the code always records a skipped WhatsApp invite. The doc now says so, and points to the new email invite.
+- mobile-api.md 2.1: the link has the language in it, and the invite and page are live. No endpoint the app calls changed, so the version stays 1.0.
+
+**Problems hit:** none.
+
+**Verified**
+By me, on the test database:
+- `customers.spec.ts` and `tenancy.spec.ts`: 68 passed. RLS guard rails (`packages/database`): 26 passed.
+- Typecheck and lint pass for api, garage-web and contracts; Prettier is clean on the changed files.
+
+To do by the user: the migration on the dev database, the full test suite, and a browser check (invite, the email in the API console, the page in both languages, `/privacy`).
+
+**Commit:** _(pending)_ "Phase 6.1: owner app invite, set-password page for owners, privacy policy"
 
 ---

@@ -15,6 +15,10 @@ export const ERROR_CODES = {
   EMAIL_ALREADY_USED: 'EMAIL_ALREADY_USED',
   OWNER_ALREADY_ACTIVE: 'OWNER_ALREADY_ACTIVE',
   OWNER_NOT_ACTIVATED: 'OWNER_NOT_ACTIVATED',
+  /** The car owner already uses the app; this garage's cars already appear there (flow.md 2.4). */
+  OWNER_APP_ALREADY_ACTIVE: 'OWNER_APP_ALREADY_ACTIVE',
+  /** "Invite to the app" needs the customer's email first (flow.md 2.4). */
+  CUSTOMER_EMAIL_REQUIRED: 'CUSTOMER_EMAIL_REQUIRED',
   GARAGE_ALREADY_SUSPENDED: 'GARAGE_ALREADY_SUSPENDED',
   GARAGE_NOT_SUSPENDED: 'GARAGE_NOT_SUSPENDED',
   /** A trial can be extended only while the garage has never paid (flow.md 11.1). */

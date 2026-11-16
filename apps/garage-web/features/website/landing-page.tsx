@@ -199,9 +199,14 @@ export function LandingPage() {
 
       <footer className="flex flex-wrap justify-between gap-3 border-t border-line pb-10 pt-6 text-sm text-muted">
         <span>{t('footer')}</span>
-        <Link href="/login" className="underline">
-          {t('signIn')}
-        </Link>
+        <span className="flex gap-4">
+          <Link href="/privacy" className="underline">
+            {t('privacy')}
+          </Link>
+          <Link href="/login" className="underline">
+            {t('signIn')}
+          </Link>
+        </span>
       </footer>
     </div>
   );

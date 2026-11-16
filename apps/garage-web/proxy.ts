@@ -6,6 +6,9 @@ import { forwardToApi } from './lib/forward-api';
 
 const handleI18n = createMiddleware(routing);
 
+/** The only owner app endpoint this site forwards: its /owner/set-password page posts here. */
+const OWNER_SET_PASSWORD = '/mobile/v1/auth/set-password';
+
 /**
  * Next 16 "proxy" (formerly middleware): passes the visitor's IP on to the API, and adds the /en or /ar prefix to page URLs. A URL
  * without one (such as the invite link /set-password?token=...) opens in the language the
@@ -13,7 +16,9 @@ const handleI18n = createMiddleware(routing);
  */
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith('/v1/')) return forwardToApi(request);
+  if (pathname.startsWith('/v1/') || pathname === OWNER_SET_PASSWORD) {
+    return forwardToApi(request);
+  }
   const prefixed = routing.locales.some(
     (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`),
   );

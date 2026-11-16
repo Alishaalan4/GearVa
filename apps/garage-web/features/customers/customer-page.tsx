@@ -3,18 +3,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   type CustomerDetail,
+  type StaffRole,
   type UpdateCustomerInput,
   updateCustomerSchema,
 } from '@gearva/contracts';
 import { Alert, Button, buttonClass, Card, Field, Input, Pill, Textarea } from '@gearva/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
+import { useStaff } from '@/features/auth/use-staff';
 import { Link } from '@/i18n/navigation';
-import { ApiError, api, apiPatch } from '@/lib/api';
+import { ApiError, api, apiPatch, apiPost } from '@/lib/api';
 import { useDistance } from '@/lib/format';
 
 /** flow.md 3.1, 3.2.1: the customer's file, their cars, and "Add car". */
@@ -73,6 +75,8 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
         )}
       </Card>
 
+      <OwnerAppCard customer={c} />
+
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t('cars')}</h2>
@@ -104,6 +108,76 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
         </ul>
       </div>
     </div>
+  );
+}
+
+/** Who may send the app invite (flow.md 2.4); the API checks too. */
+const INVITE_ROLES: readonly StaffRole[] = ['OWNER', 'MANAGER', 'RECEPTIONIST'];
+
+/**
+ * flow.md 2.4 step 1: "Invite to the app". The customer gets an email with a link to set
+ * the password of their Gearva owner app; it needs the customer's email.
+ */
+function OwnerAppCard({ customer }: { customer: CustomerDetail }) {
+  const t = useTranslations('customers.app');
+  const format = useFormatter();
+  const staff = useStaff();
+  const queryClient = useQueryClient();
+  const invite = useMutation({
+    mutationFn: () => apiPost<CustomerDetail>(`/v1/customers/${customer.id}/app-invite`),
+    onSuccess: (updated) => queryClient.setQueryData(['customer', customer.id], updated),
+  });
+  const canInvite = !!staff.data && INVITE_ROLES.includes(staff.data.role);
+  const status = customer.appStatus;
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">{t('title')}</h2>
+            <Pill tone={status === 'ACTIVE' ? 'ok' : status === 'INVITED' ? 'brand' : 'soft'}>
+              {t(`status.${status}`)}
+            </Pill>
+          </div>
+          <p className="text-sm text-muted">
+            {status === 'ACTIVE'
+              ? t('activeText')
+              : status === 'INVITED' && customer.inviteSentAt
+                ? t('invitedText', {
+                    date: format.dateTime(new Date(customer.inviteSentAt), {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    }),
+                  })
+                : t('noneText')}
+          </p>
+          {status !== 'ACTIVE' && !customer.email && (
+            <p className="text-sm text-muted">{t('needsEmail')}</p>
+          )}
+        </div>
+        {canInvite && status !== 'ACTIVE' && (
+          <Button
+            type="button"
+            variant={status === 'INVITED' ? 'secondary' : 'primary'}
+            disabled={!customer.email || invite.isPending}
+            onClick={() => invite.mutate()}
+          >
+            {status === 'INVITED' ? t('sendAgain') : t('invite')}
+          </Button>
+        )}
+      </div>
+      {invite.isSuccess && (
+        <div className="mt-3">
+          <Alert tone="success">{t('sent', { email: customer.email ?? '' })}</Alert>
+        </div>
+      )}
+      {invite.error && (
+        <div className="mt-3">
+          <ApiErrorAlert error={invite.error} />
+        </div>
+      )}
+    </Card>
   );
 }
 

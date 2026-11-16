@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { Locale } from '../notification-channel';
+import { ownerInvite } from './owner-invite';
 import { passwordReset } from './password-reset';
 import { monthlyReminder, recommendedNext, serviceReminder, warrantyEnd } from './reminders';
 import { staffInvite } from './staff-invite';
@@ -19,6 +20,7 @@ export interface EmailTemplate<T> {
 const EMAIL_TEMPLATES = {
   'staff-invite': staffInvite,
   'password-reset': passwordReset,
+  'owner-invite': ownerInvite,
   'service-reminder': serviceReminder,
   'warranty-end': warrantyEnd,
   'recommended-next': recommendedNext,

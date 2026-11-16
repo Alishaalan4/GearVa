@@ -48,7 +48,9 @@
     "INVOICE_PDF_NOT_READY": "The PDF is still being prepared. Try again in a moment.",
     "FILE_TOO_LARGE": "The file is too large.",
     "REMINDER_NOT_DUE": "This reminder is not due any more. The list was refreshed.",
-    "VIEW_ONLY": "You are viewing this garage as a Gearva admin: nothing can be changed."
+    "VIEW_ONLY": "You are viewing this garage as a Gearva admin: nothing can be changed.",
+    "OWNER_APP_ALREADY_ACTIVE": "This customer already uses the Gearva app. Their cars from your garage already appear there.",
+    "CUSTOMER_EMAIL_REQUIRED": "Add the customer’s email first (Edit)."
   },
   "nav": {
     "home": "Search",
@@ -93,6 +95,27 @@
     "confirmMismatch": "The two passwords are not the same.",
     "submit": "Save and sign in",
     "noToken": "This page needs the link from your email. Open the link again, or ask for a new one."
+  },
+  "ownerSetPassword": {
+    "title": "Set your Gearva app password",
+    "intro": "Choose the password you will use in the Gearva app, with the email this link was sent to.",
+    "password": "New password",
+    "passwordHint": "At least {min} characters.",
+    "passwordInvalid": "Use at least {min} characters.",
+    "confirm": "Repeat the password",
+    "confirmMismatch": "The two passwords are not the same.",
+    "submit": "Save password",
+    "noToken": "This page needs the link from your email. Open the link again, or ask your garage for a new one.",
+    "doneTitle": "Password saved",
+    "done": "Your password is saved.",
+    "doneSignIn": "Download the Gearva app and sign in with this email and your new password:",
+    "privacy": "Privacy policy",
+    "side": {
+      "heading": "Your cars, always up to date.",
+      "point1": "Every service your garage records",
+      "point2": "Your invoices, ready to open",
+      "point3": "A reminder when the next service is due"
+    }
   },
   "lock": {
     "title": {
@@ -217,7 +240,22 @@
       "email": "Enter a valid email address."
     },
     "email": "Email (optional)",
-    "emailHint": "Service reminders are emailed automatically. Without an email, they appear in Reminders for WhatsApp."
+    "emailHint": "Service reminders are emailed automatically. Without an email, they appear in Reminders for WhatsApp.",
+    "app": {
+      "title": "Gearva app",
+      "status": {
+        "NONE": "Not invited",
+        "INVITED": "Invited",
+        "ACTIVE": "Uses the app"
+      },
+      "noneText": "The customer can see their cars, service history and invoices in the Gearva app.",
+      "invitedText": "Invite sent on {date}. The link works for 7 days.",
+      "activeText": "The customer uses the app: their cars from your garage appear there.",
+      "needsEmail": "Add the customer’s email (Edit) to invite them.",
+      "invite": "Invite to the app",
+      "sendAgain": "Send again",
+      "sent": "Invite sent to {email}."
+    }
   },
   "vehicles": {
     "newTitle": "New car for {name}",
@@ -666,6 +704,53 @@
       "sentText": "Thank you. We will contact you by phone or email shortly.",
       "again": "Send another application"
     },
-    "footer": "Gearva · Keep you moving"
+    "footer": "Gearva · Keep you moving",
+    "privacy": "Privacy policy"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Last updated: 16 November 2026",
+    "intro": "Gearva is a service that car garages use to keep their customers’ cars, services and invoices, and to remind customers when a service is due. This policy explains what information Gearva keeps, why, and what you can do about it. It covers the garage app, the Gearva owner app and this website.",
+    "sections": {
+      "who": {
+        "title": "Who is responsible",
+        "p1": "Each garage decides what it records about its own customers and is responsible for those records. Gearva keeps and processes them on the garage’s behalf.",
+        "p2": "For your owner app account (your login email and password), Gearva is responsible."
+      },
+      "collect": {
+        "title": "What we keep",
+        "p1": "About garage customers: name, phone number, an email if the garage adds one, cars (plate, make, model, year, odometer readings), the services done, invoices and payments, and the reminders sent.",
+        "p2": "For the owner app: your login email, your password (stored only as a secure hash, never readable), your language, your phone’s notification token, and the time and IP address of each sign-in.",
+        "p3": "About garage staff and garages that apply on this website: name, email, phone, garage details and sign-in records. We use only the cookies needed to keep you signed in and remember your language: no advertising or tracking cookies."
+      },
+      "use": {
+        "title": "How we use it",
+        "p1": "To run the service: to show your garage its records, make invoices, send service reminders, and show you your own cars, history, invoices, notifications and offers in the owner app.",
+        "p2": "To keep it secure: to protect accounts from misuse and to keep a log of who changed what. We do not sell your information and we do not use it for advertising."
+      },
+      "share": {
+        "title": "Who can see it",
+        "p1": "A garage sees only its own customers. If you are a customer of several garages, each one sees only its own records; only your owner app shows them together.",
+        "p2": "We use trusted providers to run Gearva: hosting in the European Union (Render), email delivery (Resend), file storage (Cloudflare) and app notifications (Google Firebase). They handle the information only to provide their service to us."
+      },
+      "keep": {
+        "title": "How long we keep it",
+        "p1": "Service records and invoices are the garage’s business records. They are kept while the garage uses Gearva and as long as the law requires; invoices are never deleted, only cancelled.",
+        "p2": "When you delete your owner app account (in the app), your login email, password, sessions and notification tokens are removed. The garages keep their own records of your visits and invoices."
+      },
+      "rights": {
+        "title": "Your choices and rights",
+        "p1": "You can ask your garage to correct your details, stop service reminders or offers from any garage (in the app or by asking the garage), and delete your app account at any time from the app.",
+        "p2": "You can also ask Gearva for a copy of your information or for its deletion, where the law allows."
+      },
+      "security": {
+        "title": "Security",
+        "p1": "All connections are encrypted (HTTPS), passwords are stored only as secure hashes, each garage’s data is kept separate in the database, and access to records is logged."
+      },
+      "contact": {
+        "title": "Contact",
+        "p1": "For questions about your records, contact your garage. For anything else, or about this policy, write to Gearva at privacy@gearva.online. If we change this policy, we will update the date above."
+      }
+    }
   }
 }

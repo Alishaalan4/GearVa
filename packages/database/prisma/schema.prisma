@@ -203,16 +203,24 @@ model Session {
 // code may read only the owners linked to its own customers (owners_linked_read policy),
 // and creates or finds one only through find_or_create_owner() (section 6.6).
 model Owner {
-  id          String    @id @default(uuid(7)) @db.Uuid
+  id              String    @id @default(uuid(7)) @db.Uuid
   // E.164, the login identity (Phase 6)
-  phone       String    @unique
+  phone           String    @unique
   // the name given by the first garage that added them
-  name        String
-  email       String?
-  locale      String
-  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(3)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  name            String
+  // the owner app login (step 6.1, flow.md 2.4), lower case; set by a garage's invite
+  // through invite_owner(). Garages' contact emails stay on garage_customers.
+  email           String?   @unique
+  locale          String
+  // argon2id; null until the owner sets a password through the invite link
+  passwordHash    String?   @map("password_hash")
+  // SHA-256 of the one-time set-password link (invite 7 days, reset 24 hours)
+  inviteTokenHash String?   @unique @map("invite_token_hash")
+  inviteExpiresAt DateTime? @map("invite_expires_at") @db.Timestamptz(3)
+  passwordSetAt   DateTime? @map("password_set_at") @db.Timestamptz(3)
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   garageCustomers GarageCustomer[]
   vehicles        Vehicle[]

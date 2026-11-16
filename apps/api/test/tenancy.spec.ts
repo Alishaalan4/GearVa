@@ -352,6 +352,17 @@ describe('Tenant isolation (test:tenancy)', () => {
       });
     },
 
+    // Step 6.1: the owner app invite changes the global owner, so check that row as well.
+    'POST /v1/customers/:customerId/app-invite': async () => {
+      // B's customer has no email: a leak would answer 400 CUSTOMER_EMAIL_REQUIRED, not 404.
+      const ownerOfB = () => platform.owner.findUniqueOrThrow({ where: { phone: b.phone } });
+      const before = await ownerOfB();
+      await expectBUnchanged(async () => {
+        await asA.post(`/v1/customers/${b.customerId}/app-invite`).expect(404);
+      });
+      expect(await ownerOfB()).toEqual(before);
+    },
+
     'POST /v1/customers/:customerId/vehicles': async () => {
       await expectBUnchanged(async () => {
         const car = { plate: 'X 1', make: 'Kia', model: 'Rio', distanceUnit: 'KM', odometer: 1 };

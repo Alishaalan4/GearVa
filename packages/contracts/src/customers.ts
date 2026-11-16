@@ -58,6 +58,13 @@ export interface CustomerSummary {
   phone: string;
 }
 
+/**
+ * The customer and the owner app (flow.md 2.4): `ACTIVE` once the person set a password
+ * (from any garage's invite), `INVITED` after this garage sent an invite, else `NONE`.
+ */
+export const OWNER_APP_STATUSES = ['NONE', 'INVITED', 'ACTIVE'] as const;
+export type OwnerAppStatus = (typeof OWNER_APP_STATUSES)[number];
+
 export interface CustomerDetail extends CustomerSummary {
   notes: string | null;
   email: string | null;
@@ -65,6 +72,9 @@ export interface CustomerDetail extends CustomerSummary {
   marketingOptOut: boolean;
   createdAt: string;
   vehicles: VehicleItem[];
+  appStatus: OwnerAppStatus;
+  /** when this garage last sent the app invite */
+  inviteSentAt: string | null;
 }
 
 /**

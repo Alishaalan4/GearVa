@@ -68,11 +68,13 @@ Production will not sleep, but keep this behaviour: it also covers short outages
 
 ### 2.1 How an owner gets an account
 1. The garage adds the customer (phone, name) and their **email** in the garage app, then taps **Invite to the app**.
-2. Gearva emails the owner a link to **set a password** on a web page (`https://gearva.online/owner/set-password?token=…`), valid 7 days. Staff never see or type the password.
+2. Gearva emails the owner a link to **set a password** on a web page (`https://gearva.online/en/owner/set-password?token=…`, or `/ar/…` for an Arabic-speaking owner), valid 7 days. Staff never see or type the password.
 3. The page tells them to download the app; they log in with that email and password.
-4. If a second garage invites the same person later, no new account is made: their cars from the new garage simply appear in the app.
+4. If a second garage invites the same person later, no new account is made: their cars from the new garage simply appear in the app (the garage sees "Uses the app").
 
 Password rule: at least 10 characters (the same check runs in the app and on the server).
+
+**Live on the test server (step 6.1, 2026-11-16):** the invite, its email and the set-password page. The page posts to `POST /mobile/v1/auth/set-password`; the app itself does not call it. The privacy policy for the store listings is at `https://gearva.online/privacy`.
 
 ### 2.2 `POST /mobile/v1/auth/login`
 ```json

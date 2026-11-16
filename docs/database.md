@@ -26,7 +26,7 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 
 | Group | Tables | Tenant (`garage_id`)? | RLS |
 |---|---|---|---|
-| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `owner_otps`, `device_tokens` | No | No (only reachable from admin/auth code). Exception (step 5.1): `subscription_payments`, `admin_access_logs` and `garage_applications` carry a `garage_id`, so they also get the tenant policy as a second guard, and are listed in `tenant-tables.ts`; `gearva_app` has no right on them at all |
+| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `device_tokens` | No | No (only reachable from admin/auth code). Exception (step 5.1): `subscription_payments`, `admin_access_logs` and `garage_applications` carry a `garage_id`, so they also get the tenant policy as a second guard, and are listed in `tenant-tables.ts`; `gearva_app` has no right on them at all |
 | Tenant root | `garages` | It is the tenant (`id`) | Yes, `id = app.garage_id` |
 | Tenant data | `garage_settings`, `branches`, `users`, `garage_customers`, `vehicles`, `service_types`*, `suggestions`, `visits`, `service_records`, `reminders`, `invoices`, `invoice_items`, `invoice_counters`, `payments`, `offers`, `notifications`, `files`, `audit_logs` | Yes | Yes |
 
@@ -101,13 +101,17 @@ Not a tenant table, but garage code may read the owners linked to its own custom
 | id | uuid PK | |
 | phone | text U | E.164, the identity of the person across garages |
 | name | text | name given by the first garage that added them |
-| email | text? U | the owner's own email, the owner app login (Phase 6); set by the first invite (flow.md 2.4), lower case. Garages' contact emails stay on `garage_customers` |
+| email | text? U | the owner's own email, the owner app login (Phase 6); set by a garage's invite (flow.md 2.4), lower case (a CHECK enforces it). Garages' contact emails stay on `garage_customers` |
 | locale | text | `ar` or `en`, used for invoices and notifications |
+| passwordHash | text? | argon2id; null until the owner sets it (step 6.1) |
+| inviteTokenHash | text? U | SHA-256 of the one-time set-password link, for the invite (7 days) and a reset (24 hours) |
+| inviteExpiresAt | timestamptz? | |
+| passwordSetAt | timestamptz? | when the password was last set |
 | lastLoginAt | timestamptz? | null means the app was never used |
 
-Added in step 6.1 (decision 2026-11-15, flow.md 2.4): `passwordHash` text? (argon2id; null until the owner sets it), `inviteTokenHash` text? U and `inviteExpiresAt` timestamptz? (the set-password link, for the invite and for a reset), `passwordSetAt` timestamptz?. Deleting the app account clears `email`, `passwordHash` and the token, and removes the sessions and device tokens.
+The login columns came in step 6.1 (decision 2026-11-15, flow.md 2.4). Garage code changes them only through `invite_owner()` (section 6.6). Deleting the app account clears `email`, `passwordHash` and the token, and removes the sessions and device tokens.
 
-`owner_otps` (phone + one-time code) is **dropped** in step 6.1: the login is email + password since 2026-10-29.
+`owner_otps` (phone + one-time code) was planned for Phase 6 but never created: the login is email + password since 2026-10-29.
 
 #### `device_tokens` (step 6.4)
 `id`, `ownerId` FK, `token` U (the Firebase Cloud Messaging registration token), `platform` (`ios`/`android`), `lastSeenAt`. Removed on logout, on account deletion, and when FCM reports the token dead.
@@ -565,6 +569,7 @@ Decided in step 2.1 (2026-10-23); the earlier text called `owners` a platform ta
 **Owners: linked-only access.** `owners` has no `garage_id`, yet garage code needs a customer's phone, name, email and locale. So:
 - `owners` has RLS enabled (not forced) with one policy, `owners_linked_read`: `gearva_app` may `SELECT` an owner only when a `garage_customers` row of the current garage points to it. A garage can never list or search all owners, even with a buggy query.
 - `gearva_app` has no `INSERT`/`UPDATE` on `owners`. It gets an owner's id with `SELECT find_or_create_owner(phone, name, locale)`: a `SECURITY DEFINER` function that checks the phone is E.164 and a tenant context is set, inserts the owner if the phone is new (`ON CONFLICT DO NOTHING`), and returns **only the id**. Adding a customer is then one tenant transaction: `find_or_create_owner`, then insert the `garage_customers` link.
+- "Invite to the app" (step 6.1, flow.md 2.4) is garage code too: it calls `SELECT invite_owner(ownerId, email, tokenHash, expiresAt)`, another `SECURITY DEFINER` function. It needs a tenant context and an owner linked to a live customer of that garage, and returns `INVITED` (email and link saved), `ALREADY_ACTIVE` (the owner already set a password; nothing changes) or `EMAIL_USED` (another owner has that email; nothing changes). Only `gearva_app` may execute it.
 - `gearva_platform` (admin, owner login in Phase 6) reads and writes `owners` normally.
 - Rows created in SQL get UUID v7 ids from `gearva_uuid_v7()` (Postgres 18 has `uuidv7()` built in).
 
@@ -579,7 +584,7 @@ garages            (status, expiresAt)
 users              U(email); U(inviteTokenHash); (garageId, role); U(garageId) WHERE role = 'OWNER' (exactly one owner)
 branches           U(garageId, code)
 garage_customers   U(garageId, ownerId); (garageId, deletedAt)
-owners             U(phone)
+owners             U(phone); U(email); U(inviteTokenHash)
 vehicles           U(garageId, plateNormalized) WHERE deletedAt IS NULL; (garageId, garageCustomerId); (ownerId)
 visits             (garageId, branchId, openedAt DESC); (vehicleId, openedAt DESC)
 service_records    (vehicleId, serviceTypeId, performedAt DESC); (garageId, performedAt DESC); (visitId)

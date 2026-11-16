@@ -95,6 +95,13 @@ Same as above. **Two-factor authentication (TOTP) is optional per admin** (decis
 6. **Delete account.** The owner can delete their app account in the app (the stores require it): the email, password hash, sessions and device tokens are removed; the garages keep their own records.
 7. **A locked garage** (subscription ended, 2.5): its customers still see their history and invoices from it in the app (read only); its offers are hidden and it sends no reminders.
 
+Details (step 6.1):
+- Invite: `POST /v1/customers/:customerId/app-invite` (OWNER, MANAGER, RECEPTIONIST; 10 per minute), answering the customer with `appStatus` and `inviteSentAt`. The email is the customer's `garage_customers.email`; without one the answer is `CUSTOMER_EMAIL_REQUIRED`. The owner row is changed through `invite_owner()` (database.md 6.6). The email (template `owner-invite`) is sent at once (the daytime rule is only for reminders) in the owner's language, with the link `gearva.online/<ar|en>/owner/set-password?token=...`. "Send again" replaces the link. Audit action `customer.app_invite`.
+- The customer page shows the app status: `NONE`, `INVITED` (this garage sent an invite, with the date) or `ACTIVE` (the person set a password, from any garage's invite). It never shows the login email, which another garage may have set.
+- Set password: the page posts to `POST /mobile/v1/auth/set-password` (`token`, `password`), forwarded by garage-web like `/v1`. It answers `{ email }` and signs nobody in; the page then says to download the app and sign in with that email. A used, replaced or expired link gives `INVALID_LINK`. It ends every app session of that owner, and writes an `owner.set_password` audit row (actor `OWNER`, no garage).
+- The privacy policy is public at `gearva.online/privacy` (English and Arabic), linked from the website footer and the set-password page. The stores need its address for the app.
+- The WhatsApp invite recorded when a customer is added (section 3.1 step 5) stays as it is.
+
 ### 2.5 Subscription lock
 Every garage request passes this check after authentication:
 
@@ -136,7 +143,7 @@ sequenceDiagram
 2. API normalizes the phone to E.164.
 3. Find or create the global `owners` row by phone (name and the garage's default locale are used only if it is new).
 4. Find or create the `garage_customers` link for (garage, owner). If it already exists, return the existing customer instead of creating a duplicate.
-5. Queue an `INVITE` notification so the customer can download the app. Channel: email if known, else in-app is impossible (no app yet), so the invite is logged as `SKIPPED` until WhatsApp is available. The customer still exists and still gets service data once a channel exists.
+5. Queue an `INVITE` notification so the customer can download the app. It is a WhatsApp row (template `customer-app-invite`), logged as `SKIPPED` until WhatsApp is available. The email invite with the set-password link is sent from the customer page with **Invite to the app** (section 2.4, step 6.1), once the customer has an email.
 
 **Same phone at two garages:** both garages link to the same `owners` row. Each garage sees only its own `garage_customers`, vehicles, visits and invoices (RLS). The owner app (phase 6) sees both histories through `ownerId`.
 

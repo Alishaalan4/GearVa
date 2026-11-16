@@ -290,4 +290,137 @@ describe('Customers, vehicles, search, suggestions', () => {
       await as(owner).get('/v1/suggestions?field=NOPE').expect(400);
     });
   });
+
+  describe('owner app invite and set password (step 6.1, flow.md 2.4)', () => {
+    const uniqueEmail = () => `sara-${randomUUID().slice(0, 8)}@test.local`;
+
+    /** The token from the newest owner-invite email of this customer. */
+    async function inviteToken(customerId: string): Promise<{ token: string; link: URL }> {
+      const n = await platform.notification.findFirstOrThrow({
+        where: { refId: customerId, template: 'owner-invite' },
+        orderBy: { createdAt: 'desc' },
+      });
+      const link = new URL((n.payload as { link: string }).link);
+      return { token: link.searchParams.get('token') as string, link };
+    }
+
+    const setPassword = (token: string, password = 'owner app password 1') =>
+      http().post('/mobile/v1/auth/set-password').send({ token, password });
+
+    it('needs the customer email, and is not for mechanics', async () => {
+      const c = await addCustomer();
+      const noEmail = await as(owner).post(`/v1/customers/${c.id}/app-invite`).expect(400);
+      expect(noEmail.body.code).toBe('CUSTOMER_EMAIL_REQUIRED');
+
+      await as(owner).patch(`/v1/customers/${c.id}`, { email: uniqueEmail() }).expect(200);
+      const mechanic = await signInAsStaff(app, g, 'MECHANIC');
+      await as(mechanic.cookie).post(`/v1/customers/${c.id}/app-invite`).expect(403);
+      const receptionist = await signInAsStaff(app, g, 'RECEPTIONIST');
+      await as(receptionist.cookie).post(`/v1/customers/${c.id}/app-invite`).expect(200);
+    });
+
+    it('invites, sets the password once, then refuses a second invite', async () => {
+      const c = await addCustomer();
+      const email = uniqueEmail();
+      await as(owner).patch(`/v1/customers/${c.id}`, { email: email.toUpperCase() }).expect(200);
+      const before = await as(owner).get(`/v1/customers/${c.id}`).expect(200);
+      expect(before.body).toMatchObject({ appStatus: 'NONE', inviteSentAt: null });
+
+      const invited = await as(owner).post(`/v1/customers/${c.id}/app-invite`).expect(200);
+      expect(invited.body.appStatus).toBe('INVITED');
+      expect(invited.body.inviteSentAt).toEqual(expect.any(String));
+
+      // The owner row got the login email and a hashed 7-day link; the email is queued.
+      const ownerRow = await platform.owner.findUniqueOrThrow({ where: { phone: c.phone } });
+      expect(ownerRow).toMatchObject({ email, passwordHash: null });
+      expect(ownerRow.inviteTokenHash).toMatch(/^[0-9a-f]{64}$/);
+      const days = (ownerRow.inviteExpiresAt!.getTime() - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(6.9);
+      const n = await platform.notification.findFirstOrThrow({
+        where: { refId: c.id, template: 'owner-invite' },
+      });
+      expect(n).toMatchObject({
+        channel: 'EMAIL',
+        type: 'INVITE',
+        recipient: email,
+        garageId: g.garageId,
+        ownerId: ownerRow.id,
+      });
+      const audit = await platform.auditLog.findFirst({
+        where: { action: 'customer.app_invite', entityId: c.id },
+      });
+      expect(audit).toMatchObject({ actorType: 'STAFF', garageId: g.garageId });
+
+      // "Send again" replaces the link: the first one stops working.
+      const first = await inviteToken(c.id);
+      await as(owner).post(`/v1/customers/${c.id}/app-invite`).expect(200);
+      const second = await inviteToken(c.id);
+      expect(second.token).not.toBe(first.token);
+      expect(second.link.pathname).toBe('/en/owner/set-password');
+      expect((await setPassword(first.token).expect(400)).body.code).toBe('INVALID_LINK');
+
+      // The page: too short is refused, then the password is saved and the link is spent.
+      await setPassword(second.token, 'short').expect(400);
+      const saved = await setPassword(second.token).expect(200);
+      expect(saved.body).toEqual({ email });
+      expect((await setPassword(second.token).expect(400)).body.code).toBe('INVALID_LINK');
+      const active = await platform.owner.findUniqueOrThrow({ where: { id: ownerRow.id } });
+      expect(active.passwordHash).toMatch(/^\$argon2id\$/);
+      expect(active).toMatchObject({ inviteTokenHash: null, inviteExpiresAt: null });
+      expect(active.passwordSetAt).toBeInstanceOf(Date);
+      expect(
+        await platform.auditLog.findFirst({
+          where: { action: 'owner.set_password', actorType: 'OWNER', actorId: ownerRow.id },
+        }),
+      ).toMatchObject({ garageId: null });
+
+      const after = await as(owner).get(`/v1/customers/${c.id}`).expect(200);
+      expect(after.body.appStatus).toBe('ACTIVE');
+      const again = await as(owner).post(`/v1/customers/${c.id}/app-invite`).expect(409);
+      expect(again.body.code).toBe('OWNER_APP_ALREADY_ACTIVE');
+    });
+
+    it('a second garage sees the account as active and cannot re-invite (one login)', async () => {
+      const phone = randomPhone();
+      const c = await addCustomer(owner, phone);
+      await as(owner).patch(`/v1/customers/${c.id}`, { email: uniqueEmail() }).expect(200);
+      await as(owner).post(`/v1/customers/${c.id}/app-invite`).expect(200);
+      await setPassword((await inviteToken(c.id)).token).expect(200);
+
+      const other = await createGarageWithOwner(app);
+      const { cookie } = await staffLogin(app, other.ownerEmail, other.password);
+      const theirs = await addCustomer(cookie, phone);
+      await as(cookie).patch(`/v1/customers/${theirs.id}`, { email: uniqueEmail() }).expect(200);
+      const detail = await as(cookie).get(`/v1/customers/${theirs.id}`).expect(200);
+      expect(detail.body.appStatus).toBe('ACTIVE');
+      const res = await as(cookie).post(`/v1/customers/${theirs.id}/app-invite`).expect(409);
+      expect(res.body.code).toBe('OWNER_APP_ALREADY_ACTIVE');
+    });
+
+    it('refuses an email that another person uses for the app', async () => {
+      const email = uniqueEmail();
+      const first = await addCustomer();
+      await as(owner).patch(`/v1/customers/${first.id}`, { email }).expect(200);
+      await as(owner).post(`/v1/customers/${first.id}/app-invite`).expect(200);
+
+      const second = await addCustomer();
+      await as(owner).patch(`/v1/customers/${second.id}`, { email }).expect(200);
+      const res = await as(owner).post(`/v1/customers/${second.id}/app-invite`).expect(409);
+      expect(res.body.code).toBe('EMAIL_ALREADY_USED');
+      const row = await platform.owner.findUniqueOrThrow({ where: { phone: second.phone } });
+      expect(row).toMatchObject({ email: null, inviteTokenHash: null });
+    });
+
+    it('an expired link is refused', async () => {
+      const c = await addCustomer();
+      await as(owner).patch(`/v1/customers/${c.id}`, { email: uniqueEmail() }).expect(200);
+      await as(owner).post(`/v1/customers/${c.id}/app-invite`).expect(200);
+      const { token } = await inviteToken(c.id);
+      await platform.owner.update({
+        where: { phone: c.phone },
+        data: { inviteExpiresAt: new Date(Date.now() - 1000) },
+      });
+      expect((await setPassword(token).expect(400)).body.code).toBe('INVALID_LINK');
+    });
+  });
 });

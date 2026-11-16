@@ -6,7 +6,11 @@ import type { Env } from '../src/config/env';
 import { ResendEmailChannel } from '../src/notifications/adapters/resend-email.channel';
 
 describe('Resend email adapter', () => {
-  const env = { RESEND_API_KEY: 're_test', EMAIL_FROM: 'Gearva <no-reply@gearva.online>' } as Env;
+  const env = {
+    RESEND_API_KEY: 're_test',
+    EMAIL_FROM: 'Gearva <no-reply@gearva.online>',
+    APP_URL_GARAGE: 'https://gearva.online',
+  } as Env;
   const input = {
     recipient: 'owner@example.com',
     template: 'password-reset',
@@ -36,6 +40,10 @@ describe('Resend email adapter', () => {
     expect(body).toMatchObject({ from: env.EMAIL_FROM, to: ['owner@example.com'] });
     expect(body.subject).toEqual(expect.any(String));
     expect(body.text).toContain('https://gearva.online/set-password?token=x');
+    // Step 6.5c: an HTML part with the logo, and the link as a button.
+    expect(body.html).toContain('<img src="https://gearva.online/email-logo.png"');
+    expect(body.html).toContain('href="https://gearva.online/set-password?token=x"');
+    expect(body.html).toContain('Open the link');
   });
 
   it('a rate limit or outage is retried; a refused email is final', async () => {

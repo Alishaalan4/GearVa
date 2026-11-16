@@ -59,7 +59,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
 | 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | ✅ Done | 2026-11-16 |
 | 6 | 6.4 In-app notifications, push (Firebase), device tokens | ✅ Done (the phone test waits for the app) | 2026-11-16 |
-| 6 | 6.5 Offers: garage screens and owner app | Written, awaiting the user's checks | |
+| 6 | 6.5 Offers: garage screens and owner app | ✅ Done | 2026-11-16 |
+| 6 | 6.5b Tab icon in both apps; offer image preview | Written, awaiting the user's checks | |
+| 6 | 6.5c Emails with the Gearva logo (HTML part) | Written, awaiting the user's checks | |
 | 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
@@ -2120,6 +2122,69 @@ By me, on the test database:
 
 To do by the user: the migration, the tests, and a look at the Offers page in the browser (English and Arabic, on a phone width).
 
-**Commit:** _(pending)_ "Phase 6.5: offers in the garage app and the owner app"
+**Commit:** `5c88ad7`
+
+---
+
+## Phase 6 · Step 6.5b — The Gearva icon in the browser tab; offer images shown in the garage app
+**When:** 2026-11-16 ~15:00 → ~15:20
+
+**Implements:** user requests (2026-11-16): "add this logo everywhere" and "when we add an image let us see it".
+
+**Summary**
+- **Logo:** both web apps already showed the Gearva logo on every page: the sidebar, the sign-in pages, the website, the owner set-password page and the privacy page. What was missing was the **browser tab icon**. Both apps now serve `app/icon.svg`, the logo the user sent. Its dark part turns white when the browser uses a dark theme, so it stays visible. The emails are plain text, so they carry no image.
+- **Offer images:**
+  - Each offer card in the list now shows its image.
+  - In the form, a picked image is previewed at once and saved with **Save**, also for a new offer (before, a new offer had to be saved first and then edited).
+  - "Remove this choice" drops a picked image before saving.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/app/icon.svg`, `apps/admin/app/icon.svg` (new) | The tab icon |
+| `apps/garage-web/features/offers/offers-page.tsx` | `OfferImage` (the stored image, loaded with the staff session); preview and upload with Save |
+| `apps/garage-web/messages/en.json`, `ar.json` | Image texts; unused ones removed |
+
+**Doc changes:** flow.md 10: the image is previewed when picked and saved with Save (it said "after saving"); the list shows it.
+
+**Verified:** typecheck and lint pass for garage-web and admin. Both production builds list `/icon.svg`. Every text key the page uses exists in English and Arabic.
+
+**Commit:** _(pending; goes with 6.5c if not committed yet)_
+
+---
+
+## Phase 6 · Step 6.5c — Emails with the Gearva logo
+**When:** 2026-11-16 ~15:25 → ~15:55
+
+**Implements:** user request (2026-11-16): "add the icon to be on the email when sent".
+
+**Summary:** Every email now has an HTML part. It has a white card with the Gearva logo and name on top under an orange line, the same words as before, and a footer. A line that is only a link (the invite and password links) becomes an orange **Open the link** button, with the address under it for copying. Arabic text and its button read right to left; the frame stays centred. The plain-text part is still sent too, for mail apps that do not show HTML.
+
+**How it works**
+- **The logo:** mail apps (Gmail, Outlook) do not show SVG, so the logo is a PNG rendered from the user's SVG with the repo's Puppeteer: 48 × 42 shown, 3× pixels. garage-web serves it as `gearva.online/email-logo.png` (`apps/garage-web/public/`). Its address comes from `APP_URL_GARAGE`, so it follows the domain at handover.
+- **The layout:** `templates/email-html.ts` builds the HTML from the rendered text, so the 7 templates did not change. It uses inline styles and tables only, which mail apps need. Everything from the text is escaped (names are typed by staff).
+- **Sending:** Resend gets `html` next to `text`. The console adapter (development) still prints the text.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/public/email-logo.png` (new) | The logo for emails |
+| `apps/api/src/notifications/templates/email-html.ts` (new) | The HTML layout |
+| `apps/api/src/notifications/adapters/resend-email.channel.ts` | Sends `html` too |
+| `apps/api/test/email-html.spec.ts` (new) | 4 tests: logo, paragraphs, button, Arabic, escaping, every template in both languages |
+| `apps/api/test/deploy-adapters.spec.ts` | The Resend body has the HTML with the logo and the link |
+
+**Doc changes:** none needed: README 5.5 and flow.md 9.4 do not describe the email format.
+
+**Problems hit:** the first Arabic sample was off-centre and cut, because `dir="rtl"` was on the whole page. Only the text cell is right to left now; checked again in a screenshot.
+
+**Verified**
+- English and Arabic samples (owner invite) were rendered in Chrome and looked at.
+- Email, adapter, notification and staff-management tests: 26 passed.
+- Typecheck, lint and build of the API pass.
+
+To check live after the push: send yourself an invite or a password reset and open it in Gmail. Some mail apps hide images until you allow them.
+
+**Commit:** _(pending)_ "Emails with the Gearva logo (HTML part); tab icon; offer image preview"
 
 ---

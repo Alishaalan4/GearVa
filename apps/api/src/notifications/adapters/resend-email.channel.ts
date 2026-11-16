@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ENV, type Env } from '../../config/env';
 import type { NotificationChannel, SendInput, SendResult } from '../notification-channel';
 import { renderEmail } from '../templates';
+import { emailHtml } from '../templates/email-html';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 
@@ -35,6 +36,8 @@ export class ResendEmailChannel implements NotificationChannel {
         to: [input.recipient],
         subject: email.subject,
         text: email.text,
+        // The same words with the Gearva logo (step 6.5c); mail apps pick the part they show.
+        html: emailHtml(email, input.locale, this.env.APP_URL_GARAGE),
       }),
       signal: AbortSignal.timeout(15_000),
     });

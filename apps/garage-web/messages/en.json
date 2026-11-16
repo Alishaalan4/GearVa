@@ -766,7 +766,6 @@
     "dates": "{from} to {to}",
     "from": "From {from}",
     "views": "{count, plural, =0 {Not opened yet} one {Opened by # customer} other {Opened by # customers}}",
-    "hasImage": "With image",
     "state": {
       "ACTIVE": "Showing",
       "SCHEDULED": "Starts later",
@@ -797,13 +796,12 @@
       "end": "The end must be on or after the start."
     },
     "image": "Image",
-    "imageSet": "This offer has an image.",
     "imageNone": "No image yet.",
-    "uploadImage": "Add an image",
-    "replaceImage": "Replace the image",
-    "imageSaved": "Image saved.",
+    "uploadImage": "Choose an image",
+    "replaceImage": "Choose another image",
     "imageTooBig": "The image is larger than 2 MB.",
     "imageType": "Use a PNG or JPEG image.",
-    "imageAfter": "You can add an image after saving."
+    "imageOnSave": "This image is saved with the offer when you press Save.",
+    "undoImage": "Remove this choice"
   }
 }

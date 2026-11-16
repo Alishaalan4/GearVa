@@ -34,7 +34,12 @@
     "SERVICE_TYPE_CODE_EXISTS": "A service type with this code already exists.",
     "APPLICATION_ALREADY_REVIEWED": "This application was already approved or rejected.",
     "MAIN_BRANCH_REQUIRED": "The main branch cannot be switched off.",
-    "BRANCH_HAS_STAFF": "This branch still has active staff. The garage owner must move them to another branch (or deactivate them) first."
+    "BRANCH_HAS_STAFF": "This branch still has active staff. The garage owner must move them to another branch (or deactivate them) first.",
+    "CANNOT_MODIFY_SELF": "You cannot switch yourself off or change your own role.",
+    "LAST_SUPER_ADMIN": "There must always be one active super admin.",
+    "NO_LOGIN_EMAIL": "This person has no app login yet: a garage must invite them first.",
+    "CANNOT_MODIFY_OWNER": "A garage owner is not switched off here: suspend the garage instead.",
+    "BRANCH_INACTIVE": "This person works in a branch that is switched off."
   },
   "nav": {
     "brand": "Gearva Admin",
@@ -45,7 +50,8 @@
     "applications": "Applications",
     "monitoring": "Monitoring",
     "business": "Business",
-    "settings": "Settings"
+    "settings": "Settings",
+    "users": "Users"
   },
   "authSide": {
     "heading": "Run every garage from one place.",
@@ -430,5 +436,83 @@
       "address": "Use at most 200 characters.",
       "phone": "Enter a valid phone number."
     }
+  },
+  "staffRoles": {
+    "OWNER": "Owner",
+    "MANAGER": "Manager",
+    "MECHANIC": "Mechanic",
+    "RECEPTIONIST": "Receptionist"
+  },
+  "users": {
+    "title": "Users",
+    "lead": "Gearva admins, every garage's staff and the car owners with the app.",
+    "superOnly": "Only a super admin can open this page.",
+    "tabs": {
+      "admins": "Admins",
+      "staff": "Garage staff",
+      "owners": "Car owners"
+    },
+    "cols": {
+      "name": "Name",
+      "role": "Role",
+      "state": "Status",
+      "lastLogin": "Last sign-in",
+      "garage": "Garage",
+      "garages": "Garages"
+    },
+    "email": "Email",
+    "loading": "Loading…",
+    "empty": "Nobody found.",
+    "total": "{count, plural, one {# person} other {# people}}",
+    "never": "Never",
+    "you": "you",
+    "active": "Active",
+    "inactive": "Switched off",
+    "twoFactor": "2FA on",
+    "noPassword": "no password yet",
+    "allBranches": "All branches",
+    "manage": "Manage",
+    "close": "Close",
+    "addAdmin": "Add an admin",
+    "adminCreated": "{name} was added. Give them their password; they can turn on 2FA from their Account page.",
+    "adminRoles": {
+      "SUPER_ADMIN": "Super admin",
+      "ADMIN": "Admin"
+    },
+    "makeAdmin": "Make admin",
+    "makeSuper": "Make super admin",
+    "roleChanged": "Role changed.",
+    "deactivate": "Switch off",
+    "activate": "Switch on",
+    "deactivated": "Switched off. Their sessions were ended.",
+    "activated": "Switched on.",
+    "resetTotp": "Turn off 2FA (lost phone)",
+    "totpReset": "2FA turned off. They can turn it on again from their Account page.",
+    "newPassword": "New password",
+    "newPasswordHint": "At least {min} characters. Tell it to the person; all their sessions end.",
+    "setPassword": "Set this password",
+    "passwordSet": "Password set. Their sessions were ended and any old link no longer works.",
+    "searchStaff": "Name or email",
+    "searchOwners": "Name, phone or email",
+    "search": "Search",
+    "allRoles": "All roles",
+    "sendInvite": "Send invite link",
+    "sendReset": "Send reset link",
+    "inviteSent": "Invite link sent to {email}.",
+    "resetSent": "Reset link sent to {email}.",
+    "ownerHint": "A garage owner is not switched off here: suspend the garage instead.",
+    "ownersPrivacy": "Personal data of the garages' customers: each time this list is opened, it is written to the audit log.",
+    "allAccounts": "All",
+    "account": {
+      "ACTIVE": "Uses the app",
+      "INVITED": "Invited",
+      "NONE": "No app account"
+    },
+    "noLogin": "No app login yet: a garage must invite this person first.",
+    "closeAccount": "Close app account",
+    "confirmClose": "Yes, close it",
+    "keep": "Keep it",
+    "closeHint": "The login email, password and phones are removed. The garages keep their records and can invite the person again.",
+    "accountClosed": "App account closed."
   }
 }

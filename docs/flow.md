@@ -539,6 +539,13 @@ Extra branches are billed ($100 a year each, section 11.1), so **only Gearva add
 - Garage API: `POST /v1/branches` is removed; `PATCH /v1/branches/:branchId` with `isActive` answers `403 BRANCHES_MANAGED_BY_GEARVA`.
 - The admin app shows the branches card on the garage's page (add, edit, switch off and on).
 
+### 11.8 Users page (step 5.9, decision 2026-11-16)
+The super admin's page for every account in Gearva. **Super admins only**: the page and every endpoint check it (`FORBIDDEN` for a regular admin). Passwords can be changed in two ways (user decision): a **link** the person uses to choose their own password, or a password the super admin **types** and tells the person. Every password change ends that person's sessions and voids any open link; every action writes an audit row.
+
+- **Admins** (`/admin/v1/users/admins`): list; add an admin (name, email, role, a typed password of 12+ characters); change name, role, on/off; set a password; turn off 2FA (a lost phone: the secret and recovery codes are deleted, the admin can turn it on again). Nobody switches themselves off or changes their own role (`CANNOT_MODIFY_SELF`), and one active super admin always remains (`LAST_SUPER_ADMIN`). Admins get no emails: a notification row needs a garage, and admins have none, so their passwords are typed.
+- **Garage staff of every garage** (`/admin/v1/users/staff`, search by name or email, filter by role and garage): garage, branch, role, password set or not, last sign-in. Send a link (an invite if no password yet, else a reset, as in 2.1, logged under that garage); set a password (10+); switch off or on. A garage's owner is not switched off here (`CANNOT_MODIFY_OWNER`: suspend the garage), and nobody comes back into a branch that is off (`BRANCH_INACTIVE`).
+- **Car owners** (`/admin/v1/users/owners`, search by name, the end of the phone or email; filter by app account: `ACTIVE`, `INVITED`, `NONE`): phone, login email, their garages, last sign-in. Send the set-password link (the forgot-password email, 2.4 step 4); set a password (10+); close the app account (as the owner can in the app: email, password, sessions and phones removed; garage records stay). A person with no login email gets neither link nor password (`NO_LOGIN_EMAIL`): a garage invites them first. Opening this list is personal data across garages, so each load writes an `admin.users.owners.view` audit row (there is no single garage for `admin_access_logs`).
+
 ## 12. Data protection flows
 
 - **No export:** there are no export endpoints. Lists are paginated (max 50), rate limited per user and per IP, and bulk PDF download is blocked.

@@ -15,6 +15,7 @@ import { RequestContext } from '../common/context/request-context';
 import { OwnerDb } from '../common/db/owner-db';
 import { PlatformDb } from '../common/db/platform-db';
 import { AppException } from '../common/errors/app-exception';
+import { OwnerAuthService } from './owner-auth.service';
 
 type CustomerWithGarage = GarageCustomer & {
   garage: Garage & { settings: GarageSettings | null };
@@ -55,6 +56,7 @@ export class OwnerAccountService {
     private readonly sessions: SessionService,
     private readonly attempts: LoginAttemptsService,
     private readonly context: RequestContext,
+    private readonly ownerAuth: OwnerAuthService,
   ) {}
 
   /** mobile-api.md 3.1: the owner and every garage where they are a customer. */
@@ -144,18 +146,7 @@ export class OwnerAccountService {
    */
   async deleteAccount(password: string): Promise<void> {
     const owner = await this.verifyPassword(password);
-    await this.platformDb.client.owner.update({
-      where: { id: owner.id },
-      data: {
-        email: null,
-        passwordHash: null,
-        passwordSetAt: null,
-        inviteTokenHash: null,
-        inviteExpiresAt: null,
-      },
-    });
-    await this.sessions.revokeAll('OWNER', owner.id);
-    await this.platformDb.client.deviceToken.deleteMany({ where: { ownerId: owner.id } });
+    await this.ownerAuth.closeAppAccount(owner.id);
   }
 
   /** The owner's current password, with the same per-email lockout as the login. */

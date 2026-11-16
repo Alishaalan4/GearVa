@@ -159,10 +159,17 @@ export class OwnerAuthService {
       'NX',
     );
     if (fresh !== 'OK') return;
+    const owner = await this.platformDb.client.owner.findUnique({ where: { email } });
+    if (owner?.email) await this.sendResetLink({ ...owner, email: owner.email });
+  }
 
+  /**
+   * Emails this owner a 24-hour link to the set-password page (a newer link replaces an
+   * older one). Used by forgot-password and by the super admin's Users page. Returns
+   * false when the person is no garage's customer (nobody to log the email under).
+   */
+  async sendResetLink(owner: Owner & { email: string }): Promise<boolean> {
     const db = this.platformDb.client;
-    const owner = await db.owner.findUnique({ where: { email } });
-    if (!owner?.email) return;
     const customer =
       (await db.garageCustomer.findFirst({
         where: { ownerId: owner.id, deletedAt: null, inviteSentAt: { not: null } },
@@ -174,7 +181,7 @@ export class OwnerAuthService {
       }));
     if (!customer) {
       this.logger.warn(`Owner ${owner.id} asked for a reset but is no garage's customer`);
-      return;
+      return false;
     }
 
     const locale = owner.locale === 'en' ? 'en' : 'ar';
@@ -204,6 +211,45 @@ export class OwnerAuthService {
     } catch (error) {
       this.logger.error(`Could not queue owner reset ${notification.id}`, error as Error);
     }
+    return true;
+  }
+
+  /**
+   * Sets a password chosen by someone else (the super admin, step 5.9): any open link
+   * stops working and every app session ends, so only the new password works.
+   */
+  async setPasswordFor(ownerId: string, password: string): Promise<void> {
+    await this.platformDb.client.owner.update({
+      where: { id: ownerId },
+      data: {
+        passwordHash: await this.passwords.hash(password),
+        passwordSetAt: new Date(),
+        inviteTokenHash: null,
+        inviteExpiresAt: null,
+      },
+    });
+    await this.sessions.revokeAll('OWNER', ownerId);
+  }
+
+  /**
+   * Closes the app account (mobile-api.md 3.5, and the super admin's Users page): the login
+   * email, password and any link go, every session and phone token is removed. The garages
+   * keep their own records and may invite the person again.
+   */
+  async closeAppAccount(ownerId: string): Promise<void> {
+    const db = this.platformDb.client;
+    await db.owner.update({
+      where: { id: ownerId },
+      data: {
+        email: null,
+        passwordHash: null,
+        passwordSetAt: null,
+        inviteTokenHash: null,
+        inviteExpiresAt: null,
+      },
+    });
+    await this.sessions.revokeAll('OWNER', ownerId);
+    await db.deviceToken.deleteMany({ where: { ownerId } });
   }
 
   private async respond(

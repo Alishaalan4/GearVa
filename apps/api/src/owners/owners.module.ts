@@ -36,6 +36,6 @@ import { OwnerGuard } from './owner.guard';
     OwnerOffersService,
     OwnerGuard,
   ],
-  exports: [OwnerGuard],
+  exports: [OwnerGuard, OwnerAuthService],
 })
 export class OwnersModule {}

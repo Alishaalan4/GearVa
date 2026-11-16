@@ -57,6 +57,12 @@ export const ERROR_CODES = {
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
   /** Adding a branch or switching one on or off is done by Gearva (decision 2026-11-16). */
   BRANCHES_MANAGED_BY_GEARVA: 'BRANCHES_MANAGED_BY_GEARVA',
+  /** An admin cannot deactivate or demote themselves (step 5.9). */
+  CANNOT_MODIFY_SELF: 'CANNOT_MODIFY_SELF',
+  /** There must always be one active super admin (step 5.9). */
+  LAST_SUPER_ADMIN: 'LAST_SUPER_ADMIN',
+  /** A car owner without a login email cannot get a link or a password (step 5.9). */
+  NO_LOGIN_EMAIL: 'NO_LOGIN_EMAIL',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */
   BRANCH_INACTIVE: 'BRANCH_INACTIVE',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',

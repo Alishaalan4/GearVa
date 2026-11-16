@@ -60,9 +60,10 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | ✅ Done | 2026-11-16 |
 | 6 | 6.4 In-app notifications, push (Firebase), device tokens | ✅ Done (the phone test waits for the app) | 2026-11-16 |
 | 6 | 6.5 Offers: garage screens and owner app | ✅ Done | 2026-11-16 |
-| 6 | 6.5b Tab icon in both apps; offer image preview | Written, awaiting the user's checks | |
-| 6 | 6.5c Emails with the Gearva logo (HTML part) | Written, awaiting the user's checks | |
-| 5 | 5.8 Branches managed by Gearva (admin adds, switches off and on) | Written, awaiting the user's checks | |
+| 6 | 6.5b Tab icon in both apps; offer image preview | ✅ Done | 2026-11-16 |
+| 6 | 6.5c Emails with the Gearva logo (HTML part) | ✅ Done | 2026-11-16 |
+| 5 | 5.8 Branches managed by Gearva (admin adds, switches off and on) | ✅ Done | 2026-11-16 |
+| 5 | 5.9 Users page for the super admin (admins, garage staff, car owners) | Written, awaiting the user's checks | |
 | 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
@@ -2150,7 +2151,7 @@ To do by the user: the migration, the tests, and a look at the Offers page in th
 
 **Verified:** typecheck and lint pass for garage-web and admin. Both production builds list `/icon.svg`. Every text key the page uses exists in English and Arabic.
 
-**Commit:** _(pending; goes with 6.5c if not committed yet)_
+**Commit:** `e0a3c8d`
 
 ---
 
@@ -2186,7 +2187,7 @@ To do by the user: the migration, the tests, and a look at the Offers page in th
 
 To check live after the push: send yourself an invite or a password reset and open it in Gmail. Some mail apps hide images until you allow them.
 
-**Commit:** _(pending)_ "Emails with the Gearva logo (HTML part); tab icon; offer image preview"
+**Commit:** `e0a3c8d`
 
 ---
 
@@ -2228,6 +2229,50 @@ To check live after the push: send yourself an invite or a password reset and op
 - The whole API suite (3 workers): 30 suites, 340 tests passed.
 - Typecheck and lint pass for api, admin and garage-web.
 
-**Commit:** _(pending)_ "Branches are managed by Gearva: admin adds and switches them; owner edits details"
+**Commit:** `d83656e`
+
+---
+
+## Phase 5 · Step 5.9 — The super admin's Users page: admins, garage staff, car owners
+**When:** 2026-11-16 ~17:00 → ~18:10
+
+**Implements:** user request and decisions (2026-11-16): all three kinds of users; both reset links and typed passwords; super admin only; built before 6.6. flow.md 11.8 (new); README 6 (Phase 5 note).
+
+**Summary:** A new **Users** page in the admin app, shown to super admins only, with three tabs.
+- **Admins:** add an admin with a typed password; rename; change role; switch off or on; set a new password; turn off 2FA after a lost phone.
+- **Garage staff of every garage:** search, filter by role, see garage and branch. Send an invite or reset link, set a password, switch off or on.
+- **Car owners:** search by name, phone or email, filter by app account. Send the set-password link, set a password, close the app account.
+- **For every password change:** that person's sessions end and any open link stops working.
+
+**How it works**
+- **API:** `/admin/v1/users/...`, 13 endpoints. Each one checks the super admin role (`requireSuperAdmin`), and every action writes an audit row.
+- **Safety rules:** nobody switches themselves off or changes their own role (`CANNOT_MODIFY_SELF`), and one active super admin always remains (`LAST_SUPER_ADMIN`). A garage's owner is not switched off here (suspend the garage). Nobody comes back into a branch that is off. A car owner with no login email gets neither link nor password (`NO_LOGIN_EMAIL`).
+- **Links:** staff links reuse `UserAccessLinksService` (invite or reset, logged under their garage). Owner links reuse the forgot-password email, now `OwnerAuthService.sendResetLink`. Closing an owner's account now uses `closeAppAccount`, shared with the app's own "delete account".
+- **Admins get no emails:** a notification row needs a garage and admins have none, so admin passwords are typed (12+ characters, as the seed).
+- **Privacy:** loading the owners list is personal data across garages, so each load writes an `admin.users.owners.view` audit row. There is no single garage for `admin_access_logs`.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/admin-users.ts` (new), `index.ts`, `errors.ts` | Schemas and types; `CANNOT_MODIFY_SELF`, `LAST_SUPER_ADMIN`, `NO_LOGIN_EMAIL` |
+| `apps/api/src/admin/users/admin-users.service.ts`, `admin-users.controller.ts` (new), `admin/admin.module.ts` | The Users API |
+| `apps/api/src/owners/owner-auth.service.ts`, `owner-account.service.ts`, `owners.module.ts` | `sendResetLink`, `setPasswordFor`, `closeAppAccount` (shared) |
+| `apps/api/test/admin-users.spec.ts` (new) | 9 tests: regular admin refused; admins (create, sign in, password, 2FA, off, self and last-super rules); staff (list, link, password, off, owner refused); owners (list, audit, link, password, close, no login) |
+| `apps/admin/features/users/users-page.tsx` (new), `app/[locale]/(panel)/users/page.tsx` (new), `components/panel-shell.tsx`, `messages/*.json` | The page, its menu item (super admins), texts in both languages |
+
+**Doc changes:** flow.md 11.8 (new); README 6 (a note under Phase 5).
+
+**Problems hit:**
+- My first test of "one super admin remains" switched off every other super admin in the shared test database, which could break other test files running at the same time. It now fakes that count instead.
+- A long shell command with quotes broke. I put the edit in a script file instead; nothing had been written.
+
+**Verified**
+- The whole API suite (3 workers): 31 suites, 349 tests passed.
+- Typecheck and lint pass for api, contracts and admin.
+- All 62 texts of the page exist in English and Arabic.
+
+To check in the browser: sign in to admin as the super admin → Users. Then: add an admin, send a staff reset link (it shows in the API console locally), and set an owner's password, then sign in to the app with it.
+
+**Commit:** _(pending)_ "Super admin Users page: admins, garage staff, car owners"
 
 ---

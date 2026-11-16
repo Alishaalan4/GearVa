@@ -62,6 +62,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
           {item('/monitoring', t('nav.monitoring'))}
           {item('/business', t('nav.business'))}
           {item('/settings', t('nav.settings'))}
+          {admin.data.role === 'SUPER_ADMIN' && item('/users', t('nav.users'))}
           {item('/account', t('nav.account'))}
         </>
       }

@@ -34,6 +34,8 @@ export const TENANT_TABLES = [
   'subscription_payments',
   'admin_access_logs',
   'garage_applications',
+  // Phase 6 (step 6.5)
+  'offer_views',
 ] as const;
 
 export type TenantTable = (typeof TENANT_TABLES)[number];

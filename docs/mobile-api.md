@@ -8,8 +8,9 @@ The contract between the API and the owner app (V3, Flutter). The API is built t
 | 1.1 | 2026-11-16 | **Live:** login and account (2) and profile (3.1 to 3.5). 2.3: reusing a refresh token ends **all** of the owner's sessions, on every phone (it said "that phone's"). 2.2: also `RATE_LIMITED` after 10 wrong passwords for one email (15 minutes). 2.5: one reset email per address per minute. 3.3: send at least one of the two fields |
 | 1.2 | 2026-11-16 | **Live:** garage logo (3.6), cars and history (4), invoices and PDFs (5). 4.3: `details` has one label/value pair per field the garage filled in (the example was a combined line); `date` is when the visit finished, or opened while in progress. 4.1: `nextService` order and the warranty/recommendation names written down. A garage that removed the person as a customer no longer shows anything in the app |
 | 1.3 | 2026-11-16 | **Live:** inbox, push and devices (6). The types sent today: `SERVICE_REMINDER` (also a recommended service) and `WARRANTY_END`, from the garages' reminder scan, between 09:00 and 20:00 garage time. 6.2: an id that is not the owner's is `NOT_FOUND`. 6.4: one phone token belongs to one owner (the latest to register it); up to 10 phones per owner. Push needs the project's Firebase key on the server; until then the inbox works without push |
+| 1.4 | 2026-11-16 | **Live:** offers (7). 7.1: at most 50, newest first; only offers that are on, started and not ended, of garages that are not locked. 7.2 and 7.3: an offer the owner cannot see (offers turned off for that garage, ended, locked garage) is `NOT_FOUND` |
 
-Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** 2, 3, 4, 5, 6. **Planned:** 7.
+Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** every group (2 to 7).
 
 ---
 
@@ -369,11 +370,13 @@ Offers are made by garages (garage side built in Phase 6 too). The app shows the
 ```
 `discountType` `PERCENT` (`discountValue` is the percent) or `AMOUNT` (`discountValue` in cents). `expiresAt` may be `null`. The owner redeems an offer by visiting the garage; the garage applies it to the invoice.
 
+At most 50, newest first: offers the garage switched on, already started and not ended, of garages where the owner is a customer, has not turned offers off (3.3) and that are not locked. Not paginated.
+
 ### 7.2 `GET /mobile/v1/offers/{offerId}/image`
 The offer image (Bearer token, cacheable), 404 if none.
 
 ### 7.3 `POST /mobile/v1/offers/{offerId}/viewed`
-204. Call once when an offer is opened; it feeds the garage's offer report.
+204. Call once when an offer is opened; it feeds the garage's offer report. Calling it again changes nothing. An offer the owner cannot see is `NOT_FOUND`.
 
 ---
 

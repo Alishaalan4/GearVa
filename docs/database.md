@@ -423,7 +423,10 @@ Payments are append-only. Rule: `SUM(payments.amountCents) = invoices.paidCents`
 ### 4.6 Offers, notifications, files, audit
 
 #### `offers`
-`id`, `garageId`, `title`, `body`, `imageFileId?`, `discountType`, `discountValue`, `startsAt`, `expiresAt?`, `target` (`ALL`, `OVERDUE`, `INACTIVE_6M`), `isActive`, `createdById`. Redemptions are counted from `invoices.offerId`. The table is created in the Phase 3 migration (with the invoices), even though the offer screens and broadcasts are built in Phase 7.
+`id`, `garageId`, `title`, `body`, `imageFileId?`, `discountType`, `discountValue`, `startsAt`, `expiresAt?`, `target` (`ALL`, `OVERDUE`, `INACTIVE_6M`), `isActive`, `createdById`. Redemptions are counted from `invoices.offerId`. The table is created in the Phase 3 migration (with the invoices). The offer screens and the owner app's offers are built in step 6.5 (`target` is always `ALL` until then); targeting and broadcasts in Phase 7.
+
+#### `offer_views` (step 6.5)
+`id`, `garageId`, `offerId` (garage-scoped FK to `offers`), `ownerId` FK, `viewedAt`; **U** (`offerId`, `ownerId`): an owner who opened an offer in the app, counted once (flow.md 10). A tenant table (RLS, listed in `tenant-tables.ts`), append-only (`SELECT, INSERT` only). In the owner context, `owner_record_view` lets an owner add their own row for a garage where they are a live customer who has not turned offers off.
 
 #### `notifications` (log and in-app inbox in one table)
 | Column | Type | Notes |
@@ -563,6 +566,8 @@ Built in step 6.2 (migration `owner_context`): `runAsOwner(client, ownerId, fn)`
 - `garages` and `garage_settings`: `owner_read` for garages (not deleted) where the owner is a live customer.
 
 Step 6.3 (migration `owner_read`) added `owner_read` on `vehicles`, `visits`, `service_records`, `reminders` and `invoices` (by `owner_id`), `invoice_items` and `payments` (through their invoice), `branches` and the garage's own `service_types` (garages where the person is a live customer; global types are readable already), and `files`: only the PDFs of the person's invoices and the logos of their garages. Step 6.4 (migration `owner_inbox_push`) added `owner_inbox_read` and `owner_inbox_mark_read` on `notifications`: the owner's own `IN_APP` rows only, and a trigger, `notifications_owner_update_guard`, lets an owner change nothing but `readAt`.
+
+Step 6.5 (migration `offers_owner_app`) added `owner_read` on `offers` and `owner_offer_images` on `files`, for garages where the person is a live customer who has not turned offers off, and the `offer_views` owner policies above.
 
 ### 6.5 Guard rails
 - A test queries `pg_tables`/`pg_policies` and **fails if any table with a `garage_id` column has no RLS policy**.

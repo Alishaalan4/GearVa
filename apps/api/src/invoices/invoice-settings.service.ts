@@ -10,12 +10,7 @@ import { RequestContext } from '../common/context/request-context';
 import { TenantDb } from '../common/db/tenant-db';
 import { AppException } from '../common/errors/app-exception';
 import { FILE_STORAGE, type FileStorage } from '../files/file-storage';
-
-function imageType(bytes: Buffer): string | null {
-  if (bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))) return 'image/png';
-  if (bytes.subarray(0, 3).equals(Buffer.from('ffd8ff', 'hex'))) return 'image/jpeg';
-  return null;
-}
+import { imageType } from '../files/image-type';
 
 function toSettings(settings: GarageSettings): InvoiceSettings {
   return {

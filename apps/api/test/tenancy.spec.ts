@@ -59,6 +59,7 @@ describe('Tenant isolation (test:tenancy)', () => {
   let b: Side;
   /** The global OIL_CHANGE service type (seeded by test:prepare). */
   let oilChangeId: string;
+  let bOfferId: string;
 
   const http = () => request(app.getHttpServer());
   const asA = {
@@ -206,6 +207,19 @@ describe('Tenant isolation (test:tenancy)', () => {
       .post('/v1/invoice-settings/logo')
       .set('Cookie', b.cookie)
       .attach('file', PNG, 'logo.png')
+      .expect(200);
+    // Step 6.5: an offer of B, with an image.
+    bOfferId = (
+      await http()
+        .post('/v1/offers')
+        .set('Cookie', b.cookie)
+        .send({ title: 'B offer', discountType: 'PERCENT', discountValue: 10 })
+        .expect(201)
+    ).body.id;
+    await http()
+      .post(`/v1/offers/${bOfferId}/image`)
+      .set('Cookie', b.cookie)
+      .attach('file', PNG, 'offer.png')
       .expect(200);
   });
 
@@ -649,6 +663,52 @@ describe('Tenant isolation (test:tenancy)', () => {
       expect(search.body.items).toEqual([
         { customer: expect.objectContaining({ name: 'A name' }), vehicle: null },
       ]);
+    },
+
+    // Step 6.5: offers.
+    'GET /v1/offers': async () => {
+      const res = await asA.get('/v1/offers?pageSize=50').expect(200);
+      expect(res.body.items.map((o: { id: string }) => o.id)).not.toContain(bOfferId);
+    },
+
+    'POST /v1/offers': async () => {
+      await expectBUnchanged(async () => {
+        // A garageId in the body is ignored: the offer lands in A.
+        const created = await asA
+          .post('/v1/offers', {
+            title: 'A offer',
+            discountType: 'AMOUNT',
+            discountValue: 500,
+            garageId: b.garage.garageId,
+          })
+          .expect(201);
+        const row = await platform.offer.findUniqueOrThrow({ where: { id: created.body.id } });
+        expect(row.garageId).toBe(a.garage.garageId);
+      });
+    },
+
+    'GET /v1/offers/:offerId': async () => {
+      await asA.get(`/v1/offers/${bOfferId}`).expect(404);
+    },
+
+    'PATCH /v1/offers/:offerId': async () => {
+      const before = await platform.offer.findUniqueOrThrow({ where: { id: bOfferId } });
+      await asA.patch(`/v1/offers/${bOfferId}`, { title: 'Hacked', isActive: false }).expect(404);
+      expect(await platform.offer.findUniqueOrThrow({ where: { id: bOfferId } })).toEqual(before);
+    },
+
+    'GET /v1/offers/:offerId/image': async () => {
+      await asA.get(`/v1/offers/${bOfferId}/image`).expect(404);
+    },
+
+    'POST /v1/offers/:offerId/image': async () => {
+      const before = await platform.offer.findUniqueOrThrow({ where: { id: bOfferId } });
+      await http()
+        .post(`/v1/offers/${bOfferId}/image`)
+        .set('Cookie', a.cookie)
+        .attach('file', PNG, 'offer.png')
+        .expect(404);
+      expect(await platform.offer.findUniqueOrThrow({ where: { id: bOfferId } })).toEqual(before);
     },
   };
 

@@ -46,6 +46,8 @@ describe('Owner isolation (test:tenancy)', () => {
   let yInvoiceId: string;
 
   let yNotificationId: string;
+  let cOfferId: string;
+  let aOfferId: string;
   const yDeviceToken = `fcm-y-${Date.now()}`;
 
   /** The start of a PNG: enough for the logo type check. */
@@ -108,6 +110,10 @@ describe('Owner isolation (test:tenancy)', () => {
         where: { ownerId: y.ownerId },
         orderBy: { id: 'asc' },
       }),
+      offerViews: await platform.offerView.findMany({
+        where: { ownerId: y.ownerId },
+        orderBy: { id: 'asc' },
+      }),
     };
   }
 
@@ -155,6 +161,24 @@ describe('Owner isolation (test:tenancy)', () => {
     await platform.deviceToken.create({
       data: { ownerId: y.ownerId, token: yDeviceToken, platform: 'android' },
     });
+    // Step 6.5: an offer with an image at C (Y's garage only) and one at A (both).
+    const newOffer = async (cookie: string, title: string) => {
+      const id = (
+        await http()
+          .post('/v1/offers')
+          .set('Cookie', cookie)
+          .send({ title, discountType: 'PERCENT', discountValue: 10 })
+          .expect(201)
+      ).body.id as string;
+      await http()
+        .post(`/v1/offers/${id}/image`)
+        .set('Cookie', cookie)
+        .attach('file', PNG, 'offer.png')
+        .expect(200);
+      return id;
+    };
+    cOfferId = await newOffer(c.cookie, 'C offer');
+    aOfferId = await newOffer(a.cookie, 'A offer');
     await ownerLogin(app, y.email);
     xToken = (await ownerLogin(app, x.email)).accessToken;
   });
@@ -207,6 +231,29 @@ describe('Owner isolation (test:tenancy)', () => {
     'GET /mobile/v1/garages/:garageId/logo': async () => {
       // C has a logo, but X is not its customer.
       await asX.get(`/mobile/v1/garages/${c.g.garageId}/logo`).expect(404);
+    },
+
+    // Step 6.5: offers.
+    'GET /mobile/v1/offers': async () => {
+      const res = await asX.get('/mobile/v1/offers').expect(200);
+      const ids = res.body.map((o: { id: string }) => o.id);
+      // A's offer (X is A's customer), never C's (only Y is C's customer).
+      expect(ids).toContain(aOfferId);
+      expect(ids).not.toContain(cOfferId);
+    },
+
+    'GET /mobile/v1/offers/:offerId/image': async () => {
+      await asX.get(`/mobile/v1/offers/${cOfferId}/image`).expect(404);
+    },
+
+    'POST /mobile/v1/offers/:offerId/viewed': async () => {
+      await expectYUnchanged(async () => {
+        await asX.post(`/mobile/v1/offers/${cOfferId}/viewed`, {}).expect(404);
+        // X's view of A's offer is X's alone.
+        await asX.post(`/mobile/v1/offers/${aOfferId}/viewed`, {}).expect(204);
+      });
+      const views = await platform.offerView.findMany({ where: { offerId: aOfferId } });
+      expect(views.map((v) => v.ownerId)).toEqual([x.ownerId]);
     },
 
     // Step 6.4: inbox and devices.

@@ -10,6 +10,7 @@ export * from './money';
 export * from './monitoring';
 export * from './next-due';
 export * from './odometer';
+export * from './offers';
 export * from './owners';
 export * from './pagination';
 export * from './phone';

@@ -58,8 +58,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
 | 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | ✅ Done | 2026-11-16 |
-| 6 | 6.4 In-app notifications, push (Firebase), device tokens | Written; the phone test waits for the app | |
-| 6 | 6.5 Offers: garage screens and owner app | Next | |
+| 6 | 6.4 In-app notifications, push (Firebase), device tokens | ✅ Done (the phone test waits for the app) | 2026-11-16 |
+| 6 | 6.5 Offers: garage screens and owner app | Written, awaiting the user's checks | |
+| 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
 
@@ -2069,6 +2070,56 @@ By me, on the test database:
 
 **Not yet verified:** a push reaching a real phone. It needs the key on Render and a test build of the app (the developer's). Then run `push:test` with that phone's token, or let a due reminder reach the test owner.
 
-**Commit:** _(pending)_ "Phase 6.4: owner app inbox, push through Firebase (HTTP v1), device tokens"
+**Commit:** `b1598a4`
+
+---
+
+## Phase 6 · Step 6.5 — Offers: the garage's Offers page and offers in the owner app
+**When:** 2026-11-16 ~13:50 → ~14:45
+
+**Implements:** README 6 (step 6.5); flow.md 10 (steps 1, 2 and the "viewed" count; new "Built in step 6.5"); mobile-api.md 7; database.md 4.6 (`offers`, `offer_views`), 6.4.
+
+**Summary:**
+- **Garage app:** an **Offers** page for the owner and managers. They create and edit an offer (title, text, percent or dollar amount, start and end day, on/off), add an image, and see each offer's state and how many app users opened it.
+- **Owner app:** the active offers of the person's garages, with the image and "viewed". With this, every group of the contract is live.
+- **New endpoints:** 6 under `/v1/offers` and 3 under `/mobile/v1/offers`.
+
+**How it works**
+- **Visibility:** an offer shows in the app while it is on, started and not ended. It shows only to live customers who have not turned offers off, and only while the garage is not locked or deleted. The database (`owner_read` on `offers`, `owner_offer_images` on `files`) and the code both check this.
+- **Views:** `offer_views` is a new append-only tenant table with one row per offer and owner. An owner may only add their own row, for an offer they can see.
+- **Rules:** a percent is at most 100 and the end must be after the start, both checked again on the stored values when editing. Offers are never deleted, only switched off. `target` stays `ALL`.
+- **Images:** the type is checked from the bytes (`files/image-type.ts`, now shared with the logo).
+- **Still Phase 7:** targeting, broadcasts, picking an offer on an invoice, and the full report.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma`, migration `20261116180000_offers_owner_app` (new), `src/tenant-tables.ts` | `offer_views`; owner policies on offers, offer images and views |
+| `packages/contracts/src/offers.ts` (new), `index.ts` | Schemas, `offerState`, garage and owner offer types |
+| `apps/api/src/offers/` (new: module, controller, service), `app.module.ts` | Garage offers API |
+| `apps/api/src/files/image-type.ts` (new), `invoices/invoice-settings.service.ts` | Shared image check |
+| `apps/api/src/owners/owner-offers.service.ts`, `owner-offers.controller.ts` (new), `owners.module.ts` | Owner app offers |
+| `apps/api/test/offers.spec.ts` (new) | 8 tests: create, rules, roles, states, image; owner list, views, opt-out and locked garage |
+| `apps/api/test/tenancy.spec.ts` | 6 cases: garage A never reads or changes B's offers or image |
+| `apps/api/test/tenancy-owner.spec.ts` | 3 cases: X never sees an offer of a garage where only Y is a customer; views are X's own |
+| `apps/garage-web/features/offers/offers-page.tsx`, `app/[locale]/(app)/offers/page.tsx` (new), `components/app-shell.tsx` | The Offers page and its menu item (owner, manager) |
+| `apps/garage-web/messages/en.json`, `ar.json` | Texts |
+
+**Doc changes**
+- mobile-api.md 1.4: group 7 live (every group is now live), visibility and `NOT_FOUND` written down.
+- flow.md 10, database.md 4.6 and 6.4: what step 6.5 built.
+
+**Problems hit:** a lint warning, because `form.watch` doesn't work with React's compiler. I used `useWatch` instead.
+
+**Verified**
+By me, on the test database:
+- RLS guard rails: 31 passed.
+- `offers`, `tenancy`, `tenancy-owner`, `owner-*`: 106 passed.
+- The whole API suite (3 workers): 29 suites, 336 tests passed.
+- Typecheck and lint pass for api, contracts, database and garage-web.
+
+To do by the user: the migration, the tests, and a look at the Offers page in the browser (English and Arabic, on a phone width).
+
+**Commit:** _(pending)_ "Phase 6.5: offers in the garage app and the owner app"
 
 ---

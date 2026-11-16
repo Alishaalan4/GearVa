@@ -11,6 +11,8 @@ import { OwnerInvoicesController, OwnerVehiclesController } from './owner-read.c
 import { OwnerReadService } from './owner-read.service';
 import { OwnerDevicesController, OwnerNotificationsController } from './owner-inbox.controller';
 import { OwnerInboxService } from './owner-inbox.service';
+import { OwnerOffersController } from './owner-offers.controller';
+import { OwnerOffersService } from './owner-offers.service';
 import { OwnerGuard } from './owner.guard';
 
 /** Car-owner accounts and the owner app API, /mobile/v1 (Phase 6, docs/mobile-api.md). */
@@ -24,12 +26,14 @@ import { OwnerGuard } from './owner.guard';
     OwnerInvoicesController,
     OwnerNotificationsController,
     OwnerDevicesController,
+    OwnerOffersController,
   ],
   providers: [
     OwnerAuthService,
     OwnerAccountService,
     OwnerReadService,
     OwnerInboxService,
+    OwnerOffersService,
     OwnerGuard,
   ],
   exports: [OwnerGuard],

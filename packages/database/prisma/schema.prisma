@@ -230,6 +230,7 @@ model Owner {
   notifications   Notification[]
   invoices        Invoice[]
   deviceTokens    DeviceToken[]
+  offerViews      OfferView[]
 
   @@map("owners")
 }
@@ -292,6 +293,7 @@ model Garage {
   reminders            Reminder[]
   files                File[]
   offers               Offer[]
+  offerViews           OfferView[]
   invoiceCounters      InvoiceCounter[]
   invoices             Invoice[]
   invoiceItems         InvoiceItem[]
@@ -682,13 +684,31 @@ model Offer {
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage    Garage    @relation(fields: [garageId], references: [id])
-  image     File?     @relation(fields: [garageId, imageFileId], references: [garageId, id], onDelete: Restrict)
-  createdBy User      @relation(fields: [garageId, createdById], references: [garageId, id])
+  garage    Garage      @relation(fields: [garageId], references: [id])
+  image     File?       @relation(fields: [garageId, imageFileId], references: [garageId, id], onDelete: Restrict)
+  createdBy User        @relation(fields: [garageId, createdById], references: [garageId, id])
   invoices  Invoice[]
+  views     OfferView[]
 
   @@unique([garageId, id])
   @@map("offers")
+}
+
+// An owner opened an offer in the app (step 6.5, mobile-api.md 7.3): one row per offer
+// and owner, for the garage's offer report (flow.md 10). Append-only.
+model OfferView {
+  id       String   @id @default(uuid(7)) @db.Uuid
+  garageId String   @map("garage_id") @db.Uuid
+  offerId  String   @map("offer_id") @db.Uuid
+  ownerId  String   @map("owner_id") @db.Uuid
+  viewedAt DateTime @default(now()) @map("viewed_at") @db.Timestamptz(3)
+
+  garage Garage @relation(fields: [garageId], references: [id])
+  offer  Offer  @relation(fields: [garageId, offerId], references: [garageId, id])
+  owner  Owner  @relation(fields: [ownerId], references: [id])
+
+  @@unique([offerId, ownerId])
+  @@map("offer_views")
 }
 
 // Gap-free numbering (flow.md 7.1): the row lock serializes concurrent invoices.

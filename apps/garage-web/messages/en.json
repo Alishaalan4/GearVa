@@ -65,7 +65,8 @@
     "invoiceSettings": "Invoice settings",
     "reminders": "Reminders",
     "notifications": "Messages log",
-    "reminderSettings": "Reminder settings"
+    "reminderSettings": "Reminder settings",
+    "offers": "Offers"
   },
   "authSide": {
     "heading": "Know when every customer is due.",
@@ -752,5 +753,57 @@
         "p1": "For questions about your records, contact your garage. For anything else, or about this policy, write to Gearva at privacy@gearva.online. If we change this policy, we will update the date above."
       }
     }
+  },
+  "offers": {
+    "title": "Offers",
+    "lead": "What your customers see in the Gearva app. Customers who turned offers off do not see them.",
+    "new": "New offer",
+    "newTitle": "New offer",
+    "editTitle": "Edit offer",
+    "empty": "No offers yet.",
+    "percentOff": "{value}% off",
+    "amountOff": "{value} off",
+    "dates": "{from} to {to}",
+    "from": "From {from}",
+    "views": "{count, plural, =0 {Not opened yet} one {Opened by # customer} other {Opened by # customers}}",
+    "hasImage": "With image",
+    "state": {
+      "ACTIVE": "Showing",
+      "SCHEDULED": "Starts later",
+      "ENDED": "Ended",
+      "OFF": "Off"
+    },
+    "types": {
+      "PERCENT": "Percent",
+      "AMOUNT": "Amount (USD)"
+    },
+    "fields": {
+      "title": "Title",
+      "body": "Text (optional)",
+      "type": "Discount",
+      "percent": "Percent off",
+      "amount": "Amount off (USD)",
+      "start": "Starts",
+      "end": "Ends (optional)",
+      "active": "Show in the app"
+    },
+    "startHint": "Empty: today.",
+    "endHint": "Empty: no end.",
+    "invalid": {
+      "title": "Enter a title (2 to 120 characters).",
+      "body": "Use at most 1000 characters.",
+      "percent": "A whole number from 1 to 100.",
+      "amount": "Enter an amount above 0, e.g. 5 or 5.50.",
+      "end": "The end must be on or after the start."
+    },
+    "image": "Image",
+    "imageSet": "This offer has an image.",
+    "imageNone": "No image yet.",
+    "uploadImage": "Add an image",
+    "replaceImage": "Replace the image",
+    "imageSaved": "Image saved.",
+    "imageTooBig": "The image is larger than 2 MB.",
+    "imageType": "Use a PNG or JPEG image.",
+    "imageAfter": "You can add an image after saving."
   }
 }

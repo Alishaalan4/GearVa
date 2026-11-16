@@ -51,6 +51,8 @@ export interface ScanResult {
   emailed: number;
   /** monthly reminder emails queued by this scan */
   monthly: number;
+  /** in-app reminders (with push) queued by this scan, for owners who use the app */
+  inApp: number;
 }
 
 export const REMINDER_REF = 'reminder';
@@ -139,13 +141,21 @@ export class RemindersService implements OnApplicationBootstrap {
       startHour: system.reminderDaytimeStartHour,
       endHour: system.reminderDaytimeEndHour,
     };
-    if (nextDaytimeStart(now, garage.timezone, window)) return { emailed: 0, monthly: 0 };
+    if (nextDaytimeStart(now, garage.timezone, window)) {
+      return { emailed: 0, monthly: 0, inApp: 0 };
+    }
 
     const due = await this.db.run((tx) => this.findDue(tx, garage, now, system));
     const emails = due.filter((d) => d.customer.email).map((d) => this.reminderEmail(d, garage));
     const emailed = await this.recordNew(emails);
+    // Step 6.4: owners who use the app also get it in their inbox, with a push. One per
+    // round (the dedupe key); it does not count the round, so the email and the WhatsApp
+    // list work exactly as before.
+    const inApp = await this.recordNew(
+      due.filter((d) => d.customer.owner.passwordHash).map((d) => this.reminderInApp(d, garage)),
+    );
     const monthly = await this.recordNew(await this.monthlyEmails(garage, now));
-    return { emailed, monthly };
+    return { emailed, monthly, inApp };
   }
 
   /** The due reminders of the current garage: for the scan, and the WhatsApp list (9.5). */
@@ -296,6 +306,24 @@ export class RemindersService implements OnApplicationBootstrap {
       ownerId: customer.ownerId,
       refType: REMINDER_REF,
       refId: reminder.id,
+    };
+  }
+
+  /**
+   * The same reminder for the owner app's inbox and push (mobile-api.md 6): the email's
+   * data and template name (templates/in-app.ts has the short texts), the owner as the
+   * recipient, and the car as what the app opens. Its refType is not REMINDER_REF, so
+   * marking it sent never counts the round.
+   */
+  private reminderInApp(due: DueReminder, garage: Pick<Garage, 'id' | 'name'>): NewNotification {
+    const email = this.reminderEmail(due, garage);
+    return {
+      ...email,
+      channel: 'IN_APP',
+      recipient: due.customer.ownerId,
+      dedupeKey: `REMINDER:${due.reminder.id}:${due.round}:IN_APP`,
+      refType: 'vehicle',
+      refId: due.vehicle.id,
     };
   }
 

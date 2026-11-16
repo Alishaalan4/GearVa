@@ -189,6 +189,11 @@ S3_SECRET_KEY=
 # apps pass the visitor's IP on to the API with it (section 9). Empty locally.
 PROXY_SECRET=
 
+# Push to the owner app (step 6.4): the whole Firebase service account key file as one
+# value (Firebase > Project settings > Service accounts > Generate new private key).
+# Empty = no push; the in-app inbox still works. A secret: never commit it.
+FCM_SERVICE_ACCOUNT_JSON=
+
 # Later
 WHATSAPP_ADAPTER=disabled
 ```
@@ -236,7 +241,7 @@ interface NotificationChannel {
 }
 ```
 
-Build `EMAIL` first (Phase 1); `IN_APP` comes with the owner app in Phase 6 (decision 2026-11-05). `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error, retryable? }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it. A failure marked `retryable` (provider down, rate limited), or an adapter that throws, is tried again with backoff, 3 attempts in all (flow.md 9.4); any other failure is final at once.
+Build `EMAIL` first (Phase 1); `IN_APP` comes with the owner app in Phase 6 (decision 2026-11-05; built in step 6.4: the inbox row, with a push to the owner's phones through Firebase, flow.md 9.6, so `PUSH` is not a separate channel). `WHATSAPP` is a later adapter and must need zero changes outside `notifications/`. Every send writes a `notifications` row (status, channel, error; log and in-app inbox are one table, see database.md 4.6) and uses a dedupe key. `SendResult` is `{ ok: true } | { ok: false, error, retryable? }`; the pipeline stores `SENT`, `FAILED` or `SKIPPED` from it. A failure marked `retryable` (provider down, rate limited), or an adapter that throws, is tried again with backoff, 3 attempts in all (flow.md 9.4); any other failure is final at once.
 
 ### 5.6 API conventions
 - REST + JSON, validated with Zod schemas from `packages/contracts`.

@@ -114,7 +114,7 @@ The login columns came in step 6.1 (decision 2026-11-15, flow.md 2.4). Garage co
 `owner_otps` (phone + one-time code) was planned for Phase 6 but never created: the login is email + password since 2026-10-29.
 
 #### `device_tokens` (step 6.4)
-`id`, `ownerId` FK, `token` U (the Firebase Cloud Messaging registration token), `platform` (`ios`/`android`), `lastSeenAt`. Removed on logout, on account deletion, and when FCM reports the token dead.
+`id`, `ownerId` FK (cascade), `token` U (the Firebase Cloud Messaging registration token), `platform` (`ios`/`android`, CHECK), `lastSeenAt`. Removed by the app before logout, on account deletion, and when FCM reports the token dead. A token registered again by another owner moves to that owner; an owner keeps the 10 most recently seen. A platform table: only `gearva_platform` has rights (the API's owner code, like `sessions`), no RLS.
 
 #### `subscription_payments`
 Append-only (step 5.1): `gearva_platform` has `SELECT, INSERT` only, like `payments`. Checks: amount above 0, extra branches 0 or more, new expiry date not before the period start.
@@ -562,7 +562,7 @@ Built in step 6.2 (migration `owner_context`): `runAsOwner(client, ownerId, fn)`
 - `garage_customers`: `owner_read`, and `owner_preferences` (`FOR UPDATE`, own live rows). A trigger, `garage_customers_owner_update_guard`, refuses any change other than `remindersOptOut` and `marketingOptOut` when the owner context is set.
 - `garages` and `garage_settings`: `owner_read` for garages (not deleted) where the owner is a live customer.
 
-Step 6.3 (migration `owner_read`) added `owner_read` on `vehicles`, `visits`, `service_records`, `reminders` and `invoices` (by `owner_id`), `invoice_items` and `payments` (through their invoice), `branches` and the garage's own `service_types` (garages where the person is a live customer; global types are readable already), and `files`: only the PDFs of the person's invoices and the logos of their garages. Step 6.4 adds `notifications`.
+Step 6.3 (migration `owner_read`) added `owner_read` on `vehicles`, `visits`, `service_records`, `reminders` and `invoices` (by `owner_id`), `invoice_items` and `payments` (through their invoice), `branches` and the garage's own `service_types` (garages where the person is a live customer; global types are readable already), and `files`: only the PDFs of the person's invoices and the logos of their garages. Step 6.4 (migration `owner_inbox_push`) added `owner_inbox_read` and `owner_inbox_mark_read` on `notifications`: the owner's own `IN_APP` rows only, and a trigger, `notifications_owner_update_guard`, lets an owner change nothing but `readAt`.
 
 ### 6.5 Guard rails
 - A test queries `pg_tables`/`pg_policies` and **fails if any table with a `garage_id` column has no RLS policy**.

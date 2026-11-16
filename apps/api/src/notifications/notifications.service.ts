@@ -198,6 +198,12 @@ export class NotificationsService implements OnApplicationBootstrap {
         template: notification.template,
         locale: notification.locale === 'ar' ? 'ar' : 'en',
         data: (notification.payload ?? {}) as Record<string, unknown>,
+        meta: {
+          notificationId: notification.id,
+          type: notification.type,
+          refType: notification.refType,
+          refId: notification.refId,
+        },
       });
     } catch (error) {
       result = {

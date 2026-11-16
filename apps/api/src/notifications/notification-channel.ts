@@ -3,11 +3,13 @@ import type { NotificationChannel as ChannelName } from '@gearva/database';
 export type Locale = 'ar' | 'en';
 
 export interface SendInput {
-  /** email address, phone number or push token */
+  /** email address, phone number, or the owner id for IN_APP */
   recipient: string;
   template: string;
   locale: Locale;
   data: Record<string, unknown>;
+  /** the notification row, for adapters that point back to it (the push of an IN_APP) */
+  meta?: { notificationId: string; type: string; refType: string | null; refId: string | null };
 }
 
 /**

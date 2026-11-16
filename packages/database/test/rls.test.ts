@@ -376,6 +376,38 @@ describe('Phase 2 tables', () => {
       expect(changed.count).toBe(0);
     });
 
+    it('step 6.4: an owner sees their in-app rows only, and may only mark them read', async () => {
+      const row = (channel: 'IN_APP' | 'EMAIL', ownerId: string) =>
+        platform.notification.create({
+          data: {
+            garageId: garageA,
+            ownerId,
+            channel,
+            type: 'SERVICE_REMINDER',
+            template: 'service-reminder',
+            locale: 'en',
+            recipient: 'x',
+            payload: {},
+            status: 'SENT',
+            dedupeKey: `RLS:${randomUUID()}`,
+          },
+        });
+      const inApp = await row('IN_APP', ownerX);
+      await row('EMAIL', ownerX);
+      await row('IN_APP', ownerY);
+
+      const seen = await asOwner(ownerX, (tx) => tx.notification.findMany());
+      expect(seen.map((n) => n.id)).toEqual([inApp.id]);
+      await asOwner(ownerX, (tx) =>
+        tx.notification.update({ where: { id: inApp.id }, data: { readAt: new Date() } }),
+      );
+      await expect(
+        asOwner(ownerX, (tx) =>
+          tx.notification.update({ where: { id: inApp.id }, data: { status: 'FAILED' } }),
+        ),
+      ).rejects.toThrow(/only mark their notifications read/);
+    });
+
     it('a garage context still sees only its own customers', async () => {
       const rows = await asGarage(garageB, (tx) => tx.garageCustomer.findMany());
       const owners = rows.map((c) => c.ownerId);

@@ -7,8 +7,9 @@ The contract between the API and the owner app (V3, Flutter). The API is built t
 | 1.0 | 2026-11-15 | First version (Phase 6.0): auth, profile, cars, history, invoices, notifications, push devices, offers |
 | 1.1 | 2026-11-16 | **Live:** login and account (2) and profile (3.1 to 3.5). 2.3: reusing a refresh token ends **all** of the owner's sessions, on every phone (it said "that phone's"). 2.2: also `RATE_LIMITED` after 10 wrong passwords for one email (15 minutes). 2.5: one reset email per address per minute. 3.3: send at least one of the two fields |
 | 1.2 | 2026-11-16 | **Live:** garage logo (3.6), cars and history (4), invoices and PDFs (5). 4.3: `details` has one label/value pair per field the garage filled in (the example was a combined line); `date` is when the visit finished, or opened while in progress. 4.1: `nextService` order and the warranty/recommendation names written down. A garage that removed the person as a customer no longer shows anything in the app |
+| 1.3 | 2026-11-16 | **Live:** inbox, push and devices (6). The types sent today: `SERVICE_REMINDER` (also a recommended service) and `WARRANTY_END`, from the garages' reminder scan, between 09:00 and 20:00 garage time. 6.2: an id that is not the owner's is `NOT_FOUND`. 6.4: one phone token belongs to one owner (the latest to register it); up to 10 phones per owner. Push needs the project's Firebase key on the server; until then the inbox works without push |
 
-Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** 2, 3, 4, 5. **Planned:** 6, 7.
+Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** 2, 3, 4, 5, 6. **Planned:** 7.
 
 ---
 
@@ -329,6 +330,7 @@ The in-app inbox, newest first.
 - `type`: `SERVICE_REMINDER`, `WARRANTY_END`, `INVOICE`, `PAYMENT_REMINDER`, `CAR_READY`, `OFFER`, `MONTHLY_REMINDER`. Unknown future types must still show (title and body are always there).
 - `ref` tells the app which screen to open: `vehicle`, `invoice` or `offer` with its id, or `null`.
 - `title` and `body` are already in the owner's language.
+- Sent today: `SERVICE_REMINDER` (a service due, or one the garage recommended) and `WARRANTY_END`, each once per reminder round, during the garage's daytime (09:00 to 20:00). The other types come later; show any type you do not know with its title and body.
 
 ### 6.2 `POST /mobile/v1/notifications/{id}/read` and `POST /mobile/v1/notifications/read-all`
 204. The unread count is in `GET /mobile/v1/me` (`unreadNotifications`).
@@ -342,7 +344,7 @@ Gearva sends push messages through **Firebase Cloud Messaging** (FCM) to Android
 ```json
 { "token": "<FCM registration token>", "platform": "android" }
 ```
-204. Register after login and whenever FCM gives a new token (`platform`: `android` or `ios`). Delete it before logout. A token that FCM reports as dead is removed by the server.
+204. Register after login and whenever FCM gives a new token (`platform`: `android` or `ios`). Delete it before logout (URL-encode the token in the path). A token that FCM reports as dead is removed by the server. A token belongs to the last owner who registered it (a shared or resold phone), and each owner keeps their 10 most recent phones. Deleting the account removes them all.
 
 ---
 

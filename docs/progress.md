@@ -57,8 +57,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
-| 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | Written, awaiting the user's checks | |
-| 6 | 6.4 In-app notifications, push (Firebase), device tokens | Next | |
+| 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | ✅ Done | 2026-11-16 |
+| 6 | 6.4 In-app notifications, push (Firebase), device tokens | Written; the phone test waits for the app | |
+| 6 | 6.5 Offers: garage screens and owner app | Next | |
 
 ---
 
@@ -2011,6 +2012,63 @@ By me, on the test database:
 
 To do by the user: the migration on the dev database, `npm test` and `npm run test:tenancy`, then push.
 
-**Commit:** _(pending)_ "Phase 6.3: owner app read API (cars, next service, history, invoices, PDFs, logos)"
+**Commit:** `7d4f929`
+
+---
+
+## Phase 6 · Step 6.4 — In-app notifications, push through Firebase, device tokens
+**When:** 2026-11-16 ~12:40 → ~13:40
+
+**Implements:** README 5.5, 6 (step 6.4); mobile-api.md 6; flow.md 9.6 (new); database.md 4.1 (`device_tokens`), 6.4 (inbox policies).
+
+**Summary:** Owners who use the app now get their reminders in the app's inbox, with a push to their phones. 5 endpoints are live:
+- `GET /mobile/v1/notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`
+- `POST /mobile/v1/devices`, `DELETE /devices/:token`
+
+**How it works**
+- **The scan:** when a due reminder's owner has an app account, the hourly scan also records an `IN_APP` row: the same data as the email, the car as what the app opens, one per round. It does **not** count the round, so emails and the WhatsApp list behave exactly as before.
+- **The `IN_APP` adapter:** the row becomes visible in the inbox (`SENT`), and a push goes to each of the owner's phones. Dead tokens are deleted, and a push failure never fails the inbox entry. The night rule applies (09:00 to 20:00 garage time), and in-app rows do not count toward the monthly email cap. `PUSH` is not a separate channel (README 5.5 updated).
+- **Firebase:** HTTP v1 with the service account key in `FCM_SERVICE_ACCOUNT_JSON`. The key signs a JWT (RS256) with `node:crypto`, Google trades it for a 1-hour access token, and each message is one `fetch`. No Firebase SDK was added. A broken key stops the API at start with a clear message. Without a key there is no push and the inbox still works.
+- **Database:** `device_tokens` is a platform table, like `sessions`. The owner may read their own `IN_APP` notification rows and change only `readAt` (a trigger refuses anything else).
+- **Test push:** `npm run push:test -w @gearva/api -- <token>` sends one test push to one phone, for the "Done when" check.
+
+**Decisions (mine)**
+- The monthly reminder stays email only, and invoice notifications in the app are not added (the contract lists the type for later).
+- A phone's token belongs to the last owner who registered it, and each owner keeps 10 phones.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma`, migration `20261116160000_owner_inbox_push` (new) | `device_tokens`; inbox policies and trigger on `notifications` |
+| `packages/database/test/rls.test.ts` | An owner sees only their in-app rows and may only mark them read |
+| `packages/contracts/src/owners.ts` | Inbox item, notification refs, device schema |
+| `apps/api/src/notifications/push/push-sender.ts` (new) | `PushSender`, `FcmPushSender` (HTTP v1), `NoPushSender`, the key schema |
+| `apps/api/src/notifications/adapters/in-app.channel.ts` (new), `notifications.module.ts`, `notification-channel.ts`, `notifications.service.ts` | The `IN_APP` channel; `SendInput.meta` (the row's id and reference for the push) |
+| `apps/api/src/notifications/templates/in-app.ts` (new), `reminders.ts` | Short in-app texts (en, ar) reusing the email helpers |
+| `apps/api/src/reminders/reminders.service.ts` | In-app rows from the scan; `ScanResult.inApp` |
+| `apps/api/src/owners/owner-inbox.service.ts`, `owner-inbox.controller.ts` (new), `owner-account.service.ts`, `owners.module.ts` | Inbox and devices; the unread count; deletion removes devices |
+| `apps/api/src/config/env.ts`, `.env.example`, `render.yaml` | `FCM_SERVICE_ACCOUNT_JSON` (checked at start; `sync: false` on Render) |
+| `apps/api/src/scripts/send-test-push.ts` (new), `apps/api/package.json` | `push:test` |
+| `apps/api/test/owner-inbox.spec.ts` (new) | 5 tests with a fake push: scan → inbox → push, dead token removed, round counted once, read and read-all, no app = no row, devices |
+| `apps/api/test/push-sender.spec.ts` (new) | 3 tests with a generated key and a mocked network: the signed JWT, the message, token reuse, DEAD and FAILED |
+| `apps/api/test/tenancy-owner.spec.ts` | 5 cases: X never reads or marks Y's inbox, nor removes Y's phone |
+| `apps/api/test/reminders.spec.ts` | The scan result has `inApp` |
+
+**Doc changes**
+- mobile-api.md 1.3: group 6 live, with the types sent today, the night rule, the device rules and 404 for another owner's id.
+- flow.md 9.6 (new), database.md 4.1 and 6.4, README 4 (env) and 5.5.
+
+**Problems hit:** none.
+
+**Verified**
+By me, on the test database:
+- RLS guard rails: 31 passed.
+- `owner-*`, `tenancy-owner`, `reminders`, `notification*`, `push-sender`: 69 passed.
+- `tenancy`, `customers`, `invoices`, `reminder-api`, `staff-auth`, `applications`: 117 passed.
+- Typecheck, lint and build pass.
+
+**Not yet verified:** a push reaching a real phone. It needs the key on Render and a test build of the app (the developer's). Then run `push:test` with that phone's token, or let a due reminder reach the test owner.
+
+**Commit:** _(pending)_ "Phase 6.4: owner app inbox, push through Firebase (HTTP v1), device tokens"
 
 ---

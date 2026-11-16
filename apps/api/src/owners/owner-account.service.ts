@@ -63,9 +63,15 @@ export class OwnerAccountService {
     return this.ownerDb.run(async (tx) => {
       const owner = await tx.owner.findUniqueOrThrow({ where: { id: ownerId } });
       const customers = await this.customers(tx, ownerId);
-      // The in-app inbox comes in step 6.4; until its owner policy exists this is 0.
+      // The inbox (mobile-api.md 6.1): delivered in-app rows not read yet.
       const unreadNotifications = await tx.notification.count({
-        where: { ownerId, channel: 'IN_APP', readAt: null },
+        where: {
+          ownerId,
+          channel: 'IN_APP',
+          status: 'SENT',
+          readAt: null,
+          garage: { deletedAt: null },
+        },
       });
       return {
         id: owner.id,
@@ -134,7 +140,7 @@ export class OwnerAccountService {
    * mobile-api.md 3.5, flow.md 2.4 step 6: deletes the app account (the stores require
    * it). The login email, the password, any open link and every session go; the
    * garages keep their own records, and can invite the person again later. Device tokens
-   * are removed here too once they exist (step 6.4).
+   * are removed too (no push after deletion).
    */
   async deleteAccount(password: string): Promise<void> {
     const owner = await this.verifyPassword(password);
@@ -149,6 +155,7 @@ export class OwnerAccountService {
       },
     });
     await this.sessions.revokeAll('OWNER', owner.id);
+    await this.platformDb.client.deviceToken.deleteMany({ where: { ownerId: owner.id } });
   }
 
   /** The owner's current password, with the same per-email lockout as the login. */

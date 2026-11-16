@@ -17,7 +17,7 @@ const car = {
 /** YYYY-MM-DD */
 const date = z.iso.date();
 
-function day(value: string, locale: Locale): string {
+export function day(value: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-LB-u-nu-latn' : 'en-GB', {
     day: 'numeric',
     month: 'long',
@@ -31,7 +31,7 @@ function distance(km: number, unit: 'KM' | 'MI', locale: Locale): string {
   return `${new Intl.NumberFormat('en-US').format(km)} ${label}`;
 }
 
-const serviceSchema = z
+export const serviceSchema = z
   .object({
     ...car,
     /** in the car's unit */
@@ -42,7 +42,7 @@ const serviceSchema = z
   .refine((d) => d.dueKm !== null || d.dueDate !== null, 'A due km or date is needed');
 
 /** "at 55,100 km or on 5 May 2027, whichever comes first", in the customer's language. */
-function serviceDue(d: z.infer<typeof serviceSchema>, locale: Locale): string {
+export function serviceDue(d: z.infer<typeof serviceSchema>, locale: Locale): string {
   const km = d.dueKm === null ? null : distance(d.dueKm, d.unit, locale);
   const on = d.dueDate === null ? null : day(d.dueDate, locale);
   if (locale === 'en') {
@@ -83,7 +83,7 @@ export const serviceReminder: EmailTemplate<z.infer<typeof serviceSchema>> = {
   },
 };
 
-const datedSchema = z.object({ ...car, dueDate: date });
+export const datedSchema = z.object({ ...car, dueDate: date });
 
 /** A warranty given on a service ends soon. */
 export const warrantyEnd: EmailTemplate<z.infer<typeof datedSchema>> = {

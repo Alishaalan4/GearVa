@@ -207,3 +207,37 @@ export interface OwnerInvoiceDetail extends OwnerInvoiceItem {
   warrantyText: string | null;
   cancelReason: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Inbox and push devices (mobile-api.md 6; step 6.4)
+// ---------------------------------------------------------------------------
+
+/** What the app opens when a notification is tapped. */
+export const OWNER_NOTIFICATION_REFS = ['vehicle', 'invoice', 'offer'] as const;
+export type OwnerNotificationRef = (typeof OWNER_NOTIFICATION_REFS)[number];
+
+export interface OwnerNotification {
+  id: string;
+  /** SERVICE_REMINDER, WARRANTY_END, INVOICE, ...: unknown future types must still show */
+  type: string;
+  /** in the owner's language */
+  title: string;
+  body: string;
+  garage: OwnerGarageRef;
+  ref: { type: OwnerNotificationRef; id: string } | null;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export const ownerNotificationsQuerySchema = paginationQuerySchema;
+export type OwnerNotificationsQuery = z.infer<typeof ownerNotificationsQuerySchema>;
+
+export const DEVICE_PLATFORMS = ['android', 'ios'] as const;
+export type DevicePlatform = (typeof DEVICE_PLATFORMS)[number];
+
+/** POST /mobile/v1/devices: the FCM registration token of this phone. */
+export const registerDeviceSchema = z.object({
+  token: z.string().trim().min(10).max(4096),
+  platform: z.enum(DEVICE_PLATFORMS),
+});
+export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;

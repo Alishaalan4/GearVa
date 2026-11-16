@@ -6,6 +6,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
+    "push:test": "node dist/scripts/send-test-push.js",
     "start:render": "npm run migrate:deploy -w @gearva/database && node ../../packages/database/dist/seed.js && node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.spec.json --noEmit",

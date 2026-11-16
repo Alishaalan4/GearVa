@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 import { z } from 'zod';
+import { serviceAccountSchema } from '../notifications/push/push-sender';
 
 /** An optional variable; `NAME=` with nothing after it (as in .env.example) counts as unset. */
 const unsetIfEmpty = <T extends z.ZodType>(schema: T) =>
@@ -37,6 +38,9 @@ const envSchema = z
     SCHEDULED_JOBS: z.enum(['on', 'off']).default('on'),
     // First wait before a failed notification is tried again (doubled each time).
     NOTIFICATION_RETRY_DELAY_MS: z.coerce.number().int().positive().default(30_000),
+    // The Firebase service account key file's whole JSON (step 6.4): push messages to the
+    // owner app. Empty: no push (the in-app inbox still works).
+    FCM_SERVICE_ACCOUNT_JSON: unsetIfEmpty(z.string()),
     // `stub` is for tests, which have no Chrome.
     PDF_ADAPTER: z.enum(['puppeteer', 'stub']).default('puppeteer'),
     // Base URL of garage-web: invite and password-reset links point there.
@@ -62,6 +66,22 @@ const envSchema = z
     };
     if (env.NODE_ENV === 'production') missing('PROXY_SECRET', 'in production');
     if (env.EMAIL_ADAPTER === 'resend') missing('RESEND_API_KEY', 'with EMAIL_ADAPTER=resend');
+    if (env.FCM_SERVICE_ACCOUNT_JSON) {
+      // Refuse to start with a broken key, rather than fail at the first push.
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(env.FCM_SERVICE_ACCOUNT_JSON);
+      } catch {
+        // reported below
+      }
+      if (!serviceAccountSchema.safeParse(parsed).success) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['FCM_SERVICE_ACCOUNT_JSON'],
+          message: 'must be the whole Firebase service account key file (JSON)',
+        });
+      }
+    }
     if (env.FILES_ADAPTER === 's3') {
       for (const name of ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY', 'S3_SECRET_KEY'] as const) {
         missing(name, 'with FILES_ADAPTER=s3');

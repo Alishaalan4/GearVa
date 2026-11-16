@@ -229,8 +229,28 @@ model Owner {
   reminders       Reminder[]
   notifications   Notification[]
   invoices        Invoice[]
+  deviceTokens    DeviceToken[]
 
   @@map("owners")
+}
+
+// A phone of an owner app user, for push messages through Firebase Cloud Messaging
+// (step 6.4, database.md 4.1). Platform table: only gearva_platform reaches it.
+model DeviceToken {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  ownerId    String   @map("owner_id") @db.Uuid
+  // the FCM registration token; a phone that changes hands moves to the new owner
+  token      String   @unique
+  // `android` or `ios` (CHECK in SQL)
+  platform   String
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("device_tokens")
 }
 
 // ---------------------------------------------------------------------------

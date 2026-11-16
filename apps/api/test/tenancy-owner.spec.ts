@@ -45,6 +45,9 @@ describe('Owner isolation (test:tenancy)', () => {
   let yCarId: string;
   let yInvoiceId: string;
 
+  let yNotificationId: string;
+  const yDeviceToken = `fcm-y-${Date.now()}`;
+
   /** The start of a PNG: enough for the logo type check. */
   const PNG = Buffer.from('89504e470d0a1a0a0000', 'hex');
 
@@ -97,6 +100,14 @@ describe('Owner isolation (test:tenancy)', () => {
         where: { subjectType: 'OWNER', subjectId: y.ownerId },
         orderBy: { id: 'asc' },
       }),
+      notifications: await platform.notification.findMany({
+        where: { ownerId: y.ownerId },
+        orderBy: { id: 'asc' },
+      }),
+      devices: await platform.deviceToken.findMany({
+        where: { ownerId: y.ownerId },
+        orderBy: { id: 'asc' },
+      }),
     };
   }
 
@@ -124,6 +135,26 @@ describe('Owner isolation (test:tenancy)', () => {
       .set('Cookie', c.cookie)
       .attach('file', PNG, 'logo.png')
       .expect(200);
+    // Step 6.4: an unread inbox entry and a phone for Y, both at garage A (shared with X).
+    yNotificationId = (
+      await platform.notification.create({
+        data: {
+          garageId: a.g.garageId,
+          ownerId: y.ownerId,
+          channel: 'IN_APP',
+          type: 'SERVICE_REMINDER',
+          template: 'service-reminder',
+          locale: 'en',
+          recipient: y.ownerId,
+          payload: {},
+          status: 'SENT',
+          dedupeKey: `TEST:${y.ownerId}`,
+        },
+      })
+    ).id;
+    await platform.deviceToken.create({
+      data: { ownerId: y.ownerId, token: yDeviceToken, platform: 'android' },
+    });
     await ownerLogin(app, y.email);
     xToken = (await ownerLogin(app, x.email)).accessToken;
   });
@@ -176,6 +207,44 @@ describe('Owner isolation (test:tenancy)', () => {
     'GET /mobile/v1/garages/:garageId/logo': async () => {
       // C has a logo, but X is not its customer.
       await asX.get(`/mobile/v1/garages/${c.g.garageId}/logo`).expect(404);
+    },
+
+    // Step 6.4: inbox and devices.
+    'GET /mobile/v1/notifications': async () => {
+      const res = await asX.get('/mobile/v1/notifications?pageSize=50').expect(200);
+      expect(res.body.items.map((n: { id: string }) => n.id)).not.toContain(yNotificationId);
+      expect(res.body.total).toBe(0);
+    },
+
+    'POST /mobile/v1/notifications/:notificationId/read': async () => {
+      await expectYUnchanged(async () => {
+        await asX.post(`/mobile/v1/notifications/${yNotificationId}/read`, {}).expect(404);
+      });
+    },
+
+    'POST /mobile/v1/notifications/read-all': async () => {
+      await expectYUnchanged(async () => {
+        await asX.post('/mobile/v1/notifications/read-all', {}).expect(204);
+      });
+    },
+
+    'POST /mobile/v1/devices': async () => {
+      await expectYUnchanged(async () => {
+        // An ownerId in the body is ignored: the token is X's.
+        await asX
+          .post('/mobile/v1/devices', {
+            token: `fcm-x-${Date.now()}`,
+            platform: 'ios',
+            ownerId: y.ownerId,
+          })
+          .expect(204);
+      });
+    },
+
+    'DELETE /mobile/v1/devices/:token': async () => {
+      await expectYUnchanged(async () => {
+        await asX.delete(`/mobile/v1/devices/${yDeviceToken}`, {}).expect(204);
+      });
     },
 
     'PATCH /mobile/v1/me': async () => {

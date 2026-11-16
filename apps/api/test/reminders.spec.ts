@@ -220,7 +220,7 @@ describe('Reminder scan', () => {
     const { reminderId } = await dueCar();
     await platform.garage.update({ where: { id: g.garageId }, data: { timezone: zoneAt(2) } });
     try {
-      expect(await scan()).toEqual({ emailed: 0, monthly: 0 });
+      expect(await scan()).toEqual({ emailed: 0, monthly: 0, inApp: 0 });
       expect(await reminderEmails(reminderId)).toHaveLength(0);
     } finally {
       await platform.garage.update({ where: { id: g.garageId }, data: { timezone: zoneAt(13) } });

@@ -441,6 +441,12 @@ A "Reminders due" screen for OWNER, MANAGER and RECEPTIONIST lists the due remin
 - A customer who does not want reminders is marked "No reminders" on their page (`remindersOptOut`) and leaves the list.
 - API (step 4.4): `GET /v1/reminders/due` (paginated; each item has the round, the service in both languages, the due km or date, the estimated km, `emailFailed` and the ready `whatsappUrl`) and `POST /v1/reminders/:reminderId/whatsapp-sent` `{ round }`. Marking a round that is already counted answers `counted: false` and changes nothing; a round that is not the next one is `409 REMINDER_NOT_DUE`. The log is `GET /v1/notifications` (filters `status`, `channel`), and the owner's settings are `GET` / `PATCH /v1/reminder-settings` (lead km 0–5,000, lead days 0–60, monthly reminder).
 
+### 9.6 Owner app inbox and push (step 6.4)
+- When a due reminder's customer uses the owner app (the person has a password), the scan also records an `IN_APP` notification: the same type, template name and data as the email, the owner id as recipient, `refType = vehicle` (the screen the app opens), `dedupeKey = REMINDER:{reminderId}:{round}:IN_APP`. It does **not** count the round: the round is still counted by the email or by "Mark as sent" (9.5), so the WhatsApp list works as before, and the app gets one entry per round.
+- The `IN_APP` adapter delivers by making the row visible in the inbox (`SENT`) and pushing it to each of the owner's phones through Firebase Cloud Messaging (HTTP v1, `FCM_SERVICE_ACCOUNT_JSON`). Reminder types follow the daytime rule (9.3), so no push arrives at night; they do not count toward the monthly email cap. A push failure does not fail the inbox entry; a dead token is deleted. Without the key there is no push and the inbox still works.
+- Titles and bodies are short texts (`templates/in-app.ts`) rendered in the row's language when the inbox is read. The monthly reminder (9.2) stays email only.
+- A test push to one phone: `npm run push:test -w @gearva/api -- <token>` (after a build, with the key in the environment).
+
 ---
 
 ## 10. Offers and marketing (Phase 7)

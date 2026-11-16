@@ -58,6 +58,10 @@ services:
         value: Gearva <no-reply@gearva.online>
       - key: RESEND_API_KEY
         sync: false
+      # Step 6.4: the whole Firebase service account key file (JSON), for push messages to
+      # the owner app. Empty = no push; the in-app inbox still works.
+      - key: FCM_SERVICE_ACCOUNT_JSON
+        sync: false
       - key: FILES_ADAPTER
         value: s3
       - key: S3_ENDPOINT # https://<account id>.r2.cloudflarestorage.com

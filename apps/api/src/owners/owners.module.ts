@@ -9,6 +9,8 @@ import { OwnerAuthController } from './owner-auth.controller';
 import { OwnerAuthService } from './owner-auth.service';
 import { OwnerInvoicesController, OwnerVehiclesController } from './owner-read.controller';
 import { OwnerReadService } from './owner-read.service';
+import { OwnerDevicesController, OwnerNotificationsController } from './owner-inbox.controller';
+import { OwnerInboxService } from './owner-inbox.service';
 import { OwnerGuard } from './owner.guard';
 
 /** Car-owner accounts and the owner app API, /mobile/v1 (Phase 6, docs/mobile-api.md). */
@@ -20,8 +22,16 @@ import { OwnerGuard } from './owner.guard';
     OwnerGaragesController,
     OwnerVehiclesController,
     OwnerInvoicesController,
+    OwnerNotificationsController,
+    OwnerDevicesController,
   ],
-  providers: [OwnerAuthService, OwnerAccountService, OwnerReadService, OwnerGuard],
+  providers: [
+    OwnerAuthService,
+    OwnerAccountService,
+    OwnerReadService,
+    OwnerInboxService,
+    OwnerGuard,
+  ],
   exports: [OwnerGuard],
 })
 export class OwnersModule {}

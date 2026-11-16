@@ -63,7 +63,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.5b Tab icon in both apps; offer image preview | ✅ Done | 2026-11-16 |
 | 6 | 6.5c Emails with the Gearva logo (HTML part) | ✅ Done | 2026-11-16 |
 | 5 | 5.8 Branches managed by Gearva (admin adds, switches off and on) | ✅ Done | 2026-11-16 |
-| 5 | 5.9 Users page for the super admin (admins, garage staff, car owners) | Written, awaiting the user's checks | |
+| 5 | 5.9 Users page for the super admin (admins, garage staff, car owners) | ✅ Done | 2026-11-16 |
+| 5 | 5.9b CI fix: formatting of one test file | Written, awaiting commit | |
 | 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
@@ -2273,6 +2274,20 @@ To check live after the push: send yourself an invite or a password reset and op
 
 To check in the browser: sign in to admin as the super admin → Users. Then: add an admin, send a staff reset link (it shows in the API console locally), and set an owner's password, then sign in to the app with it.
 
-**Commit:** _(pending)_ "Super admin Users page: admins, garage staff, car owners"
+**Commit:** 306fd1c "Super admin Users page: admins, garage staff, car owners"
+
+---
+
+## 5.9b CI fix: formatting (2026-11-16)
+
+**Summary:** CI failed on 306fd1c at `npm run format:check`: `apps/api/test/admin-users.spec.ts` was not in Prettier style (a call split over three lines that fits on one). Formatted with Prettier; no code change.
+
+**Files changed:** `apps/api/test/admin-users.spec.ts` (formatting only).
+
+**Doc changes:** none.
+
+**Verified:** locally, the CI steps `format:check`, `lint` and `typecheck` pass. Tests are unchanged since 306fd1c (349 pass). Lesson: run `npm run format:check` before handing over a step.
+
+**Commit:** _(pending)_ "Fix formatting of the Users page test (CI)"
 
 ---

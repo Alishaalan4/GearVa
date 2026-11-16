@@ -149,9 +149,7 @@ describe('Users page (step 5.9, super admins only)', () => {
       const row = await platform.adminUser.findUniqueOrThrow({ where: { id: second.adminId } });
       expect(row).toMatchObject({ role: 'SUPER_ADMIN', isActive: true });
       // With others present, it is allowed.
-      await su()
-        .patch(`/admin/v1/users/admins/${second.adminId}`, { isActive: false })
-        .expect(200);
+      await su().patch(`/admin/v1/users/admins/${second.adminId}`, { isActive: false }).expect(200);
     });
   });
 

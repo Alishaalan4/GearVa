@@ -8,7 +8,8 @@
     "previous": "Previous",
     "next": "Next",
     "pageOf": "Page {page} of {pages}",
-    "none": "—"
+    "none": "—",
+    "cancel": "Cancel"
   },
   "errors": {
     "BAD_REQUEST": "The request was not valid.",
@@ -31,7 +32,9 @@
     "GARAGE_NOT_SUSPENDED": "This garage is not suspended.",
     "GARAGE_NOT_IN_TRIAL": "Only a garage that has never paid can have its trial extended.",
     "SERVICE_TYPE_CODE_EXISTS": "A service type with this code already exists.",
-    "APPLICATION_ALREADY_REVIEWED": "This application was already approved or rejected."
+    "APPLICATION_ALREADY_REVIEWED": "This application was already approved or rejected.",
+    "MAIN_BRANCH_REQUIRED": "The main branch cannot be switched off.",
+    "BRANCH_HAS_STAFF": "This branch still has active staff. The garage owner must move them to another branch (or deactivate them) first."
   },
   "nav": {
     "brand": "Gearva Admin",
@@ -402,5 +405,30 @@
     "save": "Save",
     "cancel": "Cancel",
     "saved": "{name} saved."
+  },
+  "branchAdmin": {
+    "title": "Branches",
+    "hint": "Only Gearva adds branches or switches them on and off; each extra branch is billed. The garage owner can edit the name, address and phone.",
+    "addBranch": "Add a branch",
+    "add": "Add branch",
+    "created": "{name} added as {code}.",
+    "edit": "Edit",
+    "save": "Save",
+    "saved": "Branch saved.",
+    "main": "Main branch",
+    "inactive": "Switched off",
+    "staff": "{count, plural, =0 {No active staff} one {# active staff member} other {# active staff}}",
+    "deactivate": "Switch off",
+    "activate": "Switch on",
+    "deactivated": "Branch switched off.",
+    "activated": "Branch switched on.",
+    "name": "Name",
+    "address": "Address (optional)",
+    "phone": "Phone (optional)",
+    "invalid": {
+      "name": "Enter a name (2 to 120 characters).",
+      "address": "Use at most 200 characters.",
+      "phone": "Enter a valid phone number."
+    }
   }
 }

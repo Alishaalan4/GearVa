@@ -8,6 +8,7 @@ import request from 'supertest';
 import { PlatformDb } from '../src/common/db/platform-db';
 import { createTestApp } from './helpers/app';
 import {
+  addBranch,
   type TestStaffGarage,
   createGarageWithOwner,
   randomPhone,
@@ -195,7 +196,7 @@ describe('Invoices and payments', () => {
     });
 
     it('each branch counts on its own', async () => {
-      const second = (await as(owner).post('/v1/branches', { name: 'Numbers' }).expect(201)).body;
+      const second = await addBranch(app, g.garageId, 'Numbers');
       const res = await quick({ branchId: second.id });
       expect(res.status).toBe(201);
       expect(res.body.invoice.number).toBe(`${second.code}-${year()}-0001`);
@@ -367,7 +368,7 @@ describe('Invoices and payments', () => {
     });
 
     it('staff of one branch cannot reach another branch invoice', async () => {
-      const second = (await as(owner).post('/v1/branches', { name: 'Elsewhere' }).expect(201)).body;
+      const second = await addBranch(app, g.garageId, 'Elsewhere');
       const res = await quick({ branchId: second.id });
       const { cookie } = await signInAsStaff(app, g, 'RECEPTIONIST');
       await as(cookie).get(`/v1/invoices/${res.body.invoice.id}`).expect(404);

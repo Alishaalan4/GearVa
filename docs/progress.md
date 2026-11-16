@@ -62,6 +62,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.5 Offers: garage screens and owner app | ✅ Done | 2026-11-16 |
 | 6 | 6.5b Tab icon in both apps; offer image preview | Written, awaiting the user's checks | |
 | 6 | 6.5c Emails with the Gearva logo (HTML part) | Written, awaiting the user's checks | |
+| 5 | 5.8 Branches managed by Gearva (admin adds, switches off and on) | Written, awaiting the user's checks | |
 | 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
@@ -2186,5 +2187,47 @@ To do by the user: the migration, the tests, and a look at the Offers page in th
 To check live after the push: send yourself an invite or a password reset and open it in Gmail. Some mail apps hide images until you allow them.
 
 **Commit:** _(pending)_ "Emails with the Gearva logo (HTML part); tab icon; offer image preview"
+
+---
+
+## Phase 5 · Step 5.8 — Branches are managed by Gearva: the admin adds them and switches them off and on
+**When:** 2026-11-16 ~16:00 → ~16:50
+
+**Implements:** user decision 2026-11-16 ("full access for admin and deactivation"); flow.md 1 (matrix), 11.7 (new); database.md 4.2.
+
+**Summary:** Extra branches are billed, so only Gearva changes how many a garage has.
+- **Admin app:** the garage's page has a Branches card. An admin (both roles) can add a branch, edit its details, and switch it off or on, and sees each branch's active staff.
+- **Garage app:** the owner keeps renaming branches and editing their address and phone. The "Add branch" form and the on/off button are gone, replaced by a note to contact Gearva.
+
+**How it works**
+- **Shared rules:** the rules moved to `branches/branch-rules.ts`, used by both the garage API and the admin API. Codes come in order and never change, the main branch stays on, and a branch with active staff stays on until the owner moves them.
+- **Admin API:** `GET`, `POST /admin/v1/garages/:garageId/branches` and `PATCH .../:branchId`, through the platform role with the garage in every query. Audit rows `admin.branch.create` and `admin.branch.update` carry the garage.
+- **Garage API:** `POST /v1/branches` is removed. `PATCH` with `isActive` answers `403 BRANCHES_MANAGED_BY_GEARVA` (a new error code), before any lookup.
+
+**Decision (mine, the user may change it):** both admin roles manage branches, the same as creating garages.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/branches/branch-rules.ts` (new), `branches.service.ts`, `branches.controller.ts` | Shared rules; the garage side edits details only |
+| `apps/api/src/admin/garages/admin-branches.service.ts`, `admin-branches.controller.ts` (new), `admin/admin.module.ts` | Admin branches API |
+| `packages/contracts/src/errors.ts`, `staff.ts` | `BRANCHES_MANAGED_BY_GEARVA`; `AdminBranchItem` |
+| `apps/admin/features/garages/branches-card.tsx` (new), `garage-detail.tsx`, `messages/*.json` | The admin Branches card (replaces the read-only list) |
+| `apps/garage-web/features/branches/branch-settings.tsx`, `messages/*.json` | No add or on/off; a note |
+| `apps/api/test/helpers/staff.ts` | `addBranch` (the admin rules) for tests that need a second branch |
+| `apps/api/test/staff-management.spec.ts` | Branch tests rewritten: admin adds, switches off and on, main branch, staff rule; owner refused |
+| `apps/api/test/tenancy.spec.ts`, `view-as.spec.ts`, `invoices.spec.ts`, `invoice-pdf.spec.ts`, `visits.spec.ts` | Use `addBranch`; the removed route's case is dropped; `isActive` is 403 |
+
+**Doc changes:** flow.md 1 (the matrix) and 11.7 (new); database.md 4.2.
+
+**Problems hit:**
+- A shell edit with template strings broke two test files. I restored them from git and made the edit with a script file. After the restore the line endings had changed, so the script normalises them.
+- Two of my new tests had wrong assumptions: the owner works in no single branch, and `'X'` is too short for a name. I fixed the tests; the code was right.
+
+**Verified:**
+- The whole API suite (3 workers): 30 suites, 340 tests passed.
+- Typecheck and lint pass for api, admin and garage-web.
+
+**Commit:** _(pending)_ "Branches are managed by Gearva: admin adds and switches them; owner edits details"
 
 ---

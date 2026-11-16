@@ -13,6 +13,7 @@ import { PDF_RENDERER, type PdfRenderer } from '../src/invoices/pdf/pdf-renderer
 import { createTestApp } from './helpers/app';
 import { waitFor } from './helpers/garages';
 import {
+  addBranch,
   type TestStaffGarage,
   createGarageWithOwner,
   randomPhone,
@@ -189,7 +190,7 @@ describe('Invoice PDFs', () => {
   });
 
   it('staff of one branch cannot download another branch invoice', async () => {
-    const second = (await as(owner).post('/v1/branches', { name: 'Pdf Second' }).expect(201)).body;
+    const second = await addBranch(app, g.garageId, 'Pdf Second');
     const id = await finished({ branchId: second.id });
     const { cookie } = await signInAsStaff(app, g, 'MECHANIC');
     await as(cookie).get(`/v1/invoices/${id}/pdf`).expect(404);

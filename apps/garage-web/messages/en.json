@@ -50,7 +50,8 @@
     "REMINDER_NOT_DUE": "This reminder is not due any more. The list was refreshed.",
     "VIEW_ONLY": "You are viewing this garage as a Gearva admin: nothing can be changed.",
     "OWNER_APP_ALREADY_ACTIVE": "This customer already uses the Gearva app. Their cars from your garage already appear there.",
-    "CUSTOMER_EMAIL_REQUIRED": "Add the customer’s email first (Edit)."
+    "CUSTOMER_EMAIL_REQUIRED": "Add the customer’s email first (Edit).",
+    "BRANCHES_MANAGED_BY_GEARVA": "Adding a branch or switching one on or off is done by Gearva. Contact us."
   },
   "nav": {
     "home": "Search",
@@ -172,7 +173,8 @@
     "deactivate": "Deactivate",
     "activate": "Activate",
     "deactivated": "The branch was deactivated.",
-    "activated": "The branch was activated."
+    "activated": "The branch was activated.",
+    "managedByGearva": "To add a branch or close one, contact Gearva: extra branches are part of your subscription. You can edit the name, address and phone here."
   },
   "staff": {
     "title": "Staff",

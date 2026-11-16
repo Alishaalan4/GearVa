@@ -6,7 +6,9 @@ import type { PrismaClient } from '@gearva/database';
 import request from 'supertest';
 import { PlatformDb } from '../src/common/db/platform-db';
 import { createTestApp } from './helpers/app';
+import { signInAsNewAdmin } from './helpers/admin';
 import {
+  addBranch,
   type TestStaffGarage,
   createGarageWithOwner,
   latestLinkToken,
@@ -54,10 +56,25 @@ describe('Branches and staff', () => {
     await app?.close();
   });
 
+  // Since 2026-11-16 Gearva (admin) adds branches and switches them on or off (flow.md
+  // 11.7); the owner edits the name, address and phone.
   describe('branches', () => {
-    it('the owner adds a branch; it gets the next code and an audit row', async () => {
-      const res = await as(ownerA)
-        .post('/v1/branches', { name: 'Jounieh', phone: '+961 9 000 000', address: '' })
+    let admin: string;
+    const branchesUrl = () => `/admin/v1/garages/${a.garageId}/branches`;
+    const asAdmin = {
+      get: (url: string) => http().get(url).set('Cookie', admin),
+      post: (url: string, body: object) => http().post(url).set('Cookie', admin).send(body),
+      patch: (url: string, body: object) => http().patch(url).set('Cookie', admin).send(body),
+    };
+
+    beforeAll(async () => {
+      // A plain ADMIN: every admin manages branches, not only super admins.
+      ({ cookie: admin } = await signInAsNewAdmin(app, 'ADMIN'));
+    });
+
+    it('the admin adds a branch; it gets the next code and an audit row with the garage', async () => {
+      const res = await asAdmin
+        .post(branchesUrl(), { name: 'Jounieh', phone: '+961 9 000 000', address: '' })
         .expect(201);
       expect(res.body).toMatchObject({
         code: 'BR2',
@@ -65,46 +82,69 @@ describe('Branches and staff', () => {
         isActive: true,
         address: null,
         phone: '+9619000000',
+        activeStaff: 0,
       });
-      const badPhone = await as(ownerA)
-        .post('/v1/branches', { name: 'X', phone: '123' })
-        .expect(400);
+      const badPhone = await asAdmin.post(branchesUrl(), { name: 'X', phone: '123' }).expect(400);
       expect(badPhone.body.code).toBe('VALIDATION_FAILED');
 
       const list = await as(ownerA).get('/v1/branches').expect(200);
       expect(list.body.items.map((x: { code: string }) => x.code)).toEqual(['BR1', 'BR2']);
+      const adminList = await asAdmin.get(branchesUrl()).expect(200);
+      expect(adminList.body.map((x: { code: string }) => x.code)).toEqual(['BR1', 'BR2']);
+      // The owner works in every branch (branchId null), so no one is counted here yet.
+      expect(adminList.body[0]).toMatchObject({ isMain: true, activeStaff: 0 });
 
       const audit = await platform.auditLog.findFirst({
-        where: { action: 'branch.create', entityId: res.body.id },
+        where: { action: 'admin.branch.create', entityId: res.body.id },
       });
-      expect(audit).toMatchObject({ actorType: 'STAFF', actorId: a.ownerId, garageId: a.garageId });
+      expect(audit).toMatchObject({ actorType: 'ADMIN', garageId: a.garageId });
+      await asAdmin
+        .get('/admin/v1/garages/0193a0d0-0000-7000-8000-000000000000/branches')
+        .expect(404);
     });
 
-    it('the owner renames and deactivates a branch, but never the main one', async () => {
-      const created = (await as(ownerA).post('/v1/branches', { name: 'Temp' }).expect(201)).body;
-      const updated = await as(ownerA)
-        .patch(`/v1/branches/${created.id}`, { name: 'Temp 2', isActive: false })
+    it('the owner cannot add a branch or switch one on or off, but can rename it', async () => {
+      await as(ownerA).post('/v1/branches', { name: 'Mine' }).expect(404);
+      const branch = await addBranch(app, a.garageId, 'Temp');
+      const off = await as(ownerA)
+        .patch(`/v1/branches/${branch.id}`, { isActive: false })
+        .expect(403);
+      expect(off.body.code).toBe('BRANCHES_MANAGED_BY_GEARVA');
+      const renamed = await as(ownerA)
+        .patch(`/v1/branches/${branch.id}`, { name: 'Temp 2', address: 'Main road' })
         .expect(200);
-      expect(updated.body).toMatchObject({ name: 'Temp 2', isActive: false, code: created.code });
+      expect(renamed.body).toMatchObject({ name: 'Temp 2', address: 'Main road', isActive: true });
+    });
 
-      const main = await as(ownerA)
-        .patch(`/v1/branches/${a.branchId}`, { isActive: false })
+    it('the admin switches a branch off and on, but never the main one', async () => {
+      const branch = await addBranch(app, a.garageId, 'Seasonal');
+      const off = await asAdmin
+        .patch(`${branchesUrl()}/${branch.id}`, { name: 'Seasonal 2', isActive: false })
+        .expect(200);
+      expect(off.body).toMatchObject({ name: 'Seasonal 2', isActive: false, code: branch.code });
+      await asAdmin.patch(`${branchesUrl()}/${branch.id}`, { isActive: true }).expect(200);
+
+      const main = await asAdmin
+        .patch(`${branchesUrl()}/${a.branchId}`, { isActive: false })
         .expect(409);
       expect(main.body.code).toBe('MAIN_BRANCH_REQUIRED');
+      // A branch of another garage is not found under this one.
+      const other = await createGarageWithOwner(app);
+      await asAdmin.patch(`${branchesUrl()}/${other.branchId}`, { name: 'Other' }).expect(404);
     });
 
-    it('a branch with active staff cannot be deactivated until they are moved', async () => {
-      const branch = (await as(ownerA).post('/v1/branches', { name: 'Busy' }).expect(201)).body;
+    it('a branch with active staff cannot be switched off until they are moved', async () => {
+      const branch = await addBranch(app, a.garageId, 'Busy');
       const { member } = await inviteAndActivate('MECHANIC', branch.id);
 
-      const blocked = await as(ownerA)
-        .patch(`/v1/branches/${branch.id}`, { isActive: false })
+      const blocked = await asAdmin
+        .patch(`${branchesUrl()}/${branch.id}`, { isActive: false })
         .expect(409);
       expect(blocked.body).toMatchObject({ code: 'BRANCH_HAS_STAFF', details: { activeStaff: 1 } });
 
       // Moved to the main branch: now the branch can be switched off.
       await as(ownerA).patch(`/v1/users/${member.id}`, { branchId: a.branchId }).expect(200);
-      await as(ownerA).patch(`/v1/branches/${branch.id}`, { isActive: false }).expect(200);
+      await asAdmin.patch(`${branchesUrl()}/${branch.id}`, { isActive: false }).expect(200);
 
       // Nobody can be placed in it while it is off.
       const moveBack = await as(ownerA)
@@ -114,10 +154,10 @@ describe('Branches and staff', () => {
     });
 
     it('a deactivated member cannot be reactivated into a branch that was switched off', async () => {
-      const branch = (await as(ownerA).post('/v1/branches', { name: 'Closing' }).expect(201)).body;
+      const branch = await addBranch(app, a.garageId, 'Closing');
       const { member } = await inviteAndActivate('RECEPTIONIST', branch.id);
       await as(ownerA).patch(`/v1/users/${member.id}`, { isActive: false }).expect(200);
-      await as(ownerA).patch(`/v1/branches/${branch.id}`, { isActive: false }).expect(200);
+      await asAdmin.patch(`${branchesUrl()}/${branch.id}`, { isActive: false }).expect(200);
 
       const res = await as(ownerA).patch(`/v1/users/${member.id}`, { isActive: true }).expect(409);
       expect(res.body.code).toBe('BRANCH_INACTIVE');
@@ -169,11 +209,11 @@ describe('Branches and staff', () => {
       });
       expect((await as(mechanic.cookie).get('/v1/users').expect(403)).body.code).toBe('FORBIDDEN');
       await as(mechanic.cookie).get('/v1/branches').expect(403);
-      await as(mechanic.cookie).post('/v1/branches', { name: 'Nope' }).expect(403);
+      await as(mechanic.cookie).patch(`/v1/branches/${a.branchId}`, { name: 'Nope' }).expect(403);
 
       const manager = await inviteAndActivate('MANAGER', null);
       await as(manager.cookie).get('/v1/branches').expect(200);
-      await as(manager.cookie).post('/v1/branches', { name: 'Nope' }).expect(403);
+      await as(manager.cookie).patch(`/v1/branches/${a.branchId}`, { name: 'Nope' }).expect(403);
       await as(manager.cookie).get('/v1/users').expect(403);
     });
 

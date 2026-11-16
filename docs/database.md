@@ -191,7 +191,7 @@ The branch count is derived from active `branches` rows (extra branches are bill
 #### `branches`
 `id`, `garageId`, `name`, `code` (e.g. `BR1`, **U** per garage), `address?`, `phone?`, `isMain` bool, `isActive` bool.
 
-A branch with active staff cannot be deactivated (`BRANCH_HAS_STAFF`): the owner moves or deactivates them first, because work is recorded per branch. An active staff member can never be placed in, or reactivated into, an inactive branch (`BRANCH_INACTIVE`). The main branch is never deactivated (`MAIN_BRANCH_REQUIRED`).
+Branches are added and switched on or off by Gearva's admins only (flow.md 11.7, decision 2026-11-16); the garage owner edits name, address and phone. A branch with active staff cannot be deactivated (`BRANCH_HAS_STAFF`): the owner moves or deactivates them first, because work is recorded per branch. An active staff member can never be placed in, or reactivated into, an inactive branch (`BRANCH_INACTIVE`). The main branch is never deactivated (`MAIN_BRANCH_REQUIRED`).
 
 #### `users` (garage staff)
 | Column | Type | Notes |

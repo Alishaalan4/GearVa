@@ -5,6 +5,8 @@ import { AdminApplicationsController } from './applications/admin-applications.c
 import { AdminApplicationsService } from './applications/admin-applications.service';
 import { AdminAuthController } from './auth/admin-auth.controller';
 import { AdminAuthService } from './auth/admin-auth.service';
+import { AdminBranchesController } from './garages/admin-branches.controller';
+import { AdminBranchesService } from './garages/admin-branches.service';
 import { AdminGaragesController } from './garages/admin-garages.controller';
 import { AdminGaragesService } from './garages/admin-garages.service';
 import { AdminSubscriptionsService } from './garages/admin-subscriptions.service';
@@ -22,6 +24,7 @@ import {
   controllers: [
     AdminAuthController,
     AdminGaragesController,
+    AdminBranchesController,
     AdminSettingsController,
     AdminServiceTypesController,
     AdminMonitoringController,
@@ -31,6 +34,7 @@ import {
     AdminAuthService,
     AdminGuard,
     AdminGaragesService,
+    AdminBranchesService,
     AdminSubscriptionsService,
     AdminServiceTypesService,
     AdminMonitoringService,

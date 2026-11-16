@@ -9,6 +9,7 @@ import { PlatformDb } from '../src/common/db/platform-db';
 import { createTestApp } from './helpers/app';
 import { waitFor } from './helpers/garages';
 import {
+  addBranch,
   type TestStaffGarage,
   createGarageWithOwner,
   randomPhone,
@@ -372,7 +373,7 @@ describe('Quick entry, visits and history', () => {
     });
 
     it('a mechanic records visits in their own branch only', async () => {
-      const second = (await as(owner).post('/v1/branches', { name: 'Second' }).expect(201)).body;
+      const second = await addBranch(app, g.garageId, 'Second');
       const car = await newCar();
       const { userId, cookie } = await signInAsStaff(app, g, 'MECHANIC');
 

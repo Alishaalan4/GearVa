@@ -30,7 +30,8 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Reminders due list (send on WhatsApp, section 9.5) | yes | yes | no | yes |
 | Notification log | yes | yes | no | no |
 | Offers and broadcasts | yes | yes | no | no |
-| Staff, branches, garage settings | yes | no | no | no |
+| Staff, garage settings, branch name/address/phone | yes | no | no | no |
+| Add a branch, switch a branch on or off (Gearva admin only, section 11.7) | no | no | no | no |
 | Switch branch view (all branches) | yes | yes | no, own branch only | no, own branch only |
 
 This matrix is enforced by a `RolesGuard` in the API. The web app hides what a role cannot use, but the API is the real check.
@@ -530,6 +531,13 @@ How it works (step 5.6):
 Subscription revenue per month and year, and growth (garages new, renewed, lost). The cost of notifications per garage comes with a paid channel (decision 2026-11-09). API (step 5.4): `GET /admin/v1/business`: the last 12 months (revenue, payments, new garages), this year's and last year's revenue, this year's revenue by method, garages per status, and how many have paid at least once.
 
 ---
+
+### 11.7 Branches (decision 2026-11-16)
+Extra branches are billed ($100 a year each, section 11.1), so **only Gearva adds a garage's branches and switches them on or off**; any admin (SUPER_ADMIN or ADMIN) may. The garage owner edits the name, address and phone of their branches and sees "contact Gearva" for the rest.
+- Admin API: `GET`, `POST /admin/v1/garages/:garageId/branches`, `PATCH /admin/v1/garages/:garageId/branches/:branchId` (name, address, phone, `isActive`). Each branch shows its active staff. Audit actions `admin.branch.create` and `admin.branch.update`, with the garage.
+- The same rules as before (`branch-rules.ts`, shared with the garage API): codes BR2, BR3... are given in order and never change; the main branch is never switched off (`MAIN_BRANCH_REQUIRED`); a branch with active staff is not switched off until the garage owner moves or deactivates them (`BRANCH_HAS_STAFF`).
+- Garage API: `POST /v1/branches` is removed; `PATCH /v1/branches/:branchId` with `isActive` answers `403 BRANCHES_MANAGED_BY_GEARVA`.
+- The admin app shows the branches card on the garage's page (add, edit, switch off and on).
 
 ## 12. Data protection flows
 

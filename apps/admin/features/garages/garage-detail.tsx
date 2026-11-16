@@ -16,6 +16,7 @@ import { Alert, Button, Card, Field, Textarea } from '@gearva/ui';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPost } from '@/lib/api';
 import { useDates } from '@/lib/format';
+import { BranchesCard } from './branches-card';
 import { StatusBadge } from './status-badge';
 import { SubscriptionCard } from './subscription-card';
 import { ViewAsCard } from './view-as-card';
@@ -208,23 +209,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
 
         <ViewAsCard garageId={g.id} garageName={g.name} />
 
-        <Card title={t('branches')}>
-          <ul className="divide-y divide-line text-sm">
-            {g.branches.map((b) => (
-              <li key={b.id} className="flex items-center justify-between gap-2 py-2">
-                <span>
-                  {b.name}{' '}
-                  <span className="text-xs text-muted" dir="ltr">
-                    {b.code}
-                  </span>
-                </span>
-                <span className="text-xs text-muted">
-                  {b.isMain && t('main')} {!b.isActive && t('inactive')}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <BranchesCard garageId={g.id} />
       </div>
     </div>
   );

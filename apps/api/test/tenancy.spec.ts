@@ -15,6 +15,7 @@ import { PlatformDb } from '../src/common/db/platform-db';
 import { createTestApp } from './helpers/app';
 import { waitFor } from './helpers/garages';
 import {
+  addBranch,
   type TestStaffGarage,
   createGarageWithOwner,
   randomPhone,
@@ -77,7 +78,7 @@ describe('Tenant isolation (test:tenancy)', () => {
     const garage = await createGarageWithOwner(app);
     const { cookie } = await staffLogin(app, garage.ownerEmail, garage.password);
     const as = (url: string, body: object) => http().post(url).set('Cookie', cookie).send(body);
-    const branch = (await as('/v1/branches', { name: 'Second' }).expect(201)).body;
+    const branch = await addBranch(app, garage.garageId, 'Second');
     const member = (
       await as('/v1/users', {
         name: 'Member',
@@ -242,21 +243,11 @@ describe('Tenant isolation (test:tenancy)', () => {
       expect(res.body.total).toBe(2);
     },
 
-    'POST /v1/branches': async () => {
-      await expectBUnchanged(async () => {
-        // A garageId in the body is ignored: the branch lands in A (README 5.1.5).
-        const created = await asA
-          .post('/v1/branches', { name: 'Third', garageId: b.garage.garageId })
-          .expect(201);
-        const row = await platform.branch.findUniqueOrThrow({ where: { id: created.body.id } });
-        expect(row.garageId).toBe(a.garage.garageId);
-      });
-    },
-
     'PATCH /v1/branches/:branchId': async () => {
       await expectBUnchanged(async () => {
         await asA.patch(`/v1/branches/${b.branchId}`, { name: 'Hacked' }).expect(404);
-        await asA.patch(`/v1/branches/${b.branchId}`, { isActive: false }).expect(404);
+        // Switching on or off is Gearva's (flow.md 11.7): refused before any lookup.
+        await asA.patch(`/v1/branches/${b.branchId}`, { isActive: false }).expect(403);
         await asA.patch(`/v1/branches/${b.garage.branchId}`, { name: 'Hacked' }).expect(404);
       });
     },

@@ -62,7 +62,8 @@ export interface StaffProfile {
 export const viewAsSchema = z.object({ code: z.string().min(20).max(200) });
 export type ViewAsInput = z.infer<typeof viewAsSchema>;
 
-// Branches (OWNER manages; OWNER and MANAGER can list).
+// Branches: Gearva (admin) adds them and switches them on or off; the OWNER edits the
+// name, address and phone; OWNER and MANAGER can list (decision 2026-11-16).
 
 const optionalText = (max: number) =>
   z
@@ -94,6 +95,11 @@ export interface BranchItem {
   phone: string | null;
   isMain: boolean;
   isActive: boolean;
+}
+
+/** The admin's view of a garage's branch: also how many active staff work there. */
+export interface AdminBranchItem extends BranchItem {
+  activeStaff: number;
 }
 
 // Staff (OWNER only).

@@ -142,7 +142,11 @@ describe('View as garage', () => {
       .set('Cookie', cookie)
       .send({ name: 'Changed' })
       .expect(403);
-    await http().post('/v1/branches').set('Cookie', cookie).send({ name: 'New' }).expect(403);
+    await http()
+      .patch(`/v1/branches/${g.branchId}`)
+      .set('Cookie', cookie)
+      .send({ name: 'New' })
+      .expect(403);
     expect(await platform.garageCustomer.count({ where: { garageId: g.garageId } })).toBe(before);
     const row = await platform.garageCustomer.findUniqueOrThrow({ where: { id: customerId } });
     expect(row.name).toBe('Viewed Customer');

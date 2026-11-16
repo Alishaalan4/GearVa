@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { PrismaClient } from '@gearva/database';
 import request from 'supertest';
 import { PasswordService } from '../../src/auth/password.service';
+import { createBranch } from '../../src/branches/branch-rules';
 import { PlatformDb } from '../../src/common/db/platform-db';
 import { cookiesOf } from './app';
 
@@ -115,4 +116,18 @@ export async function signInAsStaff(
   });
   const { cookie } = await staffLogin(app, email, password);
   return { userId: user.id, cookie };
+}
+
+/**
+ * A new branch of this garage, made with the same rules as the admin API (flow.md 11.7:
+ * since 2026-11-16 garages no longer add branches themselves).
+ */
+export async function addBranch(
+  app: INestApplication,
+  garageId: string,
+  name: string,
+): Promise<{ id: string; code: string; name: string }> {
+  const platform = app.get(PlatformDb).client;
+  const branch = await createBranch((fn) => platform.$transaction(fn), garageId, { name });
+  return { id: branch.id, code: branch.code, name: branch.name };
 }

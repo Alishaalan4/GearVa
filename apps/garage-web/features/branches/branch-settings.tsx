@@ -1,53 +1,32 @@
 'use client';
 
-import type { BranchItem, CreateBranchInput, UpdateBranchInput } from '@gearva/contracts';
-import { Alert, Button, Card, Pill } from '@gearva/ui';
+import type { BranchItem, UpdateBranchInput } from '@gearva/contracts';
+import { Alert, Button, Pill } from '@gearva/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
-import { apiPatch, apiPost } from '@/lib/api';
+import { apiPatch } from '@/lib/api';
 import { BranchForm } from './branch-form';
 import { BRANCHES_QUERY_KEY, useBranches } from './use-branches';
 
 /**
- * flow.md 1: the OWNER adds and edits branches. Codes (BR2, BR3...) are given by the API
- * and never change, because invoice numbers use them. The main branch stays active.
+ * flow.md 1 and 11.7: the OWNER edits the name, address and phone of the branches.
+ * Adding a branch or switching one on or off is done by Gearva (extra branches are
+ * billed, decision 2026-11-16). Codes (BR2, BR3...) never change: invoice numbers use them.
  */
 export function BranchSettings() {
   const t = useTranslations('branches');
   const tCommon = useTranslations('common');
-  const queryClient = useQueryClient();
   const branches = useBranches();
   const [notice, setNotice] = useState<string | null>(null);
-
-  const create = useMutation({
-    mutationFn: (values: CreateBranchInput) => apiPost<BranchItem>('/v1/branches', values),
-    onMutate: () => setNotice(null),
-    onSuccess: (branch) => {
-      void queryClient.invalidateQueries({ queryKey: BRANCHES_QUERY_KEY });
-      setNotice(t('created', { name: branch.name, code: branch.code }));
-    },
-  });
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-extrabold">{t('title')}</h1>
       {notice && <Alert tone="success">{notice}</Alert>}
 
-      <Card title={t('add')}>
-        <BranchForm
-          submitLabel={t('addSubmit')}
-          pending={create.isPending}
-          error={create.error}
-          onSubmit={(values) =>
-            create.mutateAsync(values).then(
-              () => true,
-              () => false,
-            )
-          }
-        />
-      </Card>
+      <Alert>{t('managedByGearva')}</Alert>
 
       <ApiErrorAlert error={branches.error} />
       {branches.isPending && <p className="text-sm text-muted">{tCommon('loading')}</p>}
@@ -127,21 +106,6 @@ function BranchRow({
             <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
               {t('edit')}
             </Button>
-            {!branch.isMain && (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={update.isPending}
-                onClick={() =>
-                  update.mutate({
-                    body: { isActive: !branch.isActive },
-                    done: branch.isActive ? t('deactivated') : t('activated'),
-                  })
-                }
-              >
-                {branch.isActive ? t('deactivate') : t('activate')}
-              </Button>
-            )}
           </div>
           {update.error && (
             <div className="w-full">

@@ -55,6 +55,8 @@ export const ERROR_CODES = {
   REMINDER_NOT_DUE: 'REMINDER_NOT_DUE',
   /** A branch with active staff cannot be deactivated; move or deactivate them first. */
   BRANCH_HAS_STAFF: 'BRANCH_HAS_STAFF',
+  /** Adding a branch or switching one on or off is done by Gearva (decision 2026-11-16). */
+  BRANCHES_MANAGED_BY_GEARVA: 'BRANCHES_MANAGED_BY_GEARVA',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */
   BRANCH_INACTIVE: 'BRANCH_INACTIVE',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',

@@ -346,6 +346,36 @@ describe('Phase 2 tables', () => {
       ).rejects.toThrow(/permission denied/);
     });
 
+    it('step 6.3: an owner reads their own cars only, and cannot change them', async () => {
+      const yAtA = await asGarage(garageA, (tx) =>
+        tx.garageCustomer.findFirstOrThrow({ where: { ownerId: ownerY } }),
+      );
+      const car = (garageCustomerId: string, ownerId: string, plate: string) =>
+        asGarage(garageA, (tx) =>
+          tx.vehicle.create({
+            data: {
+              garageId: garageA,
+              garageCustomerId,
+              ownerId,
+              plate,
+              plateNormalized: plate,
+              make: 'Kia',
+              model: 'Rio',
+              currentKm: 1000,
+            },
+          }),
+        );
+      const xCar = await car(xAtA, ownerX, `X${randomUUID().slice(0, 6)}`);
+      await car(yAtA.id, ownerY, `Y${randomUUID().slice(0, 6)}`);
+
+      const seen = await asOwner(ownerX, (tx) => tx.vehicle.findMany());
+      expect(seen.map((v) => v.id)).toEqual([xCar.id]);
+      const changed = await asOwner(ownerX, (tx) =>
+        tx.vehicle.updateMany({ where: { id: xCar.id }, data: { make: 'Hacked' } }),
+      );
+      expect(changed.count).toBe(0);
+    });
+
     it('a garage context still sees only its own customers', async () => {
       const rows = await asGarage(garageB, (tx) => tx.garageCustomer.findMany());
       const owners = rows.map((c) => c.ownerId);

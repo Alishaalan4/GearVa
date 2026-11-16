@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { localMonth, monthStart, nextDaytimeStart, reminderRound } from '../src/reminders';
+import {
+  localMonth,
+  monthStart,
+  nextDaytimeStart,
+  nextServiceStatus,
+  reminderRound,
+} from '../src/reminders';
 
 const tz = 'Asia/Beirut';
 
@@ -127,5 +133,34 @@ describe('monthStart and localMonth', () => {
     const now = new Date('2026-01-31T23:30:00Z');
     expect(localMonth(now, tz)).toBe('2026-02');
     expect(monthStart(now, tz)).toEqual(new Date('2026-01-31T22:00:00Z'));
+  });
+});
+
+describe('nextServiceStatus (owner app, mobile-api.md 4.1)', () => {
+  const check = { estimatedKm: 10_000, today: '2026-11-16', leadKm: 500, leadDays: 7 };
+  const service = { kind: 'SERVICE_DUE' as const, nextDueKm: null, nextDueDate: null };
+
+  it('OK far from the km and the date', () => {
+    expect(nextServiceStatus({ ...service, nextDueKm: 11_000 }, check)).toBe('OK');
+    expect(nextServiceStatus({ ...service, nextDueDate: '2026-12-31' }, check)).toBe('OK');
+  });
+
+  it('SOON inside the lead, by km or by date (when the scan would remind)', () => {
+    expect(nextServiceStatus({ ...service, nextDueKm: 10_500 }, check)).toBe('SOON');
+    expect(nextServiceStatus({ ...service, nextDueDate: '2026-11-23' }, check)).toBe('SOON');
+    expect(nextServiceStatus({ ...service, nextDueDate: '2026-11-16' }, check)).toBe('SOON');
+  });
+
+  it('OVERDUE once the km is reached or the date has passed', () => {
+    expect(nextServiceStatus({ ...service, nextDueKm: 10_000 }, check)).toBe('OVERDUE');
+    expect(nextServiceStatus({ ...service, nextDueDate: '2026-11-15' }, check)).toBe('OVERDUE');
+    expect(
+      nextServiceStatus({ ...service, nextDueKm: 20_000, nextDueDate: '2026-11-01' }, check),
+    ).toBe('OVERDUE');
+  });
+
+  it('a warranty end has a date only: its km is ignored', () => {
+    const warranty = { kind: 'WARRANTY_END' as const, nextDueKm: 5_000, nextDueDate: '2027-01-01' };
+    expect(nextServiceStatus(warranty, check)).toBe('OK');
   });
 });

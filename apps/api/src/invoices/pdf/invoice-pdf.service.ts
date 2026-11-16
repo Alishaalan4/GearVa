@@ -52,10 +52,13 @@ export class InvoicePdfService implements OnApplicationBootstrap {
     );
   }
 
-  /** After commit. A lost job is not an error: the next download queues it again. */
-  async queueRender(invoiceId: string): Promise<void> {
+  /**
+   * After commit. A lost job is not an error: the next download queues it again. The owner
+   * app has no garage context, so it passes the invoice's garage.
+   */
+  async queueRender(invoiceId: string, garageId?: string): Promise<void> {
     try {
-      await this.queue.add({ invoiceId, garageId: this.db.garageId });
+      await this.queue.add({ invoiceId, garageId: garageId ?? this.db.garageId });
     } catch (error) {
       this.logger.error(`Could not queue the PDF of invoice ${invoiceId}`, error as Error);
     }

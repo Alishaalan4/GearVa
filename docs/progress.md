@@ -56,8 +56,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | Later | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
-| 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | Written, awaiting the user's checks | |
-| 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | Next | |
+| 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
+| 6 | 6.3 Owner read API: cars, history, invoices and PDFs, garage logos | Written, awaiting the user's checks | |
+| 6 | 6.4 In-app notifications, push (Firebase), device tokens | Next | |
 
 ---
 
@@ -1961,6 +1962,55 @@ By me, on the test database:
 
 To do by the user: the migration on the dev database, `npm test` and `npm run test:tenancy`, then push.
 
-**Commit:** _(pending)_ "Phase 6.2: owner app auth and profile API (Bearer tokens, owner RLS context)"
+**Commit:** `bf9a9af`
+
+---
+
+## Phase 6 · Step 6.3 — Owner read API: cars, next services, history, invoices and PDFs, garage logos
+**When:** 2026-11-16 ~11:35 → ~12:20
+
+**Implements:** README 6 (step 6.3); mobile-api.md 3.6, 4, 5; database.md 6.4 (`owner_read` policies); flow.md 2.4 step 7 and "Details (step 6.2)" (reading).
+
+**Summary:** The owner app can now show the person's cars, history and invoices from every garage. 7 endpoints are live:
+- `GET /mobile/v1/vehicles`, `/vehicles/:id`, `/vehicles/:id/visits`
+- `GET /mobile/v1/invoices`, `/invoices/:id`, `/invoices/:id/pdf`
+- `GET /mobile/v1/garages/:garageId/logo`
+
+**How it works**
+- **Database:** `owner_read` (SELECT only, `gearva_app` only, with `app.owner_id`) on cars, visits, service records, reminders and invoices by `owner_id`; on invoice lines and payments through their invoice; on branches and the garage's own service types for the person's garages. On files, only the person's invoice PDFs and their garages' logos.
+- **Next service:** a new pure function, `nextServiceStatus()` in `contracts`, sits next to the reminder scan's `reminderRound()` and uses the same lead km and days. `SOON` is exactly when the scan would send the first reminder, and `OVERDUE` is once the km or date has passed. The estimate is the same `estimateCurrentKm()` the garage app uses. Overdue comes first, then soon, then by the expected day.
+- **Labels:** service names and detail labels follow `Accept-Language`, else the owner's language. The detail labels are the same words as garage-web's quick entry.
+- **Visibility:** a locked garage still shows. A garage that removed the customer, or a deleted garage, shows nothing (404 on its ids).
+- **PDF:** the stored PDF, or 409 `INVOICE_PDF_NOT_READY` after queueing a render for the invoice's garage (`queueRender` now takes an optional garage id). Logo: `Cache-Control: private, max-age=86400`.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/migrations/20261116140000_owner_read/migration.sql` (new) | The `owner_read` policies |
+| `packages/database/test/rls.test.ts` | An owner reads only their own cars and cannot change them |
+| `packages/contracts/src/reminders.ts`, `test/reminders.test.ts` | `nextServiceStatus`, 4 unit tests |
+| `packages/contracts/src/owners.ts` | Car, visit, invoice types and query schemas |
+| `apps/api/src/owners/owner-read.service.ts`, `owner-read.controller.ts` (new), `service-details.ts` (new) | The 7 endpoints; detail labels (en, ar) |
+| `apps/api/src/owners/owner-account.controller.ts`, `owners.module.ts` | Logo route; imports Files and Invoices |
+| `apps/api/src/invoices/pdf/invoice-pdf.service.ts` | `queueRender(invoiceId, garageId?)` |
+| `apps/api/test/owner-read.spec.ts` (new) | 9 tests: list, language, SOON/OVERDUE, detail, history, invoices, PDF, logo, locked and removed |
+| `apps/api/test/tenancy-owner.spec.ts` | 7 cases: X never reaches Y's car, history, invoice, PDF, or a garage's logo where X is not a customer |
+
+**Doc changes**
+- mobile-api.md 1.2: groups 3.6, 4 and 5 live. Written down: one detail pair per field (the 4.3 example is updated), the visit date, the reissued invoice, the next-service order and names, and removed customers.
+- database.md 6.4 and flow.md 2.4: what step 6.3 built.
+
+**Problems hit:** a shell edit with nested template strings broke a test file. I restored it from git and made the change with the editor; nothing was lost.
+
+**Verified**
+By me, on the test database:
+- RLS guard rails: 30 passed. Contracts unit tests: 83 passed.
+- `owner-app`, `owner-read`, `tenancy-owner`: 32 passed.
+- `tenancy`, invoice suites, `customers`: 126 passed.
+- Typecheck and lint pass for api, database and contracts.
+
+To do by the user: the migration on the dev database, `npm test` and `npm run test:tenancy`, then push.
+
+**Commit:** _(pending)_ "Phase 6.3: owner app read API (cars, next service, history, invoices, PDFs, logos)"
 
 ---

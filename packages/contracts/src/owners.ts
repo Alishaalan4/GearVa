@@ -1,5 +1,9 @@
 import { z } from 'zod';
+import type { DistanceUnit } from './distance';
 import { LOCALES, type Locale } from './garages';
+import { INVOICE_STATUSES, type InvoiceStatus, type PaymentMethod } from './invoices';
+import { paginationQuerySchema } from './pagination';
+import type { NextServiceStatus } from './reminders';
 import { PASSWORD_MIN_LENGTH, type SetPasswordInput, setPasswordSchema } from './staff';
 
 // Car owners and the owner app (V3, flow.md 2.4, docs/mobile-api.md).
@@ -91,3 +95,115 @@ export type OwnerChangePasswordInput = z.infer<typeof ownerChangePasswordSchema>
 
 export const ownerDeleteAccountSchema = z.object({ password: anyPassword });
 export type OwnerDeleteAccountInput = z.infer<typeof ownerDeleteAccountSchema>;
+
+// ---------------------------------------------------------------------------
+// Cars, history, invoices (mobile-api.md 4, 5; step 6.3)
+// ---------------------------------------------------------------------------
+
+/** Which garage a car, visit or invoice belongs to (mobile-api.md 1.3). */
+export interface OwnerGarageRef {
+  id: string;
+  name: string;
+}
+
+export interface OwnerUpcomingService {
+  /** in the request's language */
+  serviceName: string;
+  /** km; null for a date-only reminder (warranty end, a recommendation) */
+  dueKm: number | null;
+  /** YYYY-MM-DD */
+  dueDate: string | null;
+  status: NextServiceStatus;
+}
+
+export interface OwnerVehicle {
+  id: string;
+  garage: OwnerGarageRef;
+  plate: string;
+  make: string;
+  model: string;
+  year: number | null;
+  distanceUnit: DistanceUnit;
+  /** km at the last visit */
+  lastRecordedKm: number;
+  lastRecordedAt: string | null;
+  /** today's estimate in km (flow.md 5.2) */
+  estimatedKm: number;
+  /** the soonest upcoming service, or null */
+  nextService: OwnerUpcomingService | null;
+}
+
+export interface OwnerVehicleDetail extends OwnerVehicle {
+  /** every open reminder of the car, soonest first */
+  upcoming: OwnerUpcomingService[];
+}
+
+export interface OwnerServiceDetail {
+  label: string;
+  value: string;
+}
+
+export interface OwnerServiceItem {
+  serviceName: string;
+  details: OwnerServiceDetail[];
+  notes: string | null;
+  /** YYYY-MM-DD */
+  warrantyUntil: string | null;
+  recommendation: string | null;
+  nextDueKm: number | null;
+  /** YYYY-MM-DD */
+  nextDueDate: string | null;
+}
+
+export interface OwnerVisit {
+  id: string;
+  /** when the visit finished, or opened if still in progress */
+  date: string;
+  odometerKm: number;
+  garage: OwnerGarageRef;
+  branchName: string;
+  services: OwnerServiceItem[];
+  /** null while the visit is in progress */
+  invoice: { id: string; number: string; totalCents: number; status: InvoiceStatus } | null;
+}
+
+export const ownerVisitsQuerySchema = paginationQuerySchema;
+export type OwnerVisitsQuery = z.infer<typeof ownerVisitsQuerySchema>;
+
+export const ownerInvoicesQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(INVOICE_STATUSES).optional(),
+});
+export type OwnerInvoicesQuery = z.infer<typeof ownerInvoicesQuerySchema>;
+
+export interface OwnerInvoiceItem {
+  id: string;
+  number: string;
+  issuedAt: string;
+  garage: OwnerGarageRef;
+  vehicle: { id: string; plate: string; make: string; model: string };
+  status: InvoiceStatus;
+  totalCents: number;
+  paidCents: number;
+  remainingCents: number;
+}
+
+export interface OwnerInvoiceDetail extends OwnerInvoiceItem {
+  items: {
+    description: string;
+    brand: string | null;
+    grade: string | null;
+    /** a decimal string ("1", "2.5"), exact */
+    quantity: string;
+    unitPriceCents: number;
+    totalCents: number;
+  }[];
+  subtotalCents: number;
+  discountCents: number;
+  vatCents: number;
+  payments: { amountCents: number; method: PaymentMethod; paidAt: string }[];
+  nextServiceKm: number | null;
+  /** YYYY-MM-DD */
+  nextServiceDate: string | null;
+  warrantyText: string | null;
+  cancelReason: string | null;
+}

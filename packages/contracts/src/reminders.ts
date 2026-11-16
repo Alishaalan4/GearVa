@@ -74,6 +74,29 @@ export function reminderRound(reminder: ReminderState, check: DueCheck): number 
   return dueByKm || dueByDate ? reminder.notifyCount + 1 : null;
 }
 
+/** The owner app's label for an upcoming service (docs/mobile-api.md 4.1). */
+export const NEXT_SERVICE_STATUSES = ['OK', 'SOON', 'OVERDUE'] as const;
+export type NextServiceStatus = (typeof NEXT_SERVICE_STATUSES)[number];
+
+/**
+ * The same rule as the reminder scan (flow.md 9.1), for showing, not sending: OVERDUE once
+ * the due km or the due date has passed, SOON inside the garage's lead (when the scan
+ * would send its first reminder), else OK. Only a service reminder has a due km.
+ */
+export function nextServiceStatus(
+  reminder: Pick<ReminderState, 'kind' | 'nextDueKm' | 'nextDueDate'>,
+  check: Pick<DueCheck, 'estimatedKm' | 'today' | 'leadKm' | 'leadDays'>,
+): NextServiceStatus {
+  const dueKm = reminder.kind === 'SERVICE_DUE' ? reminder.nextDueKm : null;
+  const date = reminder.nextDueDate;
+  if ((dueKm !== null && check.estimatedKm >= dueKm) || (date !== null && check.today > date)) {
+    return 'OVERDUE';
+  }
+  const soonByKm = dueKm !== null && check.estimatedKm >= dueKm - check.leadKm;
+  const soonByDate = date !== null && check.today >= addDays(date, -check.leadDays);
+  return soonByKm || soonByDate ? 'SOON' : 'OK';
+}
+
 interface LocalParts {
   year: number;
   month: number;

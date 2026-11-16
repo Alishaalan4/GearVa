@@ -39,6 +39,35 @@ describe('Owner isolation (test:tenancy)', () => {
   let x: TestOwner;
   let y: TestOwner;
   let xToken: string;
+  /** X's and Y's car and invoice at garage A, where both are customers. */
+  let xCarId: string;
+  let xInvoiceId: string;
+  let yCarId: string;
+  let yInvoiceId: string;
+
+  /** The start of a PNG: enough for the logo type check. */
+  const PNG = Buffer.from('89504e470d0a1a0a0000', 'hex');
+
+  /** A car with one finished oil change at garage A; returns the car and invoice ids. */
+  async function carWithInvoice(customerId: string, plate: string) {
+    const oil = await platform.serviceType.findFirstOrThrow({
+      where: { garageId: null, code: 'OIL_CHANGE' },
+    });
+    const as = (url: string, body: object) => http().post(url).set('Cookie', a.cookie).send(body);
+    const car = await as(`/v1/customers/${customerId}/vehicles`, {
+      plate,
+      make: 'Kia',
+      model: 'Rio',
+      distanceUnit: 'KM',
+      odometer: 1000,
+    }).expect(201);
+    const visit = await as('/v1/visits/quick', {
+      vehicleId: car.body.id,
+      odometer: 1100,
+      services: [{ serviceTypeId: oil.id, unitPriceCents: 2500 }],
+    }).expect(201);
+    return { carId: car.body.id as string, invoiceId: visit.body.invoice.id as string };
+  }
 
   const http = () => request(app.getHttpServer());
   const asX = {
@@ -86,7 +115,15 @@ describe('Owner isolation (test:tenancy)', () => {
     x = await createOwnerAccount(app, a.cookie);
     await addCustomer(app, b.cookie, x.phone);
     y = await createOwnerAccount(app, c.cookie);
-    await addCustomer(app, a.cookie, y.phone);
+    const yAtA = await addCustomer(app, a.cookie, y.phone);
+    ({ carId: xCarId, invoiceId: xInvoiceId } = await carWithInvoice(x.customerId, 'X 1'));
+    ({ carId: yCarId, invoiceId: yInvoiceId } = await carWithInvoice(yAtA, 'Y 1'));
+    // C, Y's garage only, has a logo.
+    await http()
+      .post('/v1/invoice-settings/logo')
+      .set('Cookie', c.cookie)
+      .attach('file', PNG, 'logo.png')
+      .expect(200);
     await ownerLogin(app, y.email);
     xToken = (await ownerLogin(app, x.email)).accessToken;
   });
@@ -103,6 +140,42 @@ describe('Owner isolation (test:tenancy)', () => {
       expect(me.body.garages.map((r: { id: string }) => r.id).sort()).toEqual(
         [a.g.garageId, b.g.garageId].sort(),
       );
+    },
+
+    // Step 6.3: cars, history, invoices, PDFs, logos.
+    'GET /mobile/v1/vehicles': async () => {
+      const res = await asX.get('/mobile/v1/vehicles').expect(200);
+      // Only X's car, although Y has one at the same garage.
+      expect(res.body.map((v: { id: string }) => v.id)).toEqual([xCarId]);
+    },
+
+    'GET /mobile/v1/vehicles/:vehicleId': async () => {
+      await asX.get(`/mobile/v1/vehicles/${yCarId}`).expect(404);
+    },
+
+    'GET /mobile/v1/vehicles/:vehicleId/visits': async () => {
+      await asX.get(`/mobile/v1/vehicles/${yCarId}/visits`).expect(404);
+      const own = await asX.get(`/mobile/v1/vehicles/${xCarId}/visits`).expect(200);
+      expect(own.body.total).toBe(1);
+    },
+
+    'GET /mobile/v1/invoices': async () => {
+      const res = await asX.get('/mobile/v1/invoices?pageSize=50').expect(200);
+      expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([xInvoiceId]);
+      expect(res.body.total).toBe(1);
+    },
+
+    'GET /mobile/v1/invoices/:invoiceId': async () => {
+      await asX.get(`/mobile/v1/invoices/${yInvoiceId}`).expect(404);
+    },
+
+    'GET /mobile/v1/invoices/:invoiceId/pdf': async () => {
+      await asX.get(`/mobile/v1/invoices/${yInvoiceId}/pdf`).expect(404);
+    },
+
+    'GET /mobile/v1/garages/:garageId/logo': async () => {
+      // C has a logo, but X is not its customer.
+      await asX.get(`/mobile/v1/garages/${c.g.garageId}/logo`).expect(404);
     },
 
     'PATCH /mobile/v1/me': async () => {

@@ -6,8 +6,9 @@ The contract between the API and the owner app (V3, Flutter). The API is built t
 |---|---|---|
 | 1.0 | 2026-11-15 | First version (Phase 6.0): auth, profile, cars, history, invoices, notifications, push devices, offers |
 | 1.1 | 2026-11-16 | **Live:** login and account (2) and profile (3.1 to 3.5). 2.3: reusing a refresh token ends **all** of the owner's sessions, on every phone (it said "that phone's"). 2.2: also `RATE_LIMITED` after 10 wrong passwords for one email (15 minutes). 2.5: one reset email per address per minute. 3.3: send at least one of the two fields |
+| 1.2 | 2026-11-16 | **Live:** garage logo (3.6), cars and history (4), invoices and PDFs (5). 4.3: `details` has one label/value pair per field the garage filled in (the example was a combined line); `date` is when the visit finished, or opened while in progress. 4.1: `nextService` order and the warranty/recommendation names written down. A garage that removed the person as a customer no longer shows anything in the app |
 
-Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** 2, 3.1 to 3.5. **Planned:** 3.6, 4, 5, 6, 7.
+Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** 2, 3, 4, 5. **Planned:** 6, 7.
 
 ---
 
@@ -198,7 +199,9 @@ Every car of the owner, at every garage. Not paginated (a person has a few cars)
 ]
 ```
 - `estimatedKm`: today's estimate from the car's average daily driving (it is a guess; show it as "about 85,600 km").
-- `nextService`: the soonest upcoming service, or `null` when nothing is planned. `status` is `OK`, `SOON` (inside the garage's reminder window) or `OVERDUE`, computed by the server with the same rules as the reminders. Show `dueKm`, `dueDate` or both, whichever is set.
+- `nextService`: the soonest upcoming service, or `null` when nothing is planned. `status` is `OK`, `SOON` (inside the garage's reminder window) or `OVERDUE` (the due km is reached or the due date has passed), computed by the server with the same rules as the reminders. Show `dueKm`, `dueDate` or both, whichever is set.
+- "Soonest": overdue first, then soon, then by the day it is expected (its date, or the day the estimate reaches its km). A warranty end is named "Battery warranty ends" (Arabic: "انتهاء كفالة البطارية"); a recommendation by the garage's note. Both have a date only.
+- A car shows while the person is a customer of its garage. A locked garage still shows (read only); a garage that removed the customer does not, and its ids then answer `NOT_FOUND`.
 
 ### 4.2 `GET /mobile/v1/vehicles/{vehicleId}`
 The car from 4.1, plus every upcoming service:
@@ -228,7 +231,9 @@ The car's service history, newest first, paginated.
         {
           "serviceName": "Oil change",
           "details": [
-            { "label": "Oil", "value": "Castrol 5W-30, 4 L" },
+            { "label": "Brand", "value": "Castrol" },
+            { "label": "Grade", "value": "5W-30" },
+            { "label": "Litres", "value": "4" },
             { "label": "Filter changed", "value": "Yes" }
           ],
           "notes": null,
@@ -246,8 +251,9 @@ The car's service history, newest first, paginated.
   "total": 7
 }
 ```
-- `details` are ready-made label/value pairs in the request's language, so the app needs no knowledge of each service type.
-- `invoice` is `null` for a visit still in progress.
+- `details` are ready-made label/value pairs in the request's language, one per field the garage filled in, so the app needs no knowledge of each service type. Show them in the order given.
+- `date` is when the visit finished; for a visit still in progress, when it was opened. Such a visit has `invoice: null` and may have no `services` yet.
+- When an invoice was cancelled and reissued, `invoice` is the one that counts (the newest one not cancelled).
 
 ---
 

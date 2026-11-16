@@ -562,7 +562,7 @@ Built in step 6.2 (migration `owner_context`): `runAsOwner(client, ownerId, fn)`
 - `garage_customers`: `owner_read`, and `owner_preferences` (`FOR UPDATE`, own live rows). A trigger, `garage_customers_owner_update_guard`, refuses any change other than `remindersOptOut` and `marketingOptOut` when the owner context is set.
 - `garages` and `garage_settings`: `owner_read` for garages (not deleted) where the owner is a live customer.
 
-Step 6.3 adds `owner_read` on the tables listed above; step 6.4 on `notifications`.
+Step 6.3 (migration `owner_read`) added `owner_read` on `vehicles`, `visits`, `service_records`, `reminders` and `invoices` (by `owner_id`), `invoice_items` and `payments` (through their invoice), `branches` and the garage's own `service_types` (garages where the person is a live customer; global types are readable already), and `files`: only the PDFs of the person's invoices and the logos of their garages. Step 6.4 adds `notifications`.
 
 ### 6.5 Guard rails
 - A test queries `pg_tables`/`pg_policies` and **fails if any table with a `garage_id` column has no RLS policy**.

@@ -20,6 +20,18 @@ function asUuid(value: unknown): string | null {
 }
 
 /**
+ * The record a route acts on, when the response has no id: the last id in the path that
+ * is not the garage (`/users/staff/:userId/password` → the user; step 5.10).
+ */
+function routeEntityId(params: Record<string, unknown> | undefined): string | null {
+  const ids = Object.entries(params ?? {})
+    .filter(([name]) => name !== 'garageId')
+    .map(([, value]) => asUuid(value))
+    .filter((id): id is string => id !== null);
+  return ids.at(-1) ?? null;
+}
+
+/**
  * Every successful mutating request writes one audit_logs row (README section 5.6).
  * Requests without an actor (e.g. a public "forgot password") have nobody to attribute
  * the row to and are skipped; login endpoints set the actor before they return.
@@ -53,7 +65,7 @@ export class AuditInterceptor implements NestInterceptor {
         try {
           const entityType = meta?.entityType ?? 'unknown';
           const entityId =
-            asUuid((result as { id?: unknown } | null)?.id) ?? asUuid(req.params?.id);
+            asUuid((result as { id?: unknown } | null)?.id) ?? routeEntityId(req.params);
           await this.audit.record({
             action: meta?.action ?? `${req.method} ${routePath}`,
             entityType,

@@ -64,7 +64,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 6 | 6.5c Emails with the Gearva logo (HTML part) | ✅ Done | 2026-11-16 |
 | 5 | 5.8 Branches managed by Gearva (admin adds, switches off and on) | ✅ Done | 2026-11-16 |
 | 5 | 5.9 Users page for the super admin (admins, garage staff, car owners) | ✅ Done | 2026-11-16 |
-| 5 | 5.9b CI fix: formatting of one test file | Written, awaiting commit | |
+| 5 | 5.9b CI fix: formatting of one test file | ✅ Done | 2026-11-16 |
+| 5 | 5.10 Audit log page, messages to garages, sign out everywhere, branches for super admins | Written, awaiting the user's checks | |
 | 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
@@ -2288,6 +2289,48 @@ To check in the browser: sign in to admin as the super admin → Users. Then: ad
 
 **Verified:** locally, the CI steps `format:check`, `lint` and `typecheck` pass. Tests are unchanged since 306fd1c (349 pass). Lesson: run `npm run format:check` before handing over a step.
 
-**Commit:** _(pending)_ "Fix formatting of the Users page test (CI)"
+**Commit:** 132d29b "Fix formatting of the Users page test (CI)"
+
+---
+
+## 5.10 Super admin tools: audit log, messages to garages, sign out everywhere (2026-11-16)
+
+**Summary**
+The user chose items 1, 3 and 5 of the super admin ideas. Decisions (user, 2026-11-16): messages go **both** as a banner in garage-web and as an email to each garage owner; branch changes are for **super admins only**. Everything here is super admins only, in the page and in the API.
+- **Audit log page** (flow.md 11.10): `GET /admin/v1/audit` (every `audit_logs` row with the person's name and email, the garage, before/after and IP; filters: kind of person, one person, one garage, part of the action code, Beirut day range) and `GET /admin/v1/audit/access` (the "View as" access log). Admin page "Audit log" with two tabs; each garage's page links to its own rows.
+- **Audit rows name the record acted on:** when a response has no `id`, the interceptor now takes the last id of the route that is not `:garageId` (before: only `:id`, so e.g. "set a staff password" had no person).
+- **Messages to garages** (flow.md 11.9): new tables `announcements` (platform), `announcement_garages` and `announcement_dismissals` (tenant), notification type `ANNOUNCEMENT`, email template `announcement`. Audience: garages by status, or picked by hand. Banner for every staff member until they close it or the optional last day ends; "Take the banner down" ends it everywhere. Emails are ordinary notification rows of each garage (its notification log shows them). Admin page "Messages" (write, send, sent list with banner state, closes and email counts).
+- **Sign out everywhere** on the Users page for admins, staff and car owners: ends all sessions now, keeps the password, answers how many were ended. Not for yourself.
+- **Branches:** `POST` and `PATCH /admin/v1/garages/:garageId/branches` now need a super admin; the admin page shows the list read only to other admins.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma`, `migrations/20261116200000_announcements` (new), `src/tenant-tables.ts` | 3 tables, enum value, grants, RLS (`announcement_read` + tenant policies) |
+| `packages/contracts/src/admin-tools.ts` (new), `admin-users.ts`, `errors.ts`, `index.ts` | Audit and message schemas/types; `SignedOut`; `NO_GARAGES_MATCH` |
+| `apps/api/src/admin/audit/*` (new), `admin/announcements/*` (new), `admin/admin-time.ts` (new), `admin/admin.module.ts` | Audit log and messages API; Beirut day helpers |
+| `apps/api/src/announcements/*` (new), `app.module.ts` | Garage side: banners and closing them |
+| `apps/api/src/notifications/templates/announcement.ts` (new), `templates/index.ts` | The email |
+| `apps/api/src/admin/users/admin-users.*`, `auth/session.service.ts` | Sign out everywhere; `revokeAll` returns the count |
+| `apps/api/src/admin/garages/admin-branches.*` | Super admins only for changes |
+| `apps/api/src/audit/audit.interceptor.ts` | Record id from the route |
+| `apps/api/test/admin-tools.spec.ts` (new), `tenancy.spec.ts`, `staff-management.spec.ts` | 11 new tests; 2 tenancy cases; branch tests sign in as super admin |
+| `apps/admin/features/audit/*`, `features/announcements/*` (new), their routes, `components/panel-shell.tsx`, `features/users/users-page.tsx`, `features/garages/branches-card.tsx`, `garage-detail.tsx`, `messages/*.json` | The two pages, menu items (super admins), sign-out button, read-only branches, audit link, texts in both languages |
+| `apps/garage-web/components/announcement-banners.tsx` (new), `app-shell.tsx`, `messages/*.json` | The banner; "Message from Gearva" in the notification log |
+
+**Doc changes:** flow.md 1 (matrix row), 11.7, 11.8 (sign out), 11.9 and 11.10 (new), 12, 14; database.md 2, 4.6, 4.7 (new), 5; README 6 (Phase 5 note).
+
+**Verified**
+- Whole API suite (3 workers): 32 suites, 362 tests passed, including the 11 new ones (admin-tools.spec.ts) and the 2 new tenancy cases.
+- Database (RLS) 31 passed, contracts 9 files passed (`npm test` at the root).
+- The root `npm test` runs every API file at once on this machine and they time out (about 150 s each, 234 tests); the same files pass with 3 workers. CI has passed this way so far; to watch.
+- Format check, lint and typecheck pass for the whole repo.
+- All 342 texts used by the new and changed admin pages exist in English and Arabic.
+
+**Database change:** yes, migration `20261116200000_announcements`. On Render it runs by itself at API start after the push.
+
+To check in the browser (super admin): Messages → write one to one garage with email → sign in to that garage in garage-web: the banner shows, Close hides it, the email prints in the API window. Audit log → filter "password". Users → Manage → Sign out everywhere. As a regular admin: no Users, Messages or Audit log in the menu, and a garage's branches are read only.
+
+**Commit:** _(pending)_ "Super admin tools: audit log, messages to garages, sign out everywhere"
 
 ---

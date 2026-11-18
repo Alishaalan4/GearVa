@@ -68,8 +68,9 @@ describe('Branches and staff', () => {
     };
 
     beforeAll(async () => {
-      // A plain ADMIN: every admin manages branches, not only super admins.
-      ({ cookie: admin } = await signInAsNewAdmin(app, 'ADMIN'));
+      // Since step 5.10 only super admins change branches (admin-tools.spec.ts checks
+      // that a plain ADMIN is refused).
+      ({ cookie: admin } = await signInAsNewAdmin(app, 'SUPER_ADMIN'));
     });
 
     it('the admin adds a branch; it gets the next code and an audit row with the garage', async () => {

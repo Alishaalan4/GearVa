@@ -22,6 +22,7 @@ import { HealthModule } from './health/health.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 import { OffersModule } from './offers/offers.module';
 import { OwnerGuard } from './owners/owner.guard';
 import { OwnersModule } from './owners/owners.module';
@@ -76,6 +77,7 @@ import { VisitsModule } from './visits/visits.module';
     SubscriptionsModule,
     ApplicationsModule,
     OffersModule,
+    AnnouncementsModule,
     OwnersModule,
     HealthModule,
   ],

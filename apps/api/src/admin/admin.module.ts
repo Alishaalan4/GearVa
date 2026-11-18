@@ -1,11 +1,16 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { OwnersModule } from '../owners/owners.module';
 import { AdminGuard } from './admin.guard';
+import { AdminAnnouncementsController } from './announcements/admin-announcements.controller';
+import { AdminAnnouncementsService } from './announcements/admin-announcements.service';
 import { AdminApplicationsController } from './applications/admin-applications.controller';
 import { AdminApplicationsService } from './applications/admin-applications.service';
 import { AdminAuthController } from './auth/admin-auth.controller';
 import { AdminAuthService } from './auth/admin-auth.service';
+import { AdminAuditController } from './audit/admin-audit.controller';
+import { AdminAuditService } from './audit/admin-audit.service';
 import { AdminBranchesController } from './garages/admin-branches.controller';
 import { AdminBranchesService } from './garages/admin-branches.service';
 import { AdminGaragesController } from './garages/admin-garages.controller';
@@ -23,7 +28,7 @@ import {
 
 /** Everything under /admin/v1 (README section 3). */
 @Module({
-  imports: [AuthModule, OwnersModule],
+  imports: [AuthModule, OwnersModule, NotificationsModule],
   controllers: [
     AdminAuthController,
     AdminGaragesController,
@@ -33,6 +38,8 @@ import {
     AdminMonitoringController,
     AdminApplicationsController,
     AdminUsersController,
+    AdminAuditController,
+    AdminAnnouncementsController,
   ],
   providers: [
     AdminAuthService,
@@ -44,6 +51,8 @@ import {
     AdminMonitoringService,
     AdminApplicationsService,
     AdminUsersService,
+    AdminAuditService,
+    AdminAnnouncementsService,
   ],
 })
 export class AdminModule {}

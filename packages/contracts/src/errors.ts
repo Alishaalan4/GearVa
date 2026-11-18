@@ -63,6 +63,8 @@ export const ERROR_CODES = {
   LAST_SUPER_ADMIN: 'LAST_SUPER_ADMIN',
   /** A car owner without a login email cannot get a link or a password (step 5.9). */
   NO_LOGIN_EMAIL: 'NO_LOGIN_EMAIL',
+  /** A message to garages whose audience matches no garage (step 5.10). */
+  NO_GARAGES_MATCH: 'NO_GARAGES_MATCH',
   /** An active staff member cannot be placed in (or reactivated in) an inactive branch. */
   BRANCH_INACTIVE: 'BRANCH_INACTIVE',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',

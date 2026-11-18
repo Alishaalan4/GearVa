@@ -26,9 +26,9 @@ PostgreSQL 16+, managed with Prisma 7 in `packages/database`. This file describe
 
 | Group | Tables | Tenant (`garage_id`)? | RLS |
 |---|---|---|---|
-| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `device_tokens` | No | No (only reachable from admin/auth code). Exception (step 5.1): `subscription_payments`, `admin_access_logs` and `garage_applications` carry a `garage_id`, so they also get the tenant policy as a second guard, and are listed in `tenant-tables.ts`; `gearva_app` has no right on them at all |
+| Platform | `admin_users`, `admin_access_logs`, `sessions`, `system_settings`, `subscription_payments`, `garage_applications`, `owners`, `device_tokens`, `announcements` | No | No (only reachable from admin/auth code). Exception (step 5.1): `subscription_payments`, `admin_access_logs` and `garage_applications` carry a `garage_id`, so they also get the tenant policy as a second guard, and are listed in `tenant-tables.ts`; `gearva_app` has no right on them at all |
 | Tenant root | `garages` | It is the tenant (`id`) | Yes, `id = app.garage_id` |
-| Tenant data | `garage_settings`, `branches`, `users`, `garage_customers`, `vehicles`, `service_types`*, `suggestions`, `visits`, `service_records`, `reminders`, `invoices`, `invoice_items`, `invoice_counters`, `payments`, `offers`, `notifications`, `files`, `audit_logs` | Yes | Yes |
+| Tenant data | `garage_settings`, `branches`, `users`, `garage_customers`, `vehicles`, `service_types`*, `suggestions`, `visits`, `service_records`, `reminders`, `invoices`, `invoice_items`, `invoice_counters`, `payments`, `offers`, `notifications`, `files`, `audit_logs`, `offer_views`, `announcement_garages`, `announcement_dismissals` | Yes | Yes |
 
 \* `service_types` holds global defaults (`garage_id IS NULL`, readable by everyone, managed by admin) and garage overrides (`garage_id` set). See its special policy below. `owners` is a platform table with one exception: garage code reads the owners of its own customers (section 6.6).
 
@@ -436,7 +436,7 @@ Payments are append-only. Rule: `SUM(payments.amountCents) = invoices.paidCents`
 | ownerId | uuid? FK | recipient owner (customer). The table is created in Phase 1 before `owners` exists, so the FK is added in the Phase 2 migration |
 | userId | uuid? FK | recipient staff member, for in-app staff notices |
 | channel | NotificationChannel | `EMAIL`, `IN_APP`, `PUSH`, `WHATSAPP` |
-| type | NotificationType | `SERVICE_REMINDER`, `MONTHLY_REMINDER`, `INVOICE`, `OFFER`, `INVITE`, `CAR_READY`, `WARRANTY_END`, `PAYMENT_REMINDER` |
+| type | NotificationType | `SERVICE_REMINDER`, `MONTHLY_REMINDER`, `INVOICE`, `OFFER`, `INVITE`, `CAR_READY`, `WARRANTY_END`, `PAYMENT_REMINDER`, `ANNOUNCEMENT` (step 5.10: a message from Gearva to a garage owner, `refType` `announcement`) |
 | template | text | |
 | locale | text | |
 | recipient | text? | email, phone or token used |
@@ -469,6 +469,44 @@ Invite and password-reset emails use type `INVITE` with templates `staff-invite`
 
 The runtime role has `INSERT` and `SELECT` only on this table (no `UPDATE`/`DELETE`). The normal tenant policy applies, so rows with `garage_id IS NULL` are invisible to `gearva_app` (`NULL = x` never matches). The admin module writes and reads its own rows (including the `NULL` ones) through `gearva_platform`. Staff login attempts that fail before a garage is known are not audit rows; they are covered by rate limiting.
 
+Super admins read every row on the admin Audit log page (flow.md 11.10, step 5.10). When a response has no `id`, the interceptor records the last id of the route that is not `:garageId` as `entityId` (the person or record acted on).
+
+### 4.7 Messages from Gearva (step 5.10, flow.md 11.9)
+
+#### `announcements` (platform, no `garage_id`)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| title | text | 3 to 120 characters, as the admin wrote it |
+| body | text | 3 to 2000 characters |
+| showUntil | timestamptz? | the banner shows until then; `NULL` = until each person closes it. "Take the banner down" sets it to now |
+| emailSent | bool | whether owners were emailed |
+| sentById | uuid FK | `admin_users` |
+| createdAt / updatedAt | timestamptz | |
+
+`gearva_platform` reads, adds and updates (only `show_until`); nothing is deleted. `gearva_app` may only `SELECT`, through the policy `announcement_read`: a row is visible when an `announcement_garages` row links it to the current garage.
+
+#### `announcement_garages` (tenant, append-only)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| garageId | uuid FK | |
+| announcementId | uuid FK | |
+| createdAt | timestamptz | |
+
+Unique `(announcement_id, garage_id)`; index `(garage_id, created_at DESC)`. Written once when the message is sent (the garages matching the audience at that moment). `gearva_app`: `SELECT` only.
+
+#### `announcement_dismissals` (tenant, append-only)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| garageId | uuid FK | |
+| announcementId | uuid FK | |
+| userId | uuid FK | the staff member who closed the banner |
+| dismissedAt | timestamptz | |
+
+Unique `(announcement_id, user_id)`. Garage-scoped foreign keys (section 6.6): `(garage_id, user_id)` → `users(garage_id, id)` and `(announcement_id, garage_id)` → `announcement_garages`, so a person closes only a message their own garage received. `gearva_app`: `SELECT`, `INSERT`.
+
 ---
 
 ## 5. Enums
@@ -489,7 +527,7 @@ FileKind            LOGO | SERVICE_PHOTO | INVOICE_PDF | OFFER_IMAGE
 ReminderKind        SERVICE_DUE | WARRANTY_END | RECOMMENDED_NEXT
 ReminderStatus      ACTIVE | SENT | COMPLETED | CANCELLED
 NotificationChannel EMAIL | IN_APP | PUSH | WHATSAPP
-NotificationType    SERVICE_REMINDER | MONTHLY_REMINDER | INVOICE | OFFER | INVITE | CAR_READY | WARRANTY_END | PAYMENT_REMINDER
+NotificationType    SERVICE_REMINDER | MONTHLY_REMINDER | INVOICE | OFFER | INVITE | CAR_READY | WARRANTY_END | PAYMENT_REMINDER | ANNOUNCEMENT
 NotificationStatus  QUEUED | SENT | DELIVERED | FAILED | SKIPPED
 SuggestionField     OIL_BRAND | OIL_GRADE | FILTER_BRAND | BATTERY_BRAND | TIRE_BRAND | BRAKE_PAD_BRAND | SERVICE_NAME | VEHICLE_MAKE | VEHICLE_MODEL
 OfferTarget         ALL | OVERDUE | INACTIVE_6M

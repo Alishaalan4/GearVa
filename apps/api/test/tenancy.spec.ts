@@ -61,6 +61,7 @@ describe('Tenant isolation (test:tenancy)', () => {
   /** The global OIL_CHANGE service type (seeded by test:prepare). */
   let oilChangeId: string;
   let bOfferId: string;
+  let bAnnouncementId: string;
 
   const http = () => request(app.getHttpServer());
   const asA = {
@@ -222,6 +223,17 @@ describe('Tenant isolation (test:tenancy)', () => {
       .set('Cookie', b.cookie)
       .attach('file', PNG, 'offer.png')
       .expect(200);
+    // Step 5.10: a message from Gearva to B only.
+    const admin = await platform.adminUser.create({
+      data: { email: uniqueEmail('admin'), name: '[test] admin', role: 'ADMIN', passwordHash: 'x' },
+    });
+    const announcement = await platform.announcement.create({
+      data: { title: 'For B', body: 'Only B', emailSent: false, sentById: admin.id },
+    });
+    await platform.announcementGarage.create({
+      data: { announcementId: announcement.id, garageId: b.garage.garageId },
+    });
+    bAnnouncementId = announcement.id;
   });
 
   afterAll(async () => {
@@ -700,6 +712,18 @@ describe('Tenant isolation (test:tenancy)', () => {
         .attach('file', PNG, 'offer.png')
         .expect(404);
       expect(await platform.offer.findUniqueOrThrow({ where: { id: bOfferId } })).toEqual(before);
+    },
+
+    // Step 5.10: Gearva's messages, as banners.
+    'GET /v1/announcements': async () => {
+      const res = await asA.get('/v1/announcements').expect(200);
+      expect(res.body.map((m: { id: string }) => m.id)).not.toContain(bAnnouncementId);
+    },
+    'POST /v1/announcements/:announcementId/dismiss': async () => {
+      await asA.post(`/v1/announcements/${bAnnouncementId}/dismiss`).expect(404);
+      expect(
+        await platform.announcementDismissal.count({ where: { announcementId: bAnnouncementId } }),
+      ).toBe(0);
     },
   };
 

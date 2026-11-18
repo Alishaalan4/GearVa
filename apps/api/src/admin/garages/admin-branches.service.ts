@@ -7,18 +7,24 @@ import {
 } from '@gearva/contracts';
 import type { Branch, Prisma } from '@gearva/database';
 import { createBranch, toBranchItem, updateBranch } from '../../branches/branch-rules';
+import { RequestContext } from '../../common/context/request-context';
 import { PlatformDb } from '../../common/db/platform-db';
 import { AppException } from '../../common/errors/app-exception';
+import { requireSuperAdmin } from '../admin-roles';
 
 /**
  * flow.md 11.7 (decision 2026-11-16): Gearva adds a garage's branches and switches them
  * on or off, because extra branches are billed (flow.md 11.1). The same rules as the
  * garage's own API (branch-rules.ts), through the platform role with the garage in
  * every query. Branch details are not customer data, so no access-log row is written.
+ * Changes are for super admins only (decision 2026-11-16, step 5.10); any admin can look.
  */
 @Injectable()
 export class AdminBranchesService {
-  constructor(private readonly platformDb: PlatformDb) {}
+  constructor(
+    private readonly platformDb: PlatformDb,
+    private readonly context: RequestContext,
+  ) {}
 
   async list(garageId: string): Promise<AdminBranchItem[]> {
     const db = this.platformDb.client;
@@ -32,6 +38,7 @@ export class AdminBranchesService {
   }
 
   async create(garageId: string, input: CreateBranchInput): Promise<AdminBranchItem> {
+    requireSuperAdmin(this.context);
     await this.requireGarage(garageId);
     const branch = await createBranch(
       (fn) => this.platformDb.client.$transaction(fn),
@@ -46,6 +53,7 @@ export class AdminBranchesService {
     branchId: string,
     input: UpdateBranchInput,
   ): Promise<AdminBranchItem> {
+    requireSuperAdmin(this.context);
     await this.requireGarage(garageId);
     const branch = await this.platformDb.client.$transaction((tx: Prisma.TransactionClient) =>
       updateBranch(tx, garageId, branchId, input),

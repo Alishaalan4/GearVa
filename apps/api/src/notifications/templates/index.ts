@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { Locale } from '../notification-channel';
+import { announcement } from './announcement';
 import { ownerInvite } from './owner-invite';
 import { passwordReset } from './password-reset';
 import { monthlyReminder, recommendedNext, serviceReminder, warrantyEnd } from './reminders';
@@ -25,6 +26,7 @@ const EMAIL_TEMPLATES = {
   'warranty-end': warrantyEnd,
   'recommended-next': recommendedNext,
   'monthly-reminder': monthlyReminder,
+  announcement,
 };
 
 export type EmailTemplateName = keyof typeof EMAIL_TEMPLATES;

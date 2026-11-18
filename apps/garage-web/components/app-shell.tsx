@@ -7,6 +7,7 @@ import { type ReactNode, useEffect } from 'react';
 import { useStaff } from '@/features/auth/use-staff';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { ApiError, apiPost, lockReasonOf } from '@/lib/api';
+import { AnnouncementBanners } from './announcement-banners';
 import { ApiErrorAlert } from './api-error';
 import { LanguageToggle } from './language-toggle';
 
@@ -119,6 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Button>
         </div>
       )}
+      <AnnouncementBanners viewOnly={!!me.viewOnly} />
       {children}
     </AppFrame>
   );

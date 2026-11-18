@@ -107,6 +107,11 @@ export interface AdminOwnerItem {
   lastLoginAt: string | null;
 }
 
+/** "Sign out everywhere" (step 5.10): how many open sessions were ended. */
+export interface SignedOut {
+  sessions: number;
+}
+
 /** What a "send link" did: which email, and whether it was an invite or a reset. */
 export interface SentLink {
   kind: 'invite' | 'reset';

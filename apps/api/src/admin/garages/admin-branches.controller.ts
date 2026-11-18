@@ -18,7 +18,8 @@ class CreateBranchDto extends createZodDto(createBranchSchema) {}
 class UpdateBranchDto extends createZodDto(updateBranchSchema) {}
 
 /**
- * flow.md 11.7: a garage's branches, managed by Gearva (any admin). The audit row carries
+ * flow.md 11.7: a garage's branches, managed by Gearva: any admin sees them, super admins
+ * change them (step 5.10). The audit row carries
  * the garage (the :garageId param).
  */
 @Controller('admin/v1/garages/:garageId/branches')

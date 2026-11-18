@@ -301,7 +301,7 @@ Each phase ends with a working, tested slice. Do not start the next phase until 
 - Subscription payments, expiring-soon list, paid/unpaid list, usage monitoring, system settings (default service types, reminder rules), view-as-garage with access log, business view
 - Public website with an application form, and an admin **Applications** page: approving an application creates the garage and sends the owner's invite link (decision 2026-10-29, from the design prototype). The website is public pages inside `garage-web`, not a separate app (decision 2026-11-09: no extra service to host; it can move out later). See flow.md 11.6
 - Monitoring shows simple counts per garage (messages sent and failed, last login, customers, cars, invoices), with no cost estimate while no paid channel exists (decision 2026-11-09)
-- Added after the phase (2026-11-16): branches are added and switched off and on by the admins only (flow.md 11.7), and the super admin's **Users** page for every admin, garage staff member and app user, with reset links and typed passwords (flow.md 11.8).
+- Added after the phase (2026-11-16): branches are added and switched off and on by the admins only (flow.md 11.7), and the super admin's **Users** page for every admin, garage staff member and app user, with reset links and typed passwords (flow.md 11.8). Step 5.10: **Messages** to garages (a banner in garage-web and an optional email to each owner, flow.md 11.9), the **Audit log** page (flow.md 11.10), "sign out everywhere" on the Users page, and branch changes for super admins only.
 - **Done when:** the admin can run the whole subscription lifecycle without touching the database.
 - **Deploy a first version to Render now (section 9),** on free instances while only test users use it.
 

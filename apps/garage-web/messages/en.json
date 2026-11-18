@@ -561,7 +561,8 @@
       "OFFER": "Offer",
       "INVITE": "Invite or password link",
       "CAR_READY": "Car ready",
-      "PAYMENT_REMINDER": "Payment reminder"
+      "PAYMENT_REMINDER": "Payment reminder",
+      "ANNOUNCEMENT": "Message from Gearva"
     }
   },
   "reminderSettings": {
@@ -805,5 +806,9 @@
     "imageType": "Use a PNG or JPEG image.",
     "imageOnSave": "This image is saved with the offer when you press Save.",
     "undoImage": "Remove this choice"
+  },
+  "announcements": {
+    "from": "Message from Gearva",
+    "close": "Close"
   }
 }

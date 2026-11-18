@@ -39,7 +39,8 @@
     "LAST_SUPER_ADMIN": "There must always be one active super admin.",
     "NO_LOGIN_EMAIL": "This person has no app login yet: a garage must invite them first.",
     "CANNOT_MODIFY_OWNER": "A garage owner is not switched off here: suspend the garage instead.",
-    "BRANCH_INACTIVE": "This person works in a branch that is switched off."
+    "BRANCH_INACTIVE": "This person works in a branch that is switched off.",
+    "NO_GARAGES_MATCH": "No garage matches. Choose other statuses or garages."
   },
   "nav": {
     "brand": "Gearva Admin",
@@ -51,7 +52,9 @@
     "monitoring": "Monitoring",
     "business": "Business",
     "settings": "Settings",
-    "users": "Users"
+    "users": "Users",
+    "announcements": "Messages",
+    "audit": "Audit log"
   },
   "authSide": {
     "heading": "Run every garage from one place.",
@@ -200,7 +203,8 @@
     "reasonText": "Reason: {reason}",
     "reactivate": "Reactivate garage",
     "suspended": "The garage was suspended.",
-    "reactivated": "The garage was reactivated."
+    "reactivated": "The garage was reactivated.",
+    "auditLog": "This garage's audit log"
   },
   "subscription": {
     "title": "Subscription",
@@ -435,7 +439,8 @@
       "name": "Enter a name (2 to 120 characters).",
       "address": "Use at most 200 characters.",
       "phone": "Enter a valid phone number."
-    }
+    },
+    "superOnly": "Only a super admin adds branches or changes them."
   },
   "staffRoles": {
     "OWNER": "Owner",
@@ -513,6 +518,86 @@
     "confirmClose": "Yes, close it",
     "keep": "Keep it",
     "closeHint": "The login email, password and phones are removed. The garages keep their records and can invite the person again.",
-    "accountClosed": "App account closed."
+    "accountClosed": "App account closed.",
+    "signOutEverywhere": "Sign out everywhere",
+    "signOutHint": "Ends every session on every device now. The password stays the same.",
+    "signedOut": "{count, plural, =0 {No open session was found.} one {Signed out of # session.} other {Signed out of # sessions.}}"
+  },
+  "audit": {
+    "title": "Audit log",
+    "lead": "Who did what, when, and to which record: Gearva admins, garage staff, car owners and automatic jobs.",
+    "superOnly": "Only a super admin can open this page.",
+    "oneGarage": "Showing one garage only. Open Audit log from the menu to see everything.",
+    "tabs": {
+      "actions": "Actions",
+      "access": "View as visits"
+    },
+    "accessLead": "Every page an admin opened inside a garage with \"View as\". The page address is kept, never the data.",
+    "allActors": "Everyone",
+    "actors": {
+      "ADMIN": "Admin",
+      "STAFF": "Garage staff",
+      "OWNER": "Car owner",
+      "SYSTEM": "Gearva (automatic)"
+    },
+    "searchAction": "Action, e.g. password",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "cols": {
+      "when": "When",
+      "who": "Who",
+      "action": "Action",
+      "garage": "Garage",
+      "admin": "Admin",
+      "page": "Page"
+    },
+    "loading": "Loading…",
+    "empty": "Nothing found.",
+    "total": "{count, plural, one {# entry} other {# entries}}",
+    "details": "Details",
+    "close": "Close",
+    "record": "Record",
+    "ip": "IP address",
+    "before": "Before",
+    "after": "After",
+    "noChanges": "No details were saved for this action.",
+    "accessActions": {
+      "VIEW_AS_GARAGE_START": "Started View as",
+      "VIEW_AS_GARAGE_END": "Ended View as",
+      "RECORD_VIEWED": "Opened a page"
+    }
+  },
+  "announcements": {
+    "title": "Messages",
+    "lead": "Send a message to garages. It shows at the top of the Gearva app for every staff member until they close it, and can also be emailed to each garage owner.",
+    "superOnly": "Only a super admin can open this page.",
+    "write": "Write a message",
+    "titleLabel": "Title",
+    "languageHint": "Write in the language the garages read; it is sent as you write it.",
+    "bodyLabel": "Message",
+    "to": "Send to",
+    "byStatus": "Garages with these statuses",
+    "chosen": "Garages I choose",
+    "searchGarages": "Garage name or email",
+    "search": "Search",
+    "picked": "{count, plural, one {# garage chosen} other {# garages chosen}}",
+    "sendEmail": "Also email each garage owner",
+    "showUntil": "Show the banner until (optional)",
+    "showUntilHint": "Leave empty to show it until each person closes it.",
+    "send": "Send",
+    "sent": "{garages, plural, one {Sent to # garage.} other {Sent to # garages.}}",
+    "sentTitle": "Sent messages",
+    "loading": "Loading…",
+    "none": "No message sent yet.",
+    "total": "{count, plural, one {# message} other {# messages}}",
+    "takeDown": "Take the banner down",
+    "garages": "{count, plural, one {# garage} other {# garages}}",
+    "showing": "banner showing",
+    "showingUntil": "banner until {date}",
+    "ended": "banner ended",
+    "closedBy": "{count, plural, =0 {closed by nobody yet} one {closed by # person} other {closed by # people}}",
+    "emails": "emails: {sent} sent, {queued} waiting, {failed} failed",
+    "noEmail": "no email"
   }
 }

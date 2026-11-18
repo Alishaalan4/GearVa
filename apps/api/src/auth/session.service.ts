@@ -116,11 +116,13 @@ export class SessionService {
     return session;
   }
 
-  async revokeAll(subjectType: SubjectType, subjectId: string): Promise<void> {
-    await this.platformDb.client.session.updateMany({
+  /** Ends every session of this person; returns how many were still open. */
+  async revokeAll(subjectType: SubjectType, subjectId: string): Promise<number> {
+    const { count } = await this.platformDb.client.session.updateMany({
       where: { subjectType, subjectId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    return count;
   }
 
   /** Ends every session of this person except `keepSessionId` (a password change). */

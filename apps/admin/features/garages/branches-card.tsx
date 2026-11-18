@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
+import { useAdmin } from '@/features/auth/use-admin';
 import { api, apiPatch, apiPost } from '@/lib/api';
 
 type FormInput = z.input<typeof createBranchSchema>;
@@ -22,13 +23,14 @@ type FormInput = z.input<typeof createBranchSchema>;
  * flow.md 11.7 (decision 2026-11-16): Gearva adds a garage's branches and switches them
  * on or off, because extra branches are billed. The garage owner only edits the name,
  * address and phone. A branch with active staff, and the main branch, stay on (the API
- * says why).
+ * says why). Only super admins change branches here (step 5.10); other admins look.
  */
 export function BranchesCard({ garageId }: { garageId: string }) {
   const t = useTranslations('branchAdmin');
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const canChange = useAdmin().data?.role === 'SUPER_ADMIN';
   const key = ['garage', garageId, 'branches'];
   const branches = useQuery({
     queryKey: key,
@@ -63,12 +65,15 @@ export function BranchesCard({ garageId }: { garageId: string }) {
               key={b.id}
               garageId={garageId}
               branch={b}
+              canChange={canChange}
               onChanged={refresh}
               onNotice={setNotice}
             />
           ))}
         </ul>
-        {adding ? (
+        {!canChange ? (
+          <p className="text-xs text-muted">{t('superOnly')}</p>
+        ) : adding ? (
           <BranchFields
             submitLabel={t('add')}
             pending={create.isPending}
@@ -92,11 +97,13 @@ export function BranchesCard({ garageId }: { garageId: string }) {
 function BranchRow({
   garageId,
   branch,
+  canChange,
   onChanged,
   onNotice,
 }: {
   garageId: string;
   branch: AdminBranchItem;
+  canChange: boolean;
   onChanged: () => void;
   onNotice: (notice: string | null) => void;
 }) {
@@ -162,25 +169,27 @@ function BranchRow({
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setEditing(true)}>
-            {t('edit')}
-          </Button>
-          {!branch.isMain && (
-            <Button
-              variant={branch.isActive ? 'danger' : 'secondary'}
-              disabled={update.isPending}
-              onClick={() =>
-                update.mutate({
-                  body: { isActive: !branch.isActive },
-                  done: branch.isActive ? t('deactivated') : t('activated'),
-                })
-              }
-            >
-              {branch.isActive ? t('deactivate') : t('activate')}
+        {canChange && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              {t('edit')}
             </Button>
-          )}
-        </div>
+            {!branch.isMain && (
+              <Button
+                variant={branch.isActive ? 'danger' : 'secondary'}
+                disabled={update.isPending}
+                onClick={() =>
+                  update.mutate({
+                    body: { isActive: !branch.isActive },
+                    done: branch.isActive ? t('deactivated') : t('activated'),
+                  })
+                }
+              >
+                {branch.isActive ? t('deactivate') : t('activate')}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       <ApiErrorAlert error={update.error} />
     </li>

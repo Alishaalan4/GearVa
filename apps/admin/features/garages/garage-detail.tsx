@@ -13,6 +13,7 @@ import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiErrorAlert } from '@/components/api-error';
 import { Alert, Button, Card, Field, Textarea } from '@gearva/ui';
+import { useAdmin } from '@/features/auth/use-admin';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPost } from '@/lib/api';
 import { useDates } from '@/lib/format';
@@ -42,6 +43,7 @@ export function GarageDetail({ garageId }: { garageId: string }) {
   const { endDay } = useDates();
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
+  const isSuper = useAdmin().data?.role === 'SUPER_ADMIN';
 
   const garage = useQuery({
     queryKey: ['garage', garageId],
@@ -88,6 +90,14 @@ export function GarageDetail({ garageId }: { garageId: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-extrabold">{g.name}</h1>
           <StatusBadge status={g.status} />
+          {isSuper && (
+            <Link
+              href={{ pathname: '/audit', query: { garageId: g.id } }}
+              className="text-sm text-brand-ink underline"
+            >
+              {t('auditLog')}
+            </Link>
+          )}
         </div>
       </div>
 

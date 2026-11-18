@@ -65,6 +65,8 @@ enum NotificationType {
   CAR_READY
   WARRANTY_END
   PAYMENT_REMINDER
+  // step 5.10: a message from Gearva to a garage (flow.md 11.9)
+  ANNOUNCEMENT
 }
 
 enum NotificationStatus {
@@ -174,6 +176,7 @@ model AdminUser {
   accessLogs           AdminAccessLog[]
   reviewedApplications GarageApplication[]
   settingsChanged      SystemSetting[]
+  announcements        Announcement[]
 
   @@map("admin_users")
 }
@@ -278,30 +281,32 @@ model Garage {
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  createdByAdmin       AdminUser             @relation(fields: [createdByAdminId], references: [id])
-  settings             GarageSettings?
-  branches             Branch[]
-  users                User[]
-  auditLogs            AuditLog[]
-  notifications        Notification[]
-  customers            GarageCustomer[]
-  vehicles             Vehicle[]
-  serviceTypes         ServiceType[]
-  suggestions          Suggestion[]
-  visits               Visit[]
-  serviceRecords       ServiceRecord[]
-  reminders            Reminder[]
-  files                File[]
-  offers               Offer[]
-  offerViews           OfferView[]
-  invoiceCounters      InvoiceCounter[]
-  invoices             Invoice[]
-  invoiceItems         InvoiceItem[]
-  payments             Payment[]
-  subscriptionPayments SubscriptionPayment[]
-  adminAccessLogs      AdminAccessLog[]
-  applications         GarageApplication[]
-  viewAsSessions       Session[]
+  createdByAdmin         AdminUser               @relation(fields: [createdByAdminId], references: [id])
+  settings               GarageSettings?
+  branches               Branch[]
+  users                  User[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+  customers              GarageCustomer[]
+  vehicles               Vehicle[]
+  serviceTypes           ServiceType[]
+  suggestions            Suggestion[]
+  visits                 Visit[]
+  serviceRecords         ServiceRecord[]
+  reminders              Reminder[]
+  files                  File[]
+  offers                 Offer[]
+  offerViews             OfferView[]
+  invoiceCounters        InvoiceCounter[]
+  invoices               Invoice[]
+  invoiceItems           InvoiceItem[]
+  payments               Payment[]
+  subscriptionPayments   SubscriptionPayment[]
+  adminAccessLogs        AdminAccessLog[]
+  applications           GarageApplication[]
+  viewAsSessions         Session[]
+  announcementGarages    AnnouncementGarage[]
+  announcementDismissals AnnouncementDismissal[]
 
   @@index([status, expiresAt])
   @@map("garages")
@@ -380,17 +385,18 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  garage            Garage          @relation(fields: [garageId], references: [id])
-  branch            Branch?         @relation(fields: [branchId], references: [id])
-  notifications     Notification[]
-  visits            Visit[]
-  serviceRecords    ServiceRecord[]
-  filesCreated      File[]
-  offersCreated     Offer[]
-  invoicesCreated   Invoice[]       @relation("InvoiceCreatedBy")
-  invoicesEdited    Invoice[]       @relation("InvoiceLastEditedBy")
-  invoicesCancelled Invoice[]       @relation("InvoiceCancelledBy")
-  paymentsReceived  Payment[]
+  garage                 Garage                  @relation(fields: [garageId], references: [id])
+  branch                 Branch?                 @relation(fields: [branchId], references: [id])
+  notifications          Notification[]
+  visits                 Visit[]
+  serviceRecords         ServiceRecord[]
+  filesCreated           File[]
+  offersCreated          Offer[]
+  invoicesCreated        Invoice[]               @relation("InvoiceCreatedBy")
+  invoicesEdited         Invoice[]               @relation("InvoiceLastEditedBy")
+  invoicesCancelled      Invoice[]               @relation("InvoiceCancelledBy")
+  paymentsReceived       Payment[]
+  announcementDismissals AnnouncementDismissal[]
 
   // Target of the garage-scoped foreign keys (section 6.6).
   @@unique([garageId, id])
@@ -994,4 +1000,62 @@ model GarageApplication {
   @@index([email])
   @@index([phone])
   @@map("garage_applications")
+}
+
+// ---------------------------------------------------------------------------
+// Step 5.10: messages from Gearva to garages (flow.md 11.9). An email to each garage
+// owner and a banner in garage-web until each staff member closes it.
+// ---------------------------------------------------------------------------
+
+// Platform table with no garage_id: a garage reads a message only through its
+// announcement_garages row (the owner-style policy announcement_read).
+model Announcement {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  title     String
+  body      String
+  // the banner shows until this time, or until closed when null
+  showUntil DateTime? @map("show_until") @db.Timestamptz(3)
+  emailSent Boolean   @map("email_sent")
+  sentById  String    @map("sent_by_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sentBy     AdminUser               @relation(fields: [sentById], references: [id])
+  garages    AnnouncementGarage[]
+  dismissals AnnouncementDismissal[]
+
+  @@map("announcements")
+}
+
+// Which garages a message went to (tenant table: a garage reads its own rows).
+model AnnouncementGarage {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  garageId       String   @map("garage_id") @db.Uuid
+  announcementId String   @map("announcement_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  garage       Garage                  @relation(fields: [garageId], references: [id])
+  announcement Announcement            @relation(fields: [announcementId], references: [id])
+  dismissals   AnnouncementDismissal[]
+
+  @@unique([announcementId, garageId])
+  @@index([garageId, createdAt(sort: Desc)])
+  @@map("announcement_garages")
+}
+
+// A staff member closed the banner (tenant table, append-only).
+model AnnouncementDismissal {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  garageId       String   @map("garage_id") @db.Uuid
+  announcementId String   @map("announcement_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  dismissedAt    DateTime @default(now()) @map("dismissed_at") @db.Timestamptz(3)
+
+  garage       Garage             @relation(fields: [garageId], references: [id])
+  announcement Announcement       @relation(fields: [announcementId], references: [id])
+  user         User               @relation(fields: [garageId, userId], references: [garageId, id])
+  recipient    AnnouncementGarage @relation(fields: [announcementId, garageId], references: [announcementId, garageId])
+
+  @@unique([announcementId, userId])
+  @@map("announcement_dismissals")
 }

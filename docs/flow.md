@@ -31,7 +31,7 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Notification log | yes | yes | no | no |
 | Offers and broadcasts | yes | yes | no | no |
 | Staff, garage settings, branch name/address/phone | yes | no | no | no |
-| Add a branch, switch a branch on or off (Gearva admin only, section 11.7) | no | no | no | no |
+| Add a branch, switch a branch on or off (Gearva super admin only, section 11.7) | no | no | no | no |
 | Switch branch view (all branches) | yes | yes | no, own branch only | no, own branch only |
 
 This matrix is enforced by a `RolesGuard` in the API. The web app hides what a role cannot use, but the API is the real check.
@@ -533,11 +533,11 @@ Subscription revenue per month and year, and growth (garages new, renewed, lost)
 ---
 
 ### 11.7 Branches (decision 2026-11-16)
-Extra branches are billed ($100 a year each, section 11.1), so **only Gearva adds a garage's branches and switches them on or off**; any admin (SUPER_ADMIN or ADMIN) may. The garage owner edits the name, address and phone of their branches and sees "contact Gearva" for the rest.
+Extra branches are billed ($100 a year each, section 11.1), so **only Gearva adds a garage's branches and switches them on or off**. Since step 5.10 (user decision 2026-11-16) only a **SUPER_ADMIN** changes them, through the admin pages; a regular ADMIN sees the list read only (`FORBIDDEN` on `POST` and `PATCH`). The garage owner edits the name, address and phone of their branches and sees "contact Gearva" for the rest.
 - Admin API: `GET`, `POST /admin/v1/garages/:garageId/branches`, `PATCH /admin/v1/garages/:garageId/branches/:branchId` (name, address, phone, `isActive`). Each branch shows its active staff. Audit actions `admin.branch.create` and `admin.branch.update`, with the garage.
 - The same rules as before (`branch-rules.ts`, shared with the garage API): codes BR2, BR3... are given in order and never change; the main branch is never switched off (`MAIN_BRANCH_REQUIRED`); a branch with active staff is not switched off until the garage owner moves or deactivates them (`BRANCH_HAS_STAFF`).
 - Garage API: `POST /v1/branches` is removed; `PATCH /v1/branches/:branchId` with `isActive` answers `403 BRANCHES_MANAGED_BY_GEARVA`.
-- The admin app shows the branches card on the garage's page (add, edit, switch off and on).
+- The admin app shows the branches card on the garage's page (add, edit, switch off and on for super admins; the list only for other admins).
 
 ### 11.8 Users page (step 5.9, decision 2026-11-16)
 The super admin's page for every account in Gearva. **Super admins only**: the page and every endpoint check it (`FORBIDDEN` for a regular admin). Passwords can be changed in two ways (user decision): a **link** the person uses to choose their own password, or a password the super admin **types** and tells the person. Every password change ends that person's sessions and voids any open link; every action writes an audit row.
@@ -545,12 +545,28 @@ The super admin's page for every account in Gearva. **Super admins only**: the p
 - **Admins** (`/admin/v1/users/admins`): list; add an admin (name, email, role, a typed password of 12+ characters); change name, role, on/off; set a password; turn off 2FA (a lost phone: the secret and recovery codes are deleted, the admin can turn it on again). Nobody switches themselves off or changes their own role (`CANNOT_MODIFY_SELF`), and one active super admin always remains (`LAST_SUPER_ADMIN`). Admins get no emails: a notification row needs a garage, and admins have none, so their passwords are typed.
 - **Garage staff of every garage** (`/admin/v1/users/staff`, search by name or email, filter by role and garage): garage, branch, role, password set or not, last sign-in. Send a link (an invite if no password yet, else a reset, as in 2.1, logged under that garage); set a password (10+); switch off or on. A garage's owner is not switched off here (`CANNOT_MODIFY_OWNER`: suspend the garage), and nobody comes back into a branch that is off (`BRANCH_INACTIVE`).
 - **Car owners** (`/admin/v1/users/owners`, search by name, the end of the phone or email; filter by app account: `ACTIVE`, `INVITED`, `NONE`): phone, login email, their garages, last sign-in. Send the set-password link (the forgot-password email, 2.4 step 4); set a password (10+); close the app account (as the owner can in the app: email, password, sessions and phones removed; garage records stay). A person with no login email gets neither link nor password (`NO_LOGIN_EMAIL`): a garage invites them first. Opening this list is personal data across garages, so each load writes an `admin.users.owners.view` audit row (there is no single garage for `admin_access_logs`).
+- **Sign out everywhere** (step 5.10), for an admin, a staff member or a car owner: `POST /admin/v1/users/{admins|staff|owners}/:id/sign-out` ends every open session of that person on every device now (their next request answers 401) and keeps the password; it answers how many sessions were ended. For a lost phone or a shared computer. Not for yourself (`CANNOT_MODIFY_SELF`): an admin signs themselves out from their own pages.
+
+### 11.9 Messages to garages (step 5.10, decision 2026-11-16)
+Gearva tells garages about maintenance, new features or a payment change. **Super admins only** (page and API).
+- **Audience:** every garage with the chosen statuses (`TRIAL`, `ACTIVE`, `EXPIRED`, `SUSPENDED`; all four = every garage), or garages picked by hand (up to 500). Deleted garages never; a garage that opens after the message does not get it. No match → `409 NO_GARAGES_MATCH`.
+- **Banner** (always): at the top of every garage-web page for every staff member of those garages, until that person closes it (`POST /v1/announcements/:id/dismiss`, for themselves only) or until the optional last day (Beirut) ends. At most 5 at once, newest first. An admin in "View as" sees them without a close button. `GET /v1/announcements`.
+- **Email** (optional, on by default): one email to each active OWNER of each garage, template `announcement`, type `ANNOUNCEMENT`, logged under that garage (it shows in the garage's notification log) and sent by the normal queue. The admin writes the title and text once, in the language the garages read; only the greeting and the closing line follow the owner's language.
+- **Admin page "Messages":** write and send; the list of sent messages with their garages, banner state, how many people closed it, and the emails sent, waiting and failed; **Take the banner down** ends it everywhere at once (`POST /admin/v1/announcements/:id/end`). Messages are never edited or deleted (the emails are already out).
+- Admin API: `GET`, `POST /admin/v1/announcements`, `GET /admin/v1/announcements/:id` (with the garage list), `POST /admin/v1/announcements/:id/end`. Audit actions `admin.announcement.send`, `admin.announcement.end`, and `announcement.dismiss` (staff).
+- Tables: `announcements`, `announcement_garages`, `announcement_dismissals` (database.md 4.7).
+
+### 11.10 Audit log page (step 5.10, decision 2026-11-16)
+The super admin's view of `audit_logs` (database.md 4.6) across all garages, read only. **Super admins only** (page and API).
+- **Actions** (`GET /admin/v1/audit`): when, who (admin, garage staff, car owner or Gearva's automatic jobs, with name and email), the action code (for example `admin.users.staff.password`), the record type and id, the garage, and on demand the before and after values and the IP address. Filters: kind of person, one person (`actorId`), one garage (`garageId`; the garage's page links here), part of the action code, and a from/to day range in Beirut days. 50 a page, newest first.
+- **View as visits** (`GET /admin/v1/audit/access`): `admin_access_logs` (section 11.3): which admin opened which page of which garage, and when. Filters: admin, garage, days.
+- Since step 5.10 an audit row whose response has no id records the record from the route (`/users/staff/:userId/password` → that user), so "who was acted on" is always there.
 
 ## 12. Data protection flows
 
 - **No export:** there are no export endpoints. Lists are paginated (max 50), rate limited per user and per IP, and bulk PDF download is blocked.
 - **Single invoice PDF** is allowed. An attempt to fetch many in a short time is blocked and logged.
-- **Audit log:** viewing a customer record, creating or editing records, cancelling or reprinting invoices, recording payments and logins all write `audit_logs` rows. The log screen is OWNER-only.
+- **Audit log:** viewing a customer record, creating or editing records, cancelling or reprinting invoices, recording payments and logins all write `audit_logs` rows. The log screen is OWNER-only. Gearva's super admins read every garage's rows on the admin Audit log page (section 11.10).
 - **Tenant isolation test:** `npm run test:tenancy` creates garage A and garage B with customers, vehicles, visits, invoices and files, then asserts that every endpoint, with A's credentials, returns 404 or an empty list for B's ids, including list, search, update, delete, PDF, suggestions and notifications.
 - **Text selection lock:** optional UI hardening for customer lists only. It is not a security measure; the protections above are.
 
@@ -595,6 +611,8 @@ The super admin's page for every account in Gearva. **Super admins only**: the p
 /admin/v1/garages, /admin/v1/garages/:id/payments, /admin/v1/garages/:id/suspend
 /admin/v1/monitoring/*, /admin/v1/settings/*, /admin/v1/business/*
 /admin/v1/view-as/:garageId
+/admin/v1/users/*, /admin/v1/announcements/*, /admin/v1/audit/*   super admins only (11.8 to 11.10)
+/v1/announcements                 Gearva's messages as banners (11.9)
 
 /mobile/v1/*                  owner app, specified in docs/mobile-api.md (auth, me, garages,
                               vehicles, visits, invoices, notifications, devices, offers)

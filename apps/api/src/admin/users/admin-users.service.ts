@@ -10,6 +10,7 @@ import {
   type OwnerAccountState,
   type Paginated,
   type SentLink,
+  type SignedOut,
   type UpdateAdminStaffInput,
   type UpdateAdminUserInput,
 } from '@gearva/contracts';
@@ -186,6 +187,42 @@ export class AdminUsersService {
       data: { totpEnabled: false, totpSecretEnc: null, recoveryCodesHash: [] },
     });
     return toAdminItem(updated);
+  }
+
+  // -------------------------------------------------------------------------
+  // Sign out everywhere (step 5.10): every session of one person ends now, on every
+  // device, without changing the password (a lost phone, a shared computer). Admins
+  // use their Account page for themselves.
+  // -------------------------------------------------------------------------
+
+  async signOutAdmin(adminId: string): Promise<SignedOut> {
+    const actorId = requireSuperAdmin(this.context);
+    if (adminId === actorId) {
+      throw new AppException(
+        HttpStatus.CONFLICT,
+        ERROR_CODES.CANNOT_MODIFY_SELF,
+        'Sign yourself out from your own Account page',
+      );
+    }
+    const admin = await this.db.adminUser.findUnique({ where: { id: adminId } });
+    if (!admin) throw notFound('Admin');
+    return { sessions: await this.sessions.revokeAll('ADMIN', adminId) };
+  }
+
+  async signOutStaff(userId: string): Promise<SignedOut> {
+    requireSuperAdmin(this.context);
+    const user = await this.db.user.findFirst({
+      where: { id: userId, garage: { deletedAt: null } },
+    });
+    if (!user) throw notFound('User');
+    return { sessions: await this.sessions.revokeAll('STAFF', userId) };
+  }
+
+  async signOutOwner(ownerId: string): Promise<SignedOut> {
+    requireSuperAdmin(this.context);
+    const owner = await this.db.owner.findUnique({ where: { id: ownerId } });
+    if (!owner) throw notFound('Owner');
+    return { sessions: await this.sessions.revokeAll('OWNER', ownerId) };
   }
 
   // -------------------------------------------------------------------------

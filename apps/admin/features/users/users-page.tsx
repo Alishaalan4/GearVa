@@ -11,6 +11,7 @@ import {
   type Paginated,
   STAFF_ROLES,
   type SentLink,
+  type SignedOut,
 } from '@gearva/contracts';
 import { Alert, Button, Card, Field, Input, Select } from '@gearva/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -112,6 +113,24 @@ function SetPassword({
         {t('setPassword')}
       </Button>
     </form>
+  );
+}
+
+/** Step 5.10: ends every session of this person now, on every device; the password stays. */
+function SignOutEverywhere({ url, onDone }: { url: string; onDone: (message: string) => void }) {
+  const t = useTranslations('users');
+  const signOut = useMutation({
+    mutationFn: () => apiPost<SignedOut>(url),
+    onSuccess: (result) => onDone(t('signedOut', { count: result.sessions })),
+  });
+  return (
+    <div className="space-y-2">
+      <Button variant="secondary" disabled={signOut.isPending} onClick={() => signOut.mutate()}>
+        {t('signOutEverywhere')}
+      </Button>
+      <p className="text-xs text-muted">{t('signOutHint')}</p>
+      <ApiErrorAlert error={signOut.error} />
+    </div>
   );
 }
 
@@ -266,6 +285,12 @@ function AdminRow({
                 </div>
               )}
               <ApiErrorAlert error={update.error ?? totp.error} />
+              {!isMe && (
+                <SignOutEverywhere
+                  url={`/admin/v1/users/admins/${admin.id}/sign-out`}
+                  onDone={onChanged}
+                />
+              )}
               <SetPassword
                 url={`/admin/v1/users/admins/${admin.id}/password`}
                 min={ADMIN_PASSWORD_MIN_LENGTH}
@@ -516,6 +541,10 @@ function StaffRow({
               </div>
               {user.role === 'OWNER' && <p className="text-xs text-muted">{t('ownerHint')}</p>}
               <ApiErrorAlert error={link.error ?? toggle.error} />
+              <SignOutEverywhere
+                url={`/admin/v1/users/staff/${user.id}/sign-out`}
+                onDone={onChanged}
+              />
               <SetPassword
                 url={`/admin/v1/users/staff/${user.id}/password`}
                 min={PASSWORD_MIN_LENGTH}
@@ -707,6 +736,12 @@ function OwnerRow({
                   </div>
                   {confirmClose && <p className="text-xs text-muted">{t('closeHint')}</p>}
                   <ApiErrorAlert error={link.error ?? close.error} />
+                  {owner.account === 'ACTIVE' && (
+                    <SignOutEverywhere
+                      url={`/admin/v1/users/owners/${owner.id}/sign-out`}
+                      onDone={onChanged}
+                    />
+                  )}
                   <SetPassword
                     url={`/admin/v1/users/owners/${owner.id}/password`}
                     min={PASSWORD_MIN_LENGTH}

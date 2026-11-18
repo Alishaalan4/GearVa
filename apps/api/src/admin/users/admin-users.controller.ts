@@ -17,6 +17,7 @@ import {
   type AdminUserItem,
   type Paginated,
   type SentLink,
+  type SignedOut,
   adminOwnersQuerySchema,
   adminStaffQuerySchema,
   createAdminUserSchema,
@@ -86,6 +87,13 @@ export class AdminUsersController {
     return this.users.resetAdminTotp(adminId);
   }
 
+  @Post('admins/:adminId/sign-out')
+  @HttpCode(HttpStatus.OK)
+  @Audit('admin.users.admin.sign_out', 'admin_user')
+  signOutAdmin(@Param('adminId', ParseUUIDPipe) adminId: string): Promise<SignedOut> {
+    return this.users.signOutAdmin(adminId);
+  }
+
   // Garage staff
 
   @Get('staff')
@@ -108,6 +116,13 @@ export class AdminUsersController {
     @Body() body: SetUserPasswordDto,
   ): Promise<void> {
     return this.users.setStaffPassword(userId, body.password);
+  }
+
+  @Post('staff/:userId/sign-out')
+  @HttpCode(HttpStatus.OK)
+  @Audit('admin.users.staff.sign_out', 'user')
+  signOutStaff(@Param('userId', ParseUUIDPipe) userId: string): Promise<SignedOut> {
+    return this.users.signOutStaff(userId);
   }
 
   @Patch('staff/:userId')
@@ -141,6 +156,13 @@ export class AdminUsersController {
     @Body() body: SetUserPasswordDto,
   ): Promise<void> {
     return this.users.setOwnerPassword(ownerId, body.password);
+  }
+
+  @Post('owners/:ownerId/sign-out')
+  @HttpCode(HttpStatus.OK)
+  @Audit('admin.users.owner.sign_out', 'owner')
+  signOutOwner(@Param('ownerId', ParseUUIDPipe) ownerId: string): Promise<SignedOut> {
+    return this.users.signOutOwner(ownerId);
   }
 
   @Post('owners/:ownerId/close-account')

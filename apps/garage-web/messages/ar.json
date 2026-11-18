@@ -561,7 +561,8 @@
       "OFFER": "عرض",
       "INVITE": "دعوة أو رابط كلمة مرور",
       "CAR_READY": "السيارة جاهزة",
-      "PAYMENT_REMINDER": "تذكير دفع"
+      "PAYMENT_REMINDER": "تذكير دفع",
+      "ANNOUNCEMENT": "رسالة من Gearva"
     }
   },
   "reminderSettings": {
@@ -805,5 +806,9 @@
     "imageType": "استخدم صورة PNG أو JPEG.",
     "imageOnSave": "تُحفظ هذه الصورة مع العرض عند الضغط على حفظ.",
     "undoImage": "إلغاء هذا الاختيار"
+  },
+  "announcements": {
+    "from": "رسالة من Gearva",
+    "close": "إغلاق"
   }
 }

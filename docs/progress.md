@@ -65,7 +65,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.8 Branches managed by Gearva (admin adds, switches off and on) | ✅ Done | 2026-11-16 |
 | 5 | 5.9 Users page for the super admin (admins, garage staff, car owners) | ✅ Done | 2026-11-16 |
 | 5 | 5.9b CI fix: formatting of one test file | ✅ Done | 2026-11-16 |
-| 5 | 5.10 Audit log page, messages to garages, sign out everywhere, branches for super admins | Written, awaiting the user's checks | |
+| 5 | 5.10 Audit log page, messages to garages, sign out everywhere, branches for super admins | ✅ Done | 2026-11-16 |
+| 6 | 6.6 Final developer PDF (v1.4), test owner login, Done-when check | ✅ Done (the push to a real phone waits for the developer's token) | 2026-11-20 |
 | 6 | 6.6 Final contract PDF, test owner login, Done-when check | Next | |
 
 ---
@@ -2331,6 +2332,31 @@ The user chose items 1, 3 and 5 of the super admin ideas. Decisions (user, 2026-
 
 To check in the browser (super admin): Messages → write one to one garage with email → sign in to that garage in garage-web: the banner shows, Close hides it, the email prints in the API window. Audit log → filter "password". Users → Manage → Sign out everywhere. As a regular admin: no Users, Messages or Audit log in the menu, and a garage's branches are read only.
 
-**Commit:** _(pending)_ "Super admin tools: audit log, messages to garages, sign out everywhere"
+**Commit:** a910220 "Super admin tools: audit log, messages to garages, sign out everywhere"
+
+---
+
+## 6.6 Final developer PDF, test owner login, Phase 6 Done-when (2026-11-18 to 2026-11-20)
+
+**Summary**
+- `docs/mobile-brief.md` brought to **1.4** (with contract 1.4): every endpoint is live; the steps table and the test-account paragraph say so; the test owner login is sent to the developer in a separate message by the user (decision 2026-11-20), never in the PDF or the repository; we ask the developer for a debug device token to prove a push.
+- PDF build: the script from memory (`marked` in a scratch folder, the repo's Puppeteer), now with an optional `TEST_LOGIN` box on the cover. A draft v1.4 was built and its first pages checked.
+- 5.10 is live: `/v1/announcements` and `/admin/v1/audit` answer 401 on `api.gearva.online`; CI passed on a910220.
+
+**Phase 6 Done-when check**
+| Item | State |
+|---|---|
+| Every endpoint in mobile-api.md live on the server | ✅ The 25 endpoints of the contract equal the 25 the API serves; live server answers (health ok, login 401 for a wrong password) |
+| Covered by tests, owner of two garages, owner tenancy suite | ✅ `tenancy-owner.spec.ts`: owner X is a customer of garages A and B, sees exactly those two, and reaches nothing of owner Y or garage C, on every route; its coverage test fails if a route has no case |
+| A push reaches a test device token through Firebase | ⏳ Server side done and tested with a fake sender (6.4); needs a real token from the developer's debug build: `npm run push:test -w @gearva/api -- <token>` |
+| Final contract PDF with a test owner login handed over | ✅ `Gearva-Owner-App-v1.4.pdf` built on the Desktop (2026-11-20, cover checked); the user sends it and the login by message |
+
+**Files changed:** `docs/mobile-brief.md`, `docs/progress.md`.
+
+**Doc changes:** mobile-brief.md 1.4.
+
+**Verified:** contract endpoints compared with the tested route list (25 = 25); live checks with curl; draft PDF pages looked at.
+
+**Commit:** _(pending)_
 
 ---

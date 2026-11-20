@@ -3,6 +3,7 @@
 | Version | Date | What changed |
 |---|---|---|
 | 1.0 | 2026-11-15 | First version, with API contract 1.0 |
+| 1.4 | 2026-11-18 | With API contract 1.4: **every endpoint is live** on the test server (section 7 table). A test owner login is sent in a separate message |
 
 This brief and the API contract (`mobile-api.md`, the second part of this PDF) are everything needed to build the Gearva owner app. Updates come as new versions of this PDF; the tables at the top of both parts say what changed.
 
@@ -20,7 +21,7 @@ Gearva is a system for car garages in Lebanon. It has three parts:
 
 When a garage services a car, it records what was done (oil change, brand, grade, km). Gearva then works out when the next service is due and reminds the owner. **The owner app lets car owners see their cars, the full service history, when the next service is due, their invoices, reminders and the garages' offers**, from every garage that uses Gearva.
 
-The server (API) is built by the Gearva team, in parallel with the app (section 6).
+The server (API) is built by the Gearva team and is live on the test server (section 6).
 
 ---
 
@@ -102,18 +103,20 @@ Match the garage app's look (the prototype file). The colours, as in the web app
 ## 6. How we work together
 
 ### Order of work
-The API is built in steps. Until an endpoint is live, build against the JSON examples in the API contract (a mock client is ideal: it can stay for tests).
+The API was built in steps; since contract 1.4 (2026-11-18) **every endpoint is live** on the test server. The JSON examples in the API contract are still the reference (a mock client built from them is good for tests).
 
 | Step | Server side (Gearva team) | App side (you) |
 |---|---|---|
-| Now | API contract 1.0 (this PDF) | Project setup, theme, localisation, navigation, all screens with example data |
+| Start | API contract 1.0 | Project setup, theme, localisation, navigation, all screens with example data |
 | 6.1–6.2 | Owner accounts, invite emails, the set-password page, **login API live** | Real login, refresh, logout, forgot password, profile |
 | 6.3 | **Cars, history and invoices live** (PDF included) | Connect screens 4–8 |
 | 6.4 | **Notifications and push live** | Inbox, FCM, device tokens |
 | 6.5 | **Offers live** (garages can create them) | Offers screens |
-| Release | Production server | Store builds and release |
+| Release | Production server (the client's own accounts) | Store builds and release |
 
-You receive a message (and a new PDF version) each time a step goes live, with **test accounts** on the test server: a test garage with cars, visits and invoices, and an owner login.
+Status 2026-11-18: steps 6.1 to 6.5 are **live**. Push works from the server through the client's Firebase project; please send us a test device token from a debug build so we can confirm a push reaches a real phone.
+
+**Test accounts:** the owner login for the test server (an owner who is a customer of a test garage with cars, visits and invoices) comes to you in a separate message, not in this PDF. It is test data only; never use real customer data while developing.
 
 ### Repository and accounts
 - The code lives in its own Git repository, **`gearva-mobile`**, owned by the client (Gearva). You get write access.

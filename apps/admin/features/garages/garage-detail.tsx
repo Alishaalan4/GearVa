@@ -18,6 +18,7 @@ import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPost } from '@/lib/api';
 import { useDates } from '@/lib/format';
 import { BranchesCard } from './branches-card';
+import { ReminderSettingsCard } from './reminder-settings-card';
 import { StatusBadge } from './status-badge';
 import { SubscriptionCard } from './subscription-card';
 import { ViewAsCard } from './view-as-card';
@@ -220,6 +221,8 @@ export function GarageDetail({ garageId }: { garageId: string }) {
         <ViewAsCard garageId={g.id} garageName={g.name} />
 
         <BranchesCard garageId={g.id} />
+
+        <ReminderSettingsCard garageId={g.id} />
       </div>
     </div>
   );

@@ -64,7 +64,6 @@
     "debts": "Debts",
     "income": "Income",
     "reminders": "Reminders",
-    "reminderSettings": "Reminder settings",
     "offers": "Offers"
   },
   "authSide": {
@@ -571,19 +570,6 @@
       "PAYMENT_REMINDER": "Payment reminder",
       "ANNOUNCEMENT": "Message from Gearva"
     }
-  },
-  "reminderSettings": {
-    "title": "Reminder settings",
-    "intro": "Reminders go out between 09:00 and 20:00, by email when the customer has one, otherwise in Reminders for WhatsApp.",
-    "leadKm": "Remind this many km early",
-    "leadKmHint": "From 0 to 5,000. Default 500.",
-    "leadKmInvalid": "Enter a whole number from 0 to 5,000.",
-    "leadDays": "Remind this many days early",
-    "leadDaysHint": "From 0 to 60. Default 7.",
-    "leadDaysInvalid": "Enter a whole number from 0 to 60.",
-    "monthly": "Send a monthly reminder email to every customer",
-    "monthlyHint": "Once a month, to customers with an email who did not get a reminder that month. Off by default.",
-    "saved": "Saved."
   },
   "viewAs": {
     "title": "View as garage",

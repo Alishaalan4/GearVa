@@ -31,6 +31,7 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Notification log | yes | yes | no | no |
 | Offers and broadcasts | yes | yes | no | no |
 | Staff, garage settings, branch name/address/phone | yes | no | no | no |
+| Reminder settings (lead km and days, monthly reminder): set by Gearva, section 9.5 | no | no | no | no |
 | Add a branch, switch a branch on or off (Gearva super admin only, section 11.7) | no | no | no | no |
 | Switch branch view (all branches) | yes | yes | no, own branch only | no, own branch only |
 
@@ -410,7 +411,7 @@ When a round is sent (the email is `SENT`, or staff mark the WhatsApp message se
 - The settings in capitals are constants in `contracts` until `system_settings` exists (Phase 5), like the default daily km (README 7).
 
 ### 9.2 Monthly reminder
-A garage setting, `garage_settings.monthlyReminderEnabled`, **off by default** (decision 2026-11-05: avoids customers feeling spammed). When a garage turns it on, the scan sends, once a month, a general reminder by email to every customer of the garage that has an email and has not opted out (dedupe key `MONTHLY_REMINDER:{garageCustomerId}:{YYYY-MM}`). It is skipped for a customer who already received a reminder that month. It is never put on the WhatsApp list.
+A garage setting, `garage_settings.monthlyReminderEnabled`, **off by default** (decision 2026-11-05: avoids customers feeling spammed). When it is on (set by Gearva on the garage's admin page since step 7.4), the scan sends, once a month, a general reminder by email to every customer of the garage that has an email and has not opted out (dedupe key `MONTHLY_REMINDER:{garageCustomerId}:{YYYY-MM}`). It is skipped for a customer who already received a reminder that month. It is never put on the WhatsApp list.
 
 ### 9.3 Sending rules
 - **Daytime only** in the garage's time zone, from `REMINDER_DAYTIME_START` (09:00) to `REMINDER_DAYTIME_END` (20:00). The scan runs only inside the window, and a reminder email whose sending or retry falls outside it is delayed to the next window, never sent at night. Invoices, invites and password resets are not reminders and are sent at once.
@@ -445,7 +446,7 @@ A "Reminders due" screen for OWNER, MANAGER and RECEPTIONIST lists the due remin
 - **Send on WhatsApp** opens `https://wa.me/<phone>?text=<message>` with the reminder text already written in the customer's language. Staff press send in WhatsApp.
 - **Mark as sent** then records a `WHATSAPP` notification with status `SENT`, `dedupeKey = REMINDER:{reminderId}:{round}:WHATSAPP` and the phone as recipient, and counts the round (9.1). The audit row records who sent it. Gearva cannot see whether the message was really sent; it trusts the button.
 - A customer who does not want reminders is marked "No reminders" on their page (`remindersOptOut`) and leaves the list.
-- API (step 4.4): `GET /v1/reminders/due` (paginated; each item has the round, the service in both languages, the due km or date, the estimated km, `emailFailed` and the ready `whatsappUrl`) and `POST /v1/reminders/:reminderId/whatsapp-sent` `{ round }`. Marking a round that is already counted answers `counted: false` and changes nothing; a round that is not the next one is `409 REMINDER_NOT_DUE`. The log is `GET /v1/notifications` (filters `status`, `channel`), and the owner's settings are `GET` / `PATCH /v1/reminder-settings` (lead km 0–5,000, lead days 0–60, monthly reminder).
+- API (step 4.4): `GET /v1/reminders/due` (paginated; each item has the round, the service in both languages, the due km or date, the estimated km, `emailFailed` and the ready `whatsappUrl`) and `POST /v1/reminders/:reminderId/whatsapp-sent` `{ round }`. Marking a round that is already counted answers `counted: false` and changes nothing; a round that is not the next one is `409 REMINDER_NOT_DUE`. The log is `GET /v1/notifications` (filters `status`, `channel`), and the reminder settings (lead km 0–5,000, lead days 0–60, monthly reminder) are `GET` / `PATCH /admin/v1/garages/:garageId/reminder-settings` since step 7.4 (user decision 2026-11-21: Gearva sets them per garage; any admin reads, super admins change; audit `admin.reminder_settings.update` with the garage). The garage's own `/v1/reminder-settings` and its page are removed; `/settings/reminders` sends to Reminders. The admin's garage page explains each setting with a live example, and lists the rules shared by every garage (section 9.3, from Settings).
 
 ### 9.6 Owner app inbox and push (step 6.4)
 - When a due reminder's customer uses the owner app (the person has a password), the scan also records an `IN_APP` notification: the same type, template name and data as the email, the owner id as recipient, `refType = vehicle` (the screen the app opens), `dedupeKey = REMINDER:{reminderId}:{round}:IN_APP`. It does **not** count the round: the round is still counted by the email or by "Mark as sent" (9.5), so the WhatsApp list works as before, and the app gets one entry per round.

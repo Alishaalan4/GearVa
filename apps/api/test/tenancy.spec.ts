@@ -555,23 +555,6 @@ describe('Tenant isolation (test:tenancy)', () => {
       expect(new Set(rows.map((r) => r.garageId))).toEqual(new Set([a.garage.garageId]));
     },
 
-    'GET /v1/reminder-settings': async () => {
-      await asA.get('/v1/reminder-settings').expect(200);
-    },
-
-    'PATCH /v1/reminder-settings': async () => {
-      await asA
-        .patch('/v1/reminder-settings', {
-          monthlyReminderEnabled: true,
-          garageId: b.garage.garageId,
-        })
-        .expect(200);
-      const row = await platform.garageSettings.findUniqueOrThrow({
-        where: { garageId: b.garage.garageId },
-      });
-      expect(row.monthlyReminderEnabled).toBe(false);
-    },
-
     'POST /v1/invoices/:invoiceId/payments': async () => {
       await expectBUnchanged(async () => {
         await asA

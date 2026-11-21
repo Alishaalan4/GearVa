@@ -1,5 +1,6 @@
 // Step 4.4: the reminder API (flow.md 9.4, 9.5): the customer email, the WhatsApp list
-// and "mark as sent", the notification log and the reminder settings, with their roles.
+// and "mark as sent", and the notification log, with their roles. (The reminder settings moved
+// to the admin in step 7.4: admin-tools.spec.ts.)
 // Tenant isolation for these endpoints lives in tenancy.spec.ts (README 5.1.6).
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
@@ -261,23 +262,9 @@ describe('Reminder API', () => {
   });
 
   describe('reminder settings', () => {
-    it('the owner reads and changes them; nobody else', async () => {
-      const res = await as(owner).get('/v1/reminder-settings').expect(200);
-      expect(res.body).toEqual({
-        reminderLeadKm: 500,
-        reminderLeadDays: 7,
-        monthlyReminderEnabled: false,
-      });
-      const changed = await as(owner)
-        .patch('/v1/reminder-settings', { reminderLeadKm: 800, monthlyReminderEnabled: true })
-        .expect(200);
-      expect(changed.body).toMatchObject({ reminderLeadKm: 800, monthlyReminderEnabled: true });
-      await as(owner).patch('/v1/reminder-settings', { reminderLeadKm: -1 }).expect(400);
-      await as(owner)
-        .patch('/v1/reminder-settings', { reminderLeadKm: 500, monthlyReminderEnabled: false })
-        .expect(200);
-      await as(manager).get('/v1/reminder-settings').expect(403);
-      await as(manager).patch('/v1/reminder-settings', { reminderLeadKm: 1 }).expect(403);
+    it('are no longer in the garage app (set by Gearva since step 7.4)', async () => {
+      await as(owner).get('/v1/reminder-settings').expect(404);
+      await as(owner).patch('/v1/reminder-settings', { reminderLeadKm: 800 }).expect(404);
     });
   });
 });

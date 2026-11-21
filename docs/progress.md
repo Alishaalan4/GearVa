@@ -58,7 +58,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.1b Fix: slow transactions failed (`Finish visit` 500 under load, the flaky CI test) | ✅ Done | 2026-11-21 |
 | 7 | 7.1c Fix: API tests ran out of memory on the buyer's CI (private repository, small machine) | ✅ Done (CI green on both repositories) | 2026-11-21 |
 | 7 | 7.2 Invoice settings as a tab of the Invoices page | ✅ Done | 2026-11-21 |
-| 7 | 7.3 Reminders and the message log on one page | Written, awaiting the user's local check | |
+| 7 | 7.3 Reminders and the message log on one page | ✅ Done | 2026-11-21 |
+| 7 | 7.4 Reminder settings per garage move to the admin | Written, awaiting the user's local check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2469,6 +2470,32 @@ The garage app's **Reminders** page has two tabs: **To send** (the WhatsApp list
 
 **Verified:** typecheck and lint of garage-web pass; formatting checked.
 
-**Commit:** _(pending)_ "Step 7.3: reminders and the message log on one page"
+**Commit:** b9372e6 "Step 7.3: reminders and the message log on one page"
+
+---
+
+## 7.4 Reminder settings per garage move to the admin (2026-11-21)
+
+**Summary**
+User decision 2026-11-21: Gearva sets each garage's reminder settings (lead km, lead days, monthly reminder), on the garage's page in the admin; the garage app no longer shows them.
+- **API:** `GET` / `PATCH /admin/v1/garages/:garageId/reminder-settings` (any admin reads, super admins change, `FORBIDDEN` otherwise; a deleted or unknown garage is 404; audit `admin.reminder_settings.update` with the garage). The garage's `GET` / `PATCH /v1/reminder-settings` are removed (404).
+- **Admin web:** a **Reminders** card on the garage's page: each setting says what it does, with an example that follows the typed value ("an oil change due at 85,000 km is reminded once the car reaches about 84,500 km"; a due date and the day the reminder starts), that km or date comes first, what the monthly email is and who gets it; and a box with the rules every garage shares, read from Settings (email or WhatsApp list, daytime hours, follow-ups, monthly cap, opt-out, default daily km). Read only for other admins.
+- **Garage web:** the Reminder settings page and menu item are removed; `/settings/reminders` sends to Reminders.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/admin/garages/admin-reminder-settings.controller.ts`, `.service.ts` (new), `admin/admin.module.ts` | The admin API |
+| `apps/api/src/reminders/reminders.controller.ts`, `reminders.module.ts`, `reminder-settings.service.ts` (deleted) | Garage endpoints removed |
+| `apps/api/test/admin-tools.spec.ts`, `reminder-api.spec.ts`, `tenancy.spec.ts` | Admin read/change/refuse/404/audit; the garage routes answer 404; tenancy cases removed with the routes |
+| `apps/admin/features/garages/reminder-settings-card.tsx` (new), `garage-detail.tsx`, `messages/*.json` | The card and its 24 texts in both languages |
+| `apps/garage-web/features/reminders/reminder-settings.tsx` (deleted), `app/[locale]/(app)/settings/reminders/page.tsx` (redirect), `components/app-shell.tsx`, `messages/*.json` | Page, menu item and texts removed |
+| `packages/contracts/src/reminders.ts` | Comment: now the admin's endpoint |
+
+**Doc changes:** flow.md 1 (matrix row), 9.2, 9.5; database.md 4.2.
+
+**Verified:** the whole API suite: 32 suites, 362 tests (one fewer: two garage-route tenancy cases went with the routes, one admin test was added); typecheck and lint for the whole repo; every text the card uses exists in English and Arabic.
+
+**Commit:** _(pending)_ "Step 7.4: reminder settings per garage move to the admin"
 
 ---

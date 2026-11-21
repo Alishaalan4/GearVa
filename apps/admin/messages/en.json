@@ -602,5 +602,31 @@
     "closedBy": "{count, plural, =0 {closed by nobody yet} one {closed by # person} other {closed by # people}}",
     "emails": "emails: {sent} sent, {queued} waiting, {failed} failed",
     "noEmail": "no email"
+  },
+  "reminderAdmin": {
+    "title": "Reminders",
+    "intro": "How this garage's customers are reminded about their next service. Gearva sets these for the garage; the garage app does not show them.",
+    "leadKm": "Remind this many km before the service is due",
+    "leadKmHelp": "Gearva estimates each car's km from its past visits. When the estimate gets this close to the km the service is due at, the reminder is sent. From 0 to 5,000; new garages start at 500.",
+    "leadKmInvalid": "A whole number from 0 to 5,000.",
+    "leadKmExample": "Example: an oil change due at {due} km is reminded once the car reaches about {from} km.",
+    "leadDays": "Remind this many days before the due date",
+    "leadDaysHelp": "For services with a due date (and warranty ends and recommended services, which have only a date). From 0 to 60; new garages start at 7.",
+    "leadDaysInvalid": "A whole number from 0 to 60.",
+    "leadDaysExample": "Example: a service due on {due} is reminded from {from}.",
+    "firstOfBoth": "When a service has both a km and a date, whichever comes first sends the reminder.",
+    "monthly": "Monthly reminder email",
+    "monthlyHelp": "Once a month, a general \"time to check your car\" email to every customer of this garage who has an email and did not turn reminders off, unless they already got a reminder that month. It never goes on the WhatsApp list. Off by default, so customers don't feel spammed.",
+    "save": "Save",
+    "saved": "Saved. The next hourly reminder check uses the new values.",
+    "superOnly": "Only a super admin can change these.",
+    "sharedTitle": "The same for every garage (Settings)",
+    "ruleChannel": "A reminder is emailed when the customer has an email. Otherwise it appears in the garage's Reminders page for staff to send on WhatsApp.",
+    "ruleDaytime": "Sent only between {start} and {end}, garage time, never at night.",
+    "ruleFollowUps": "{count, plural, =0 {A service reminder is sent once; no follow-ups.} one {If the car is not serviced, the reminder is sent # more time, {days} days later.} other {If the car is not serviced, the reminder is sent up to # more times, every {days} days.}}",
+    "ruleCap": "At most {cap} automatic reminder emails a month for this garage; above that, they go to the WhatsApp list.",
+    "ruleOptOut": "A customer who turned reminders off gets none.",
+    "ruleEstimate": "A car with no history is estimated at {km} km a day.",
+    "sharedWhere": "Change these in Settings (super admin)."
   }
 }

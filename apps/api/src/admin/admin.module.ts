@@ -14,6 +14,8 @@ import { AdminAuditService } from './audit/admin-audit.service';
 import { AdminBranchesController } from './garages/admin-branches.controller';
 import { AdminBranchesService } from './garages/admin-branches.service';
 import { AdminGaragesController } from './garages/admin-garages.controller';
+import { AdminReminderSettingsController } from './garages/admin-reminder-settings.controller';
+import { AdminReminderSettingsService } from './garages/admin-reminder-settings.service';
 import { AdminGaragesService } from './garages/admin-garages.service';
 import { AdminSubscriptionsService } from './garages/admin-subscriptions.service';
 import { AdminMonitoringController } from './monitoring/admin-monitoring.controller';
@@ -33,6 +35,7 @@ import {
     AdminAuthController,
     AdminGaragesController,
     AdminBranchesController,
+    AdminReminderSettingsController,
     AdminSettingsController,
     AdminServiceTypesController,
     AdminMonitoringController,
@@ -46,6 +49,7 @@ import {
     AdminGuard,
     AdminGaragesService,
     AdminBranchesService,
+    AdminReminderSettingsService,
     AdminSubscriptionsService,
     AdminServiceTypesService,
     AdminMonitoringService,

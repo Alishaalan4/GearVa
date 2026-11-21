@@ -260,7 +260,10 @@ export interface NotificationLogItem {
   to: { kind: 'customer' | 'staff'; id: string; name: string } | null;
 }
 
-/** GET / PATCH /v1/reminder-settings (owner): database.md 4.2. */
+/**
+ * GET / PATCH /admin/v1/garages/:garageId/reminder-settings (database.md 4.2): set by
+ * Gearva since step 7.4; any admin reads, super admins change.
+ */
 export interface ReminderSettings {
   reminderLeadKm: number;
   reminderLeadDays: number;

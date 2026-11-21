@@ -172,6 +172,47 @@ describe('Super admin tools (step 5.10)', () => {
     await su().patch(`${url}/${created.body.id}`, { isActive: false }).expect(200);
   });
 
+  it("a garage's reminder settings: any admin reads, super admins change (step 7.4)", async () => {
+    const url = `/admin/v1/garages/${g.garageId}/reminder-settings`;
+    const read = await as(regular.cookie).get(url).expect(200);
+    expect(read.body).toEqual({
+      reminderLeadKm: 500,
+      reminderLeadDays: 7,
+      monthlyReminderEnabled: false,
+    });
+    const refused = await as(regular.cookie).patch(url, { reminderLeadKm: 800 }).expect(403);
+    expect(refused.body.code).toBe('FORBIDDEN');
+
+    const changed = await su()
+      .patch(url, { reminderLeadKm: 800, reminderLeadDays: 10, monthlyReminderEnabled: true })
+      .expect(200);
+    expect(changed.body).toEqual({
+      reminderLeadKm: 800,
+      reminderLeadDays: 10,
+      monthlyReminderEnabled: true,
+    });
+    const row = await platform.garageSettings.findUniqueOrThrow({
+      where: { garageId: g.garageId },
+    });
+    expect(row).toMatchObject({ reminderLeadKm: 800, reminderLeadDays: 10 });
+    // Another garage is untouched, and the audit row names this one.
+    const otherRow = await platform.garageSettings.findUniqueOrThrow({
+      where: { garageId: other.garageId },
+    });
+    expect(otherRow.reminderLeadKm).toBe(500);
+    expect(
+      await platform.auditLog.count({
+        where: { action: 'admin.reminder_settings.update', garageId: g.garageId },
+      }),
+    ).toBe(1);
+
+    await su().patch(url, { reminderLeadKm: -1 }).expect(400);
+    await su().patch(url, { reminderLeadDays: 61 }).expect(400);
+    await su().get(`/admin/v1/garages/${randomUUID()}/reminder-settings`).expect(404);
+    // The garage app no longer has them.
+    await as(staff).get('/v1/reminder-settings').expect(404);
+  });
+
   describe('messages to garages', () => {
     it('sends a banner and an email to the chosen garage only', async () => {
       const sent = await su()

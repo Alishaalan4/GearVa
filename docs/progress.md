@@ -55,7 +55,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | ✅ Done | 2026-11-21 |
 | 7 | 7.1 Email to the admin for each new garage application | ✅ Pushed (8e85700); the live check by the user pending | 2026-11-21 |
-| 7 | 7.1b Fix: slow transactions failed (`Finish visit` 500 under load, the flaky CI test) | Written, awaiting commit | |
+| 7 | 7.1b Fix: slow transactions failed (`Finish visit` 500 under load, the flaky CI test) | ✅ Done | 2026-11-21 |
+| 7 | 7.1c Fix: API tests ran out of memory on the buyer's CI (private repository, small machine) | Written, awaiting commit | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2421,6 +2422,21 @@ The test that failed now and then (CI on 5a675cc, and the buyer's repository on 
 
 **Verified:** the whole API suite with every file at once (the heavy mode that failed): 32 suites, 363 tests passed; database 31; typecheck passes.
 
-**Commit:** _(pending)_ "Fix: allow slower transactions (Finish visit failed under load)"
+**Commit:** 6121409 "Fix: allow slower transactions (Finish visit failed under load)"
+
+---
+
+## 7.1c Fix: API tests out of memory on the buyer's CI (2026-11-21)
+
+**Summary**
+CI on the buyer's repository failed on 8e85700 and 6121409 while the same code passed on the user's: every test file passed, then Node stopped with *"JavaScript heap out of memory"* (exit 134). A **private** repository gets GitHub's smaller free machine (2 processors, 7 GB); with 2 processors Jest runs every file in **one** process, whose memory grows past Node's ~2 GB limit. The user's repository is **public** and gets a larger machine with several processes. The API's Jest settings now fix `maxWorkers: 3` (always separate processes) and `workerIdleMemoryLimit: 1GB` (a process is restarted after a file once it uses more), so memory never builds up in one place. This also ends the local `npm test` timeouts (too many processes at once): `--maxWorkers=3` is no longer needed.
+
+**Files changed:** `apps/api/package.json` (Jest settings).
+
+**Doc changes:** none.
+
+**Verified:** plain `npm test -w @gearva/api` here: 32 suites, 363 tests, 74 s.
+
+**Commit:** _(pending)_ "Fix: API tests use 3 processes and restart them past 1 GB (CI out of memory)"
 
 ---

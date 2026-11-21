@@ -60,6 +60,8 @@
       "<rootDir>/test/setup.ts"
     ],
     "testTimeout": 30000,
+    "maxWorkers": 3,
+    "workerIdleMemoryLimit": "1GB",
     "transform": {
       "^.+\\.ts$": [
         "ts-jest",

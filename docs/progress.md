@@ -2357,6 +2357,8 @@ To check in the browser (super admin): Messages → write one to one garage with
 
 **Verified:** contract endpoints compared with the tested route list (25 = 25); live checks with curl; draft PDF pages looked at.
 
-**Commit:** _(pending)_
+**CI:** the first run of 5a675cc failed in `npm test` (docs-only commit; the same code passed on a910220); the re-run passed. A test that fails now and then under CI load; its name is unknown (the log needs a GitHub sign-in). If it happens again, copy the `FAIL` lines from the log before re-running.
+
+**Commit:** 5a675cc "Phase 6.6: developer brief 1.4, final PDF, Done-when check"
 
 ---

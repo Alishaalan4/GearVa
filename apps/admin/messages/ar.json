@@ -356,7 +356,8 @@
     "groups": {
       "subscription": "الاشتراك",
       "reminders": "التذكيرات",
-      "usage": "السيارات"
+      "usage": "السيارات",
+      "applications": "الطلبات الجديدة"
     },
     "fields": {
       "trialDays": "التجربة المجانية (أيام)",
@@ -367,7 +368,8 @@
       "reminderFollowUps": "تذكيرات المتابعة",
       "reminderFollowUpDays": "الأيام بين المتابعات",
       "reminderMaxPerGaragePerMonth": "رسائل التذكير لكل كراج في الشهر",
-      "defaultDailyKm": "الكيلومترات اليومية لسيارة بلا سجل"
+      "defaultDailyKm": "الكيلومترات اليومية لسيارة بلا سجل",
+      "applicationAlertEmail": "بريد الطلبات الجديدة"
     },
     "hints": {
       "trialDays": "للكراجات التي تُنشأ من الآن.",
@@ -378,7 +380,8 @@
       "reminderFollowUps": "بعد التذكير الأول، من 0 إلى 5.",
       "reminderFollowUpDays": "من 1 إلى 365.",
       "reminderMaxPerGaragePerMonth": "حدّ الاستخدام العادل؛ 0 يوقف الرسائل التلقائية.",
-      "defaultDailyKm": "عندما لم يحدّد الكراج قيمة."
+      "defaultDailyKm": "عندما لم يحدّد الكراج قيمة.",
+      "applicationAlertEmail": "كل كراج يقدّم طلباً عبر الموقع يُرسل إلى هذا البريد فوراً، مع زر لفتحه. اتركه فارغاً لعدم الإرسال."
     },
     "invalid": "قيمة غير صالحة.",
     "save": "حفظ الإعدادات",

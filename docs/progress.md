@@ -53,7 +53,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.7 admin web screens (Done-when check) | ✅ Done | 2026-11-10 |
 | Deploy | D.1 Code ready for hosting: Blueprint, Resend and R2 adapters, visitor IPs, headers, Render DB setup | ✅ Done | 2026-11-11 |
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
-| Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | ✅ Live on the buyer's Render; the user's final checks pending | 2026-11-21 |
+| Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | ✅ Done | 2026-11-21 |
+| 7 | 7.1 Email to the admin for each new garage application | Written, awaiting the user's local check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2375,10 +2376,35 @@ To check in the browser (super admin): Messages → write one to one garage with
 
 **Verified (from here):** Namecheap's DNS gives the new addresses; `https://api.gearva.online/health` answers ok; `gearva.online/en/login`, `/en/welcome`, `/ar/welcome` and `admin.gearva.online/en/login` load; `www` redirects to `gearva.online`.
 
-**Still to check by the user:** certificates issued on all domains; admin sign-in with the new password and 2FA; the buyer added as super admin; an invite email arrives (Resend); an invoice PDF opens (R2; the first one after a start takes up to a minute on the free plan); a new test owner login made and sent to the Flutter developer.
+**Checked by the user (2026-11-21, all fine):** certificates issued on all domains; admin sign-in with the new password and 2FA; the buyer added as super admin; an invite email arrives (Resend); an invoice PDF opens (R2; the first one after a start takes up to a minute on the free plan); a new test owner login made and sent to the Flutter developer.
 
 **Next:** upgrade `gearva-db` and `gearva-api` before about 2026-12-21 (free database), and set the plans in `render.yaml` too. Push to a real phone when the Flutter developer sends a token.
 
-**Commit:** _(pending)_
+**Commit:** 7ce65e9 "Handover: live on the buyer's Render; docs updated"
+
+---
+
+## 7.1 Email to the admin for each new garage application (2026-11-21)
+
+**Summary**
+User request after delivery: every application from the website reaches the admin's email. A new system setting `applicationAlertEmail` (key `applications.alertEmail`, super admin, empty = off) in admin Settings, card "New applications". After an application is stored, the API sends one email (template `application-alert`, English): garage, owner, email, phone, city, branches, message, and a button to the application in the admin (`APP_URL_ADMIN`, now validated in env.ts and set in render.yaml). Sent straight through the email adapter (an application has no garage, so no notification row); a failure is only logged and never changes the visitor's answer. The address itself is set in the live admin by the user, not in the repository.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/system-settings.ts` | The setting, its default and key; `readSystemSettings` handles a text setting |
+| `apps/api/src/applications/applications.service.ts`, `applications.module.ts` | Sends the email after storing |
+| `apps/api/src/notifications/templates/application-alert.ts` (new), `templates/index.ts`, `notifications.module.ts` | Template; the channels are exported |
+| `apps/api/src/config/env.ts`, `render.yaml` | `APP_URL_ADMIN` |
+| `apps/admin/features/settings/settings-page.tsx`, `messages/*.json` | The email field and its texts |
+| `apps/api/test/applications.spec.ts`, `admin-settings.spec.ts` | Sent with the right data and link; none without an address or for a honeypot; a failing email keeps the application; a bad address refused |
+
+**Doc changes:** flow.md 11.6; database.md 4.1 (`system_settings` keys); README 6 (Phase 7 plan) and 9 (`APP_URL_ADMIN`).
+
+**Problems hit:** the contracts build refused the new text setting in `readSystemSettings` (it assumed numbers); fixed with a cast, each value still checked by its own schema.
+
+**Verified:** API suite (3 workers) 32 suites, 363 tests; contracts 83; lint, typecheck and format pass. Locally the email is printed in the API window (console adapter).
+
+**Commit:** _(pending)_ "Step 7.1: email the admin for each new garage application"
 
 ---

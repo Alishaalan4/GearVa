@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { Locale } from '../notification-channel';
 import { announcement } from './announcement';
+import { applicationAlert } from './application-alert';
 import { ownerInvite } from './owner-invite';
 import { passwordReset } from './password-reset';
 import { monthlyReminder, recommendedNext, serviceReminder, warrantyEnd } from './reminders';
@@ -27,6 +28,7 @@ const EMAIL_TEMPLATES = {
   'recommended-next': recommendedNext,
   'monthly-reminder': monthlyReminder,
   announcement,
+  'application-alert': applicationAlert,
 };
 
 export type EmailTemplateName = keyof typeof EMAIL_TEMPLATES;

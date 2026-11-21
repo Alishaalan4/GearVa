@@ -52,6 +52,8 @@ services:
         generateValue: true
       - key: APP_URL_GARAGE
         value: https://gearva.online
+      - key: APP_URL_ADMIN # the link in the new-application email (step 7.1)
+        value: https://admin.gearva.online
       - key: EMAIL_ADAPTER
         value: resend
       - key: EMAIL_FROM

@@ -78,6 +78,9 @@ describe('System settings and default service types', () => {
     it('refuses bad values, also a window that ends before the stored start', async () => {
       await as(superAdmin).patch('/admin/v1/settings', { trialDays: 0 }).expect(400);
       await as(superAdmin).patch('/admin/v1/settings', { yearPriceCents: 12.5 }).expect(400);
+      await as(superAdmin)
+        .patch('/admin/v1/settings', { applicationAlertEmail: 'not an email' })
+        .expect(400);
       // Only the end is sent; with the stored start (9) it would end before it starts.
       await as(superAdmin).patch('/admin/v1/settings', { reminderDaytimeEndHour: 8 }).expect(400);
       expect(

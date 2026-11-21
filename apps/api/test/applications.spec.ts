@@ -5,6 +5,11 @@ import { SYSTEM_SETTING_DEFAULTS, type SystemSettings } from '@gearva/contracts'
 import type { PrismaClient } from '@gearva/database';
 import request from 'supertest';
 import { PlatformDb } from '../src/common/db/platform-db';
+import {
+  NOTIFICATION_CHANNELS,
+  type NotificationChannel,
+} from '../src/notifications/notification-channel';
+import { renderEmail } from '../src/notifications/templates';
 import { SystemSettingsService } from '../src/system-settings/system-settings.service';
 import { signInAsNewAdmin } from './helpers/admin';
 import { createTestApp } from './helpers/app';
@@ -119,6 +124,55 @@ describe('Applications', () => {
     expect(
       await platform.garageApplication.count({ where: { email: body.email.toLowerCase() } }),
     ).toBe(0);
+  });
+
+  it('emails each new application to the address in the settings (step 7.1)', async () => {
+    const email = app
+      .get<NotificationChannel[]>(NOTIFICATION_CHANNELS)
+      .find((c) => c.channel === 'EMAIL');
+    if (!email) throw new Error('no email channel');
+    const send = jest.spyOn(email, 'send');
+    try {
+      // No address set: no email.
+      await apply();
+      expect(send).not.toHaveBeenCalled();
+
+      settings.applicationAlertEmail = 'alerts@test.local';
+      const row = await apply({ message: 'Two branches in Jounieh.' });
+      expect(send).toHaveBeenCalledTimes(1);
+      const input = send.mock.calls[0]![0];
+      expect(input).toMatchObject({
+        recipient: 'alerts@test.local',
+        template: 'application-alert',
+        locale: 'en',
+        data: {
+          garageName: row.garageName,
+          ownerName: 'Applying Owner',
+          phone: row.phone,
+          branchCount: 2,
+          message: 'Two branches in Jounieh.',
+        },
+      });
+      expect(String(input.data.link)).toMatch(new RegExp(`/en/applications/${row.id}$`));
+      const rendered = renderEmail('application-alert', 'en', input.data);
+      expect(rendered.subject).toBe(`New garage application: ${row.garageName}`);
+      expect(rendered.text).toContain(`Phone: ${row.phone}`);
+
+      // A failing email never fails the visitor's request; the application is kept.
+      send.mockRejectedValueOnce(new Error('provider down'));
+      const kept = await apply();
+      expect(kept.status).toBe('NEW');
+      // A honeypot sends nothing.
+      send.mockClear();
+      await http()
+        .post('/v1/public/applications')
+        .send(application({ website: 'http://spam.example' }))
+        .expect(202);
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      settings.applicationAlertEmail = '';
+      send.mockRestore();
+    }
   });
 
   it('checks the form', async () => {

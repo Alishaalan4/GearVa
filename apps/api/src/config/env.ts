@@ -45,6 +45,8 @@ const envSchema = z
     PDF_ADAPTER: z.enum(['puppeteer', 'stub']).default('puppeteer'),
     // Base URL of garage-web: invite and password-reset links point there.
     APP_URL_GARAGE: z.url(),
+    // Base URL of the admin app: the link in the new-application email (step 7.1).
+    APP_URL_ADMIN: unsetIfEmpty(z.url()),
     // Signs the 15-minute access tokens (and the 5-minute 2FA challenge).
     JWT_ACCESS_SECRET: z.string().min(1),
     // Encrypts admin_users.totpSecretEnc with AES-256-GCM.

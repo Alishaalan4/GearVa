@@ -356,7 +356,8 @@
     "groups": {
       "subscription": "Subscription",
       "reminders": "Reminders",
-      "usage": "Cars"
+      "usage": "Cars",
+      "applications": "New applications"
     },
     "fields": {
       "trialDays": "Free trial (days)",
@@ -367,7 +368,8 @@
       "reminderFollowUps": "Follow-up reminders",
       "reminderFollowUpDays": "Days between follow-ups",
       "reminderMaxPerGaragePerMonth": "Reminder emails per garage per month",
-      "defaultDailyKm": "Daily km of a car with no history"
+      "defaultDailyKm": "Daily km of a car with no history",
+      "applicationAlertEmail": "Email for new applications"
     },
     "hints": {
       "trialDays": "For garages created from now on.",
@@ -378,7 +380,8 @@
       "reminderFollowUps": "After the first reminder, 0 to 5.",
       "reminderFollowUpDays": "1 to 365.",
       "reminderMaxPerGaragePerMonth": "Fair-use cap; 0 stops automatic emails.",
-      "defaultDailyKm": "When the garage set none."
+      "defaultDailyKm": "When the garage set none.",
+      "applicationAlertEmail": "Each garage that applies on the website is emailed here at once, with a button to open it. Leave empty for no email."
     },
     "invalid": "Not a valid value.",
     "save": "Save settings",

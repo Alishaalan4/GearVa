@@ -158,7 +158,7 @@ A garage asking to join from the public website. A platform table (only `gearva_
 | createdAt / updatedAt | timestamptz | |
 
 #### `system_settings`
-Key/value (`key` PK, `value` jsonb, `updatedById?` admin, `updatedAt`). `gearva_platform` reads and writes it (never deletes); `gearva_app` may read it, as it is global configuration like the default service types (step 5.1). Examples (until then, the reminder values are constants in `contracts`, flow.md 9): `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`.
+Key/value (`key` PK, `value` jsonb, `updatedById?` admin, `updatedAt`). `gearva_platform` reads and writes it (never deletes); `gearva_app` may read it, as it is global configuration like the default service types (step 5.1). Examples (until then, the reminder values are constants in `contracts`, flow.md 9): `reminder.daytimeStart`, `reminder.daytimeEnd`, `reminder.maxPerGaragePerMonth`, `invoice.defaultTemplate`, `subscription.defaultPriceCents`, `subscription.extraBranchPriceCents`, `trial.days`, `usage.defaultDailyKm`, `applications.alertEmail` (step 7.1: the address emailed for each new garage application; empty = none).
 
 ### 4.2 Tenant root and settings
 

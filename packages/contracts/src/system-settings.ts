@@ -29,6 +29,13 @@ const fields = {
   reminderMaxPerGaragePerMonth: z.number().int().min(0).max(1_000_000),
   /** km per day for a car with no history, when its garage set none (5.2) */
   defaultDailyKm: z.number().int().min(1).max(1000),
+  /** step 7.1: who gets an email for each new garage application; '' = nobody */
+  applicationAlertEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(254)
+    .refine((v) => v === '' || z.email().safeParse(v).success, 'Not an email address'),
 };
 
 const daytimeInOrder = (s: {
@@ -63,6 +70,7 @@ export const SYSTEM_SETTING_DEFAULTS: SystemSettings = {
   reminderFollowUpDays: REMINDER_FOLLOW_UP_DAYS,
   reminderMaxPerGaragePerMonth: REMINDER_MAX_PER_GARAGE_PER_MONTH,
   defaultDailyKm: DEFAULT_DAILY_KM,
+  applicationAlertEmail: '',
 };
 
 /** The `system_settings.key` of each setting (database.md 4.1). */
@@ -76,6 +84,7 @@ export const SYSTEM_SETTING_KEYS: Record<keyof SystemSettings, string> = {
   reminderFollowUpDays: 'reminder.followUpDays',
   reminderMaxPerGaragePerMonth: 'reminder.maxPerGaragePerMonth',
   defaultDailyKm: 'usage.defaultDailyKm',
+  applicationAlertEmail: 'applications.alertEmail',
 };
 
 /**
@@ -87,7 +96,8 @@ export function readSystemSettings(rows: { key: string; value: unknown }[]): Sys
   const settings = { ...SYSTEM_SETTING_DEFAULTS };
   for (const name of Object.keys(fields) as (keyof SystemSettings)[]) {
     const parsed = fields[name].safeParse(byKey.get(SYSTEM_SETTING_KEYS[name]));
-    if (parsed.success) settings[name] = parsed.data;
+    // Each field's own schema checked the value; the record type cannot follow `name`.
+    if (parsed.success) (settings as Record<string, unknown>)[name] = parsed.data;
   }
   return systemSettingsSchema.safeParse(settings).success ? settings : SYSTEM_SETTING_DEFAULTS;
 }

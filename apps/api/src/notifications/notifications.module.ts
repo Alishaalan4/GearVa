@@ -51,6 +51,6 @@ import {
     NotificationsService,
     NotificationLogService,
   ],
-  exports: [NotificationsService, PUSH_SENDER],
+  exports: [NotificationsService, PUSH_SENDER, NOTIFICATION_CHANNELS],
 })
 export class NotificationsModule {}

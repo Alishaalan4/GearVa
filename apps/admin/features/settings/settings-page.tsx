@@ -18,6 +18,8 @@ import { ServiceTypesCard } from './service-types-card';
 import { SETTINGS_QUERY_KEY, useSystemSettings } from './use-system-settings';
 
 const MONEY = ['yearPriceCents', 'extraBranchPriceCents'] as const;
+/** Typed as text, sent as it is (step 7.1). */
+const TEXT = ['applicationAlertEmail'] as const;
 const GROUPS: { title: string; fields: (keyof SystemSettings)[] }[] = [
   { title: 'subscription', fields: ['trialDays', 'yearPriceCents', 'extraBranchPriceCents'] },
   {
@@ -31,6 +33,7 @@ const GROUPS: { title: string; fields: (keyof SystemSettings)[] }[] = [
     ],
   },
   { title: 'usage', fields: ['defaultDailyKm'] },
+  { title: 'applications', fields: ['applicationAlertEmail'] },
 ];
 
 type Values = Record<keyof SystemSettings, string>;
@@ -38,7 +41,9 @@ type Values = Record<keyof SystemSettings, string>;
 function toValues(s: SystemSettings): Values {
   const v = {} as Values;
   for (const key of Object.keys(s) as (keyof SystemSettings)[]) {
-    v[key] = (MONEY as readonly string[]).includes(key) ? centsToDecimal(s[key]) : String(s[key]);
+    v[key] = (MONEY as readonly string[]).includes(key)
+      ? centsToDecimal(s[key] as number)
+      : String(s[key]);
   }
   return v;
 }
@@ -80,9 +85,13 @@ function SettingsForm({ settings, canEdit }: { settings: SystemSettings; canEdit
   const { errors } = form.formState;
 
   const submit = form.handleSubmit((v) => {
-    const body: Record<string, number | null> = {};
+    const body: Record<string, number | string | null> = {};
     for (const key of Object.keys(v) as (keyof SystemSettings)[]) {
       const text = v[key].trim();
+      if ((TEXT as readonly string[]).includes(key)) {
+        body[key] = text;
+        continue;
+      }
       body[key] = (MONEY as readonly string[]).includes(key)
         ? text === ''
           ? null
@@ -116,7 +125,13 @@ function SettingsForm({ settings, canEdit }: { settings: SystemSettings; canEdit
                     error={errors[key] && t('invalid')}
                   >
                     <Input
-                      inputMode={(MONEY as readonly string[]).includes(key) ? 'decimal' : 'numeric'}
+                      inputMode={
+                        (TEXT as readonly string[]).includes(key)
+                          ? 'email'
+                          : (MONEY as readonly string[]).includes(key)
+                            ? 'decimal'
+                            : 'numeric'
+                      }
                       dir="ltr"
                       aria-invalid={!!errors[key]}
                       {...form.register(key)}

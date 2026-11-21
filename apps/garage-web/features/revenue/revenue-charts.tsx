@@ -135,14 +135,14 @@ export function SeriesChart({ report }: { report: RevenueReport }) {
             style={{ top: 'calc(50% + 3px)' }}
           />
           <div
-            className="relative flex h-48 items-end gap-[2px] border-b border-line"
+            className="relative flex h-48 items-end gap-0.5 border-b border-line"
             onMouseLeave={() => setActive(null)}
           >
             {series.map((s, i) => (
               <button
                 key={s.key}
                 type="button"
-                className={`flex h-full min-w-0 flex-1 items-end justify-center gap-[2px] rounded-t-md pt-1.5 ${
+                className={`flex h-full min-w-0 flex-1 items-end justify-center gap-0.5 rounded-t-md pt-1.5 ${
                   active === i ? 'bg-soft' : ''
                 }`}
                 aria-label={`${label(s.key)}: ${t('invoiced')} ${money(s.invoicedCents)}, ${t('collected')} ${money(s.collectedCents)}`}
@@ -152,20 +152,20 @@ export function SeriesChart({ report }: { report: RevenueReport }) {
               >
                 <span className={`flex h-full w-full ${barWidth} items-end`}>
                   <span
-                    className="w-full rounded-t-[4px] bg-chart-1"
+                    className="w-full rounded-t-sm bg-chart-1"
                     style={{ height: `${(s.invoicedCents / max) * 100}%` }}
                   />
                 </span>
                 <span className={`flex h-full w-full ${barWidth} items-end`}>
                   <span
-                    className="w-full rounded-t-[4px] bg-chart-2"
+                    className="w-full rounded-t-sm bg-chart-2"
                     style={{ height: `${(s.collectedCents / max) * 100}%` }}
                   />
                 </span>
               </button>
             ))}
           </div>
-          <div className="mt-1.5 flex gap-[2px] text-[10px] text-muted" aria-hidden>
+          <div className="mt-1.5 flex gap-0.5 text-[10px] text-muted" aria-hidden>
             {series.map((s, i) => (
               <span
                 key={s.key}

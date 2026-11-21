@@ -60,8 +60,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.2 Invoice settings as a tab of the Invoices page | ✅ Done | 2026-11-21 |
 | 7 | 7.3 Reminders and the message log on one page | ✅ Done | 2026-11-21 |
 | 7 | 7.4 Reminder settings per garage move to the admin | ✅ Done | 2026-11-21 |
-| 7 | 7.5 Revenue page: income and debts together | Written, awaiting the user's local check | |
-| 7 | 7.6 Whish renamed to Visa card | Written, awaiting the user's local check | |
+| 7 | 7.5 Revenue page: income and debts together | Done | 3a233b7 |
+| 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2525,7 +2525,7 @@ User request: income and debts on one page, in the design of the prototype's Rev
 
 **Layout redo (same day, after the user's screenshot: not aligned or clean):** the toolbar controls are one height in one row (the date picker sits between its arrows; the year is shown, not typed); the page is two balanced rows of two sides (chart beside service types; debts beside payment methods and top customers) instead of one long left column; service bars sit on a full-width track with names and amounts aligned above them; the chart has guide lines with values, wider bars for a year and the readout and legend on top; the debts table has its own chevron column. flow.md 8.4 layout updated. Re-checked: typecheck, lint, format.
 
-**Commit:** _(pending)_ "Step 7.5: one Revenue page with income and debts"
+**Commit:** 3a233b7 "Step 7.5: one Revenue page with income and debts" (+ e13306c, Tailwind class names in the charts)
 
 ---
 
@@ -2551,6 +2551,6 @@ User request: "name everything related to Whish => Visa card". The payment metho
 
 **Verified:** Prisma client regenerated; test database rebuilt with the migration; API 32 suites, 362 tests; contracts 83; typecheck, lint, format for all workspaces.
 
-**Commit:** _(pending)_ "Step 7.6: Whish renamed to Visa card"
+**Commit:** 4f117f8 "Step 7.6: Whish renamed to Visa card"
 
 ---

@@ -75,7 +75,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <>
               {item('/income', t('nav.income'))}
               {item('/offers', t('nav.offers'))}
-              {item('/notifications', t('nav.notifications'))}
             </>
           )}
           {me.role === 'OWNER' && (

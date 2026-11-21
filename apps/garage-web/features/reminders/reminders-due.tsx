@@ -30,11 +30,8 @@ export function RemindersDue() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-extrabold">{t('title')}</h1>
-        <p className="text-sm text-muted">{t('intro')}</p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted">{t('intro')}</p>
 
       <ApiErrorAlert error={due.error} />
       {due.isPending && <p className="text-sm text-muted">{tCommon('loading')}</p>}

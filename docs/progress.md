@@ -57,7 +57,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.1 Email to the admin for each new garage application | ✅ Pushed (8e85700); the live check by the user pending | 2026-11-21 |
 | 7 | 7.1b Fix: slow transactions failed (`Finish visit` 500 under load, the flaky CI test) | ✅ Done | 2026-11-21 |
 | 7 | 7.1c Fix: API tests ran out of memory on the buyer's CI (private repository, small machine) | ✅ Done (CI green on both repositories) | 2026-11-21 |
-| 7 | 7.2 Invoice settings as a tab of the Invoices page | Written, awaiting the user's local check | |
+| 7 | 7.2 Invoice settings as a tab of the Invoices page | ✅ Done | 2026-11-21 |
+| 7 | 7.3 Reminders and the message log on one page | Written, awaiting the user's local check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2453,6 +2454,21 @@ The Invoices page has two tabs for the owner: **Invoices** (the list, as before)
 
 **Verified:** typecheck and lint of garage-web pass; formatting checked.
 
-**Commit:** _(pending)_ "Step 7.2: invoice settings as a tab of the Invoices page"
+**Commit:** a7e2b10 "Step 7.2: invoice settings as a tab of the Invoices page"
+
+---
+
+## 7.3 Reminders and the message log on one page (2026-11-21)
+
+**Summary**
+The garage app's **Reminders** page has two tabs: **To send** (the WhatsApp list, as before) and **Message log** (the former Notifications page). Receptionists may not see the log (flow.md 1), so they get the list without tabs. The tab is kept in the address (`?tab=log`); `/notifications` redirects there. The menu item "Notification log" is removed. The tab bar from 7.2 became a shared component (`components/page-tabs.tsx`), used by both pages. No API change.
+
+**Files changed:** `apps/garage-web/components/page-tabs.tsx` (new), `features/reminders/reminders-page.tsx` (new), `reminders-due.tsx` and `features/notifications/notification-log.tsx` (title and width now from the page), `features/invoices/invoices-page.tsx` (uses the shared tabs), `app/[locale]/(app)/reminders/page.tsx`, `notifications/page.tsx` (redirect), `components/app-shell.tsx`, `messages/*.json`.
+
+**Doc changes:** flow.md 9.5.
+
+**Verified:** typecheck and lint of garage-web pass; formatting checked.
+
+**Commit:** _(pending)_ "Step 7.3: reminders and the message log on one page"
 
 ---

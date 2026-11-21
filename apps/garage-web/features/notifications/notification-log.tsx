@@ -50,9 +50,7 @@ export function NotificationLog() {
     format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
-
+    <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:max-w-md">
         <Select
           aria-label={t('status')}

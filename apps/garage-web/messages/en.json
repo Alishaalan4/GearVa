@@ -64,7 +64,6 @@
     "debts": "Debts",
     "income": "Income",
     "reminders": "Reminders",
-    "notifications": "Messages log",
     "reminderSettings": "Reminder settings",
     "offers": "Offers"
   },
@@ -533,7 +532,12 @@
     "dueAtOrOn": "due at {km} or on {date}",
     "estimated": "The car is now at about {km}.",
     "sendWhatsapp": "Send on WhatsApp",
-    "markSent": "Mark as sent"
+    "markSent": "Mark as sent",
+    "pageTitle": "Reminders",
+    "tabs": {
+      "due": "To send",
+      "log": "Message log"
+    }
   },
   "notificationLog": {
     "title": "Messages log",

@@ -1,10 +1,11 @@
-import { RolesOnly } from '@/components/roles-only';
-import { NotificationLog } from '@/features/notifications/notification-log';
+import { redirect } from '@/i18n/navigation';
 
-export default function NotificationsPage() {
-  return (
-    <RolesOnly roles={['OWNER', 'MANAGER']}>
-      <NotificationLog />
-    </RolesOnly>
-  );
+/** Step 7.3: the message log is a tab of the Reminders page; old links land there. */
+export default async function NotificationsRoute({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect({ href: '/reminders?tab=log', locale });
 }

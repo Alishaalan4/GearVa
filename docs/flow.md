@@ -438,6 +438,9 @@ flowchart LR
 - Owner channel order for now: `EMAIL` (if the garage has it), else the WhatsApp list. `IN_APP` and `PUSH` come with the owner app in Phase 6, and an automatic `WHATSAPP` adapter later, without touching the callers.
 
 ### 9.5 WhatsApp list
+
+**In garage-web (step 7.3):** one **Reminders** page with two tabs: **To send** (this list; owner, managers, receptionists) and **Message log** (section 9.4; owner and managers, so receptionists see no tabs). `/reminders?tab=log` opens the log, and the old `/notifications` address sends there.
+
 A "Reminders due" screen for OWNER, MANAGER and RECEPTIONIST lists the due reminders (9.1) that this round has not reached by email: customer, car, plate, service, due km or date, and the number of earlier reminders.
 - **Send on WhatsApp** opens `https://wa.me/<phone>?text=<message>` with the reminder text already written in the customer's language. Staff press send in WhatsApp.
 - **Mark as sent** then records a `WHATSAPP` notification with status `SENT`, `dedupeKey = REMINDER:{reminderId}:{round}:WHATSAPP` and the phone as recipient, and counts the round (9.1). The audit row records who sent it. Gearva cannot see whether the message was really sent; it trusts the button.

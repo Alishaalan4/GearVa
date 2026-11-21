@@ -64,7 +64,6 @@
     "debts": "الديون",
     "income": "المداخيل",
     "reminders": "التذكيرات",
-    "notifications": "سجل الرسائل",
     "reminderSettings": "إعدادات التذكير",
     "offers": "العروض"
   },
@@ -533,7 +532,12 @@
     "dueAtOrOn": "مستحق عند {km} أو في {date}",
     "estimated": "السيارة الآن عند حوالي {km}.",
     "sendWhatsapp": "إرسال عبر واتساب",
-    "markSent": "تم الإرسال"
+    "markSent": "تم الإرسال",
+    "pageTitle": "التذكيرات",
+    "tabs": {
+      "due": "للإرسال",
+      "log": "سجل الرسائل"
+    }
   },
   "notificationLog": {
     "title": "سجل الرسائل",

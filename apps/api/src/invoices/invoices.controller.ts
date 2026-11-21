@@ -17,16 +17,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import {
   type DebtItem,
-  type IncomeSummary,
   type InvoiceDetail,
   type InvoiceListItem,
   type InvoiceSettings,
+  type RevenueReport,
   LOGO_MAX_BYTES,
   type Paginated,
   cancelInvoiceSchema,
   editInvoiceSchema,
   finishVisitSchema,
-  incomeQuerySchema,
+  revenueQuerySchema,
   invoiceListQuerySchema,
   recordPaymentSchema,
   updateInvoiceSettingsSchema,
@@ -47,7 +47,7 @@ class EditInvoiceDto extends createZodDto(editInvoiceSchema) {}
 class CancelInvoiceDto extends createZodDto(cancelInvoiceSchema) {}
 class ReissueInvoiceDto extends createZodDto(finishVisitSchema) {}
 class InvoiceListQueryDto extends createZodDto(invoiceListQuerySchema) {}
-class IncomeQueryDto extends createZodDto(incomeQuerySchema) {}
+class RevenueQueryDto extends createZodDto(revenueQuerySchema) {}
 class UpdateInvoiceSettingsDto extends createZodDto(updateInvoiceSettingsSchema) {}
 
 /** Invoices come from "Finish visit" (flow.md 7.1); there is no route to create one. */
@@ -147,15 +147,16 @@ export class DebtsController {
   }
 }
 
-/** flow.md 8.3 */
-@Controller('v1/income')
-export class IncomeController {
+/** flow.md 8.3, step 7.5: the Revenue page (it replaced GET /v1/income). */
+@Controller('v1/revenue')
+export class RevenueController {
   constructor(private readonly reports: InvoiceReportsService) {}
 
   @Get()
   @Roles('OWNER', 'MANAGER')
-  income(@Query() query: IncomeQueryDto): Promise<IncomeSummary> {
-    return this.reports.income(query);
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  revenue(@Query() query: RevenueQueryDto): Promise<RevenueReport> {
+    return this.reports.revenue(query);
   }
 }
 

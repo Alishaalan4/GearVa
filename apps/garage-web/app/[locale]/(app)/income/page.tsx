@@ -1,10 +1,7 @@
-import { RolesOnly } from '@/components/roles-only';
-import { IncomeSummaryPage } from '@/features/invoices/income-summary';
+import { redirect } from '@/i18n/navigation';
 
-export default function IncomePage() {
-  return (
-    <RolesOnly roles={['OWNER', 'MANAGER']}>
-      <IncomeSummaryPage />
-    </RolesOnly>
-  );
+/** Step 7.5: income and debts are one Revenue page; old links land there. */
+export default async function IncomeRoute({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  redirect({ href: '/revenue', locale });
 }

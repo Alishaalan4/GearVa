@@ -68,14 +68,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <>
               {item('/reminders', t('nav.reminders'))}
               {item('/invoices', t('nav.invoices'))}
-              {item('/debts', t('nav.debts'))}
+              {item('/revenue', t('nav.revenue'))}
             </>
           )}
           {(me.role === 'OWNER' || me.role === 'MANAGER') && (
-            <>
-              {item('/income', t('nav.income'))}
-              {item('/offers', t('nav.offers'))}
-            </>
+            <>{item('/offers', t('nav.offers'))}</>
           )}
           {me.role === 'OWNER' && (
             <>

@@ -16,6 +16,9 @@
   --nb: #eceae5;
   --nt: #3a4442;
   --inp: #fff;
+  /* Revenue chart (step 7.5), checked with the dataviz validator: invoiced, collected */
+  --chart1: #e8560c;
+  --chart2: #0b72c4;
   color-scheme: light;
 }
 
@@ -35,6 +38,8 @@
     --nb: #24302e;
     --nt: #c9d1cf;
     --inp: #101a19;
+    --chart1: #f2600f;
+    --chart2: #2f8fe0;
     color-scheme: dark;
   }
 }
@@ -54,6 +59,8 @@
   --nb: #24302e;
   --nt: #c9d1cf;
   --inp: #101a19;
+  --chart1: #f2600f;
+  --chart2: #2f8fe0;
   color-scheme: dark;
 }
 
@@ -66,6 +73,8 @@
   --color-muted: var(--mut);
   --color-line: var(--line);
   --color-brand: var(--o);
+  --color-chart-1: var(--chart1);
+  --color-chart-2: var(--chart2);
   --color-brand-ink: var(--ot);
   --color-on-brand: #101a19;
   --color-tint: var(--tint);

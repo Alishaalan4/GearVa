@@ -6,7 +6,7 @@ import { InvoiceReportsService } from './invoice-reports.service';
 import { InvoiceSettingsService } from './invoice-settings.service';
 import {
   DebtsController,
-  IncomeController,
+  RevenueController,
   InvoiceSettingsController,
   InvoicesController,
 } from './invoices.controller';
@@ -22,7 +22,7 @@ import {
 
 @Module({
   imports: [FilesModule],
-  controllers: [InvoicesController, DebtsController, IncomeController, InvoiceSettingsController],
+  controllers: [InvoicesController, DebtsController, RevenueController, InvoiceSettingsController],
   providers: [
     InvoicesService,
     InvoiceChangesService,

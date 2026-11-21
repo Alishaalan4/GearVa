@@ -470,12 +470,16 @@ describe('Tenant isolation (test:tenancy)', () => {
       ]);
     },
 
-    'GET /v1/income': async () => {
+    'GET /v1/revenue': async () => {
       // Each garage has one invoice of 2500; B's never counts for A, even when asked for.
-      const res = await asA.get(`/v1/income?branchId=${b.branchId}`).expect(200);
-      expect(res.body.month.invoicedCents).toBe(0);
-      const own = await asA.get('/v1/income').expect(200);
-      expect(own.body.month.invoicedCents).toBe(2500);
+      const res = await asA.get(`/v1/revenue?branchId=${b.branchId}`).expect(200);
+      expect(res.body.invoicedCents).toBe(0);
+      expect(res.body.topCustomers).toEqual([]);
+      const own = await asA.get('/v1/revenue').expect(200);
+      expect(own.body.invoicedCents).toBe(2500);
+      expect(own.body.topCustomers.map((c: { customerId: string }) => c.customerId)).toEqual([
+        a.customerId,
+      ]);
     },
 
     'GET /v1/invoice-settings': async () => {

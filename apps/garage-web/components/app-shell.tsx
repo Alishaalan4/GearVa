@@ -82,7 +82,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <>
               {item('/settings/branches', t('nav.branches'))}
               {item('/settings/staff', t('nav.staff'))}
-              {item('/settings/invoices', t('nav.invoiceSettings'))}
               {item('/settings/reminders', t('nav.reminderSettings'))}
             </>
           )}

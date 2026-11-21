@@ -63,7 +63,6 @@
     "invoices": "الفواتير",
     "debts": "الديون",
     "income": "المداخيل",
-    "invoiceSettings": "إعدادات الفواتير",
     "reminders": "التذكيرات",
     "notifications": "سجل الرسائل",
     "reminderSettings": "إعدادات التذكير",
@@ -468,6 +467,10 @@
       "PAID": "مدفوعة",
       "CANCELLED": "ملغاة",
       "REFUND": "يجب ردّ مبلغ"
+    },
+    "tabs": {
+      "list": "الفواتير",
+      "settings": "الإعدادات"
     }
   },
   "debts": {

@@ -21,7 +21,10 @@ function queryOf(filter: Filter): string {
   return `&status=${filter satisfies InvoiceStatus}`;
 }
 
-/** All invoices, newest first; cancelled ones stay listed with their number (flow.md 7.5). */
+/**
+ * All invoices, newest first; cancelled ones stay listed with their number (flow.md 7.5).
+ * Shown inside the Invoices page (invoices-page.tsx), which has the title and tabs.
+ */
 export function InvoiceList({ initialFilter }: { initialFilter?: string }) {
   const t = useTranslations('invoiceList');
   const tCommon = useTranslations('common');
@@ -40,8 +43,7 @@ export function InvoiceList({ initialFilter }: { initialFilter?: string }) {
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-2xl font-extrabold">{t('title')}</h1>
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('filter')}>
         {FILTERS.map((f) => (
           <button

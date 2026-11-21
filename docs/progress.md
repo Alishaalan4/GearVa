@@ -56,7 +56,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | ✅ Done | 2026-11-21 |
 | 7 | 7.1 Email to the admin for each new garage application | ✅ Pushed (8e85700); the live check by the user pending | 2026-11-21 |
 | 7 | 7.1b Fix: slow transactions failed (`Finish visit` 500 under load, the flaky CI test) | ✅ Done | 2026-11-21 |
-| 7 | 7.1c Fix: API tests ran out of memory on the buyer's CI (private repository, small machine) | Written, awaiting commit | |
+| 7 | 7.1c Fix: API tests ran out of memory on the buyer's CI (private repository, small machine) | ✅ Done (CI green on both repositories) | 2026-11-21 |
+| 7 | 7.2 Invoice settings as a tab of the Invoices page | Written, awaiting the user's local check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2437,6 +2438,21 @@ CI on the buyer's repository failed on 8e85700 and 6121409 while the same code p
 
 **Verified:** plain `npm test -w @gearva/api` here: 32 suites, 363 tests, 74 s.
 
-**Commit:** _(pending)_ "Fix: API tests use 3 processes and restart them past 1 GB (CI out of memory)"
+**Commit:** 5d07fb2 "Fix: API tests use 3 processes and restart them past 1 GB (CI out of memory)"
+
+---
+
+## 7.2 Invoice settings inside the Invoices page (2026-11-21)
+
+**Summary**
+The Invoices page has two tabs for the owner: **Invoices** (the list, as before) and **Settings** (logo, brand colour, number format, terms, VAT: the former Settings, Invoice settings page). Managers and receptionists see the list only, without tabs. The tab is kept in the address (`?tab=settings`), and `/settings/invoices` redirects there, so old links work. The menu item "Invoice settings" is removed. No API change.
+
+**Files changed:** `apps/garage-web/features/invoices/invoices-page.tsx` (new), `invoice-list.tsx` and `invoice-settings.tsx` (title and width now from the page), `app/[locale]/(app)/invoices/page.tsx`, `settings/invoices/page.tsx` (redirect), `components/app-shell.tsx`, `messages/*.json`.
+
+**Doc changes:** flow.md 7 (where the invoice settings are).
+
+**Verified:** typecheck and lint of garage-web pass; formatting checked.
+
+**Commit:** _(pending)_ "Step 7.2: invoice settings as a tab of the Invoices page"
 
 ---

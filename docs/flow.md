@@ -326,6 +326,8 @@ Example: a car on KM, oil change at 5,500 km, default 5,000 km: `nextDueKm = 10,
 ### 7.2 PDF
 A BullMQ job renders an HTML template with Puppeteer, in the customer's locale (Arabic RTL or English), using the garage's logo and brand color. The PDF is stored in `files` (`INVOICE_PDF`) and linked as `invoices.pdfFileId`. Contents follow the product spec: garage header, number, date and time, customer, car, line items (service, brand and grade, quantity, unit price, total), labor/parts split if entered, discount and offer, total, paid, remaining, payment method, next service km and date, warranty, terms, optional QR code, footer "Powered by Gearva". The PDF is regenerated when anything it prints changes: an edit, a payment or a cancel. Renders can overlap, so a job saves its file only if the invoice has not changed since it read it; the change that made it old queued a newer render. It is downloaded through `GET /v1/invoices/:id/pdf`, after the role and branch checks; if the job has not finished, the API answers `409 INVOICE_PDF_NOT_READY` and queues it again. The optional QR code and automatic email wait for the features they need (Phase 4 for email). The invoice page in garage-web shows each line's service name in the staff member's language (the API gives both names); the PDF keeps the customer's language, and a custom name shows as typed.
 
+**Invoice settings** (owner; logo, brand colour, number format, terms, VAT) are the **Settings** tab of the Invoices page since step 7.2 (`/invoices?tab=settings`; the old address `/settings/invoices` sends there). Managers and receptionists see only the list.
+
 ### 7.3 Statuses
 ```mermaid
 stateDiagram-v2

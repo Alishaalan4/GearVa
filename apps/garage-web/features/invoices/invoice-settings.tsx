@@ -36,7 +36,7 @@ export function InvoiceSettingsPage() {
   if (settings.isPending) return <p className="text-sm text-muted">{tCommon('loading')}</p>;
   if (settings.error) return <ApiErrorAlert error={settings.error} />;
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <LogoCard hasLogo={settings.data.hasLogo} />
       <SettingsForm settings={settings.data} />
     </div>

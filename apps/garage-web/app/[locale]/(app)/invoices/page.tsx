@@ -1,16 +1,19 @@
 import { RolesOnly } from '@/components/roles-only';
-import { InvoiceList } from '@/features/invoices/invoice-list';
+import { InvoicesPage } from '@/features/invoices/invoices-page';
 
-/** ?filter=REFUND opens the cancelled invoices that still hold money. */
-export default async function InvoicesPage({
+/**
+ * ?filter=REFUND opens the cancelled invoices that still hold money; ?tab=settings opens the
+ * invoice settings (owner, step 7.2).
+ */
+export default async function InvoicesRoute({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; tab?: string }>;
 }) {
-  const { filter } = await searchParams;
+  const { filter, tab } = await searchParams;
   return (
     <RolesOnly roles={['OWNER', 'MANAGER', 'RECEPTIONIST']}>
-      <InvoiceList initialFilter={filter} />
+      <InvoicesPage initialFilter={filter} initialTab={tab} />
     </RolesOnly>
   );
 }

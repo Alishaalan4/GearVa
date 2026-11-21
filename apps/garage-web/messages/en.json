@@ -63,7 +63,6 @@
     "invoices": "Invoices",
     "debts": "Debts",
     "income": "Income",
-    "invoiceSettings": "Invoice settings",
     "reminders": "Reminders",
     "notifications": "Messages log",
     "reminderSettings": "Reminder settings",
@@ -468,6 +467,10 @@
       "PAID": "Paid",
       "CANCELLED": "Cancelled",
       "REFUND": "Refund needed"
+    },
+    "tabs": {
+      "list": "Invoices",
+      "settings": "Settings"
     }
   },
   "debts": {

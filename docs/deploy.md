@@ -178,9 +178,11 @@ Free services sleep after 15 minutes without visitors. The API took **about 90 s
 
 The running setup is in the developer's accounts and serves as the test environment. At the end of the project it moves to the buyer's accounts:
 - **Namecheap:** already the buyer's. **Resend and Cloudflare:** the buyer is a member and pays with his card, so the keys keep working.
-- **Render:** a Hobby workspace has only one member, so the buyer creates **his own Render account** and Part C to E run again there (about 45 minutes). First delete the old services, so the names (`gearva-api`, …) and the domains are free and the DNS records stay the same.
+- **Render:** a Hobby workspace has only one member, so the buyer creates **his own Render account** and Part C to E run again there (about 45 minutes). First delete the old services, so the domains are free.
+  - **Done 2026-11-21.** Render keeps a deleted service's `onrender.com` name reserved, so the new services got a suffix and the three CNAME records at Namecheap were changed: `api` → `gearva-api-5ty7.onrender.com`, `admin` → `gearva-admin-ogya.onrender.com`, `www` → `gearva-garage-web-sr76.onrender.com` (`@` stays `216.24.57.1`). Then **Blueprints, gearva, Manual sync** added the domains.
 - **GitHub (decided 2026-11-21):** Render can only read a repository its owner allowed, so the buyer has **his own copy**: an empty private repository `GearVa` on his GitHub, with the developer as a collaborator. The developer's repository stays as it is; `origin` gets two push URLs (`git remote set-url --add --push origin <url>` for each), so one `git push` updates both. The buyer's Render (Part C) uses the buyer's repository.
-- The database starts empty (the test data is not moved).
+- The database starts empty (the test data is not moved): the first admin, the test garage and the test owner login are made again.
+- The buyer's free database was created on 2026-11-21, so it is deleted around **2026-12-21** unless upgraded (next section).
 
 ## Later: before the free database runs out
 

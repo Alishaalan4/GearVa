@@ -53,7 +53,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 5 | 5.7 admin web screens (Done-when check) | ✅ Done | 2026-11-10 |
 | Deploy | D.1 Code ready for hosting: Blueprint, Resend and R2 adapters, visitor IPs, headers, Render DB setup | ✅ Done | 2026-11-11 |
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
-| Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | Later | |
+| Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | ✅ Live on the buyer's Render; the user's final checks pending | 2026-11-21 |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2360,5 +2360,25 @@ To check in the browser (super admin): Messages → write one to one garage with
 **CI:** the first run of 5a675cc failed in `npm test` (docs-only commit; the same code passed on a910220); the re-run passed. A test that fails now and then under CI load; its name is unknown (the log needs a GitHub sign-in). If it happens again, copy the `FAIL` lines from the log before re-running.
 
 **Commit:** 5a675cc "Phase 6.6: developer brief 1.4, final PDF, Done-when check"
+
+---
+
+## D.3 Handover to the buyer's accounts (2026-11-21)
+
+**Summary**
+- **GitHub:** the buyer has his own private repository `JihadAlabdallah/GearVa` with the user as collaborator; the user keeps `Alishaalan4/GearVa` (user decision). `origin` has two push URLs, so one `git push` updates both. CI green on the buyer's repository.
+- **Resend, Cloudflare R2, Firebase, Namecheap:** the buyer is a member (Firebase: Owner); the keys did not change.
+- **Render:** the user's five services, Blueprint and environment group were deleted; the Blueprint was applied on the buyer's Render from his repository; `bootstrap:render` set up the new database; `gearva-api` live (all migrations, first admin, service types).
+- **DNS:** the deleted services' `onrender.com` names stay reserved, so the new ones have suffixes; the CNAMEs for `api`, `admin` and `www` at Namecheap now point to `gearva-api-5ty7`, `gearva-admin-ogya` and `gearva-garage-web-sr76` (`.onrender.com`); Manual sync added the domains.
+
+**Files changed:** `docs/deploy.md` (handover done, new addresses, the new database date), `docs/progress.md`.
+
+**Verified (from here):** Namecheap's DNS gives the new addresses; `https://api.gearva.online/health` answers ok; `gearva.online/en/login`, `/en/welcome`, `/ar/welcome` and `admin.gearva.online/en/login` load; `www` redirects to `gearva.online`.
+
+**Still to check by the user:** certificates issued on all domains; admin sign-in with the new password and 2FA; the buyer added as super admin; an invite email arrives (Resend); an invoice PDF opens (R2; the first one after a start takes up to a minute on the free plan); a new test owner login made and sent to the Flutter developer.
+
+**Next:** upgrade `gearva-db` and `gearva-api` before about 2026-12-21 (free database), and set the plans in `render.yaml` too. Push to a real phone when the Flutter developer sends a token.
+
+**Commit:** _(pending)_
 
 ---

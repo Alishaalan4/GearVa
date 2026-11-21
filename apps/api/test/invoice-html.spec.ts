@@ -57,7 +57,7 @@ const invoice = (over: Partial<InvoiceDetail> = {}): InvoiceDetail => ({
     {
       id: 'p1',
       amountCents: 3000,
-      method: 'WHISH',
+      method: 'CARD',
       paidAt: '2026-11-02T10:00:00.000Z',
       note: null,
       receivedBy: { id: 's1', name: 'Staff' },
@@ -89,7 +89,7 @@ describe('invoice template', () => {
       '$1,234.50',
       '$15.50',
       '$1,204.50',
-      'Whish',
+      'Visa card',
       'Labour: $10.00',
       '90,500 km · 2 May 2027',
       'Parts: 30 days.',

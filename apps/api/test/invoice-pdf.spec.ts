@@ -120,9 +120,9 @@ describe('Invoice PDFs', () => {
     const id = await finished();
     await pdfShowing(id, 'Unpaid');
     await as(owner)
-      .post(`/v1/invoices/${id}/payments`, { amountCents: 4000, method: 'WHISH' })
+      .post(`/v1/invoices/${id}/payments`, { amountCents: 4000, method: 'CARD' })
       .expect(201);
-    await pdfShowing(id, 'Whish');
+    await pdfShowing(id, 'Visa card');
     await as(owner).post(`/v1/invoices/${id}/cancel`, { reason: 'Wrong car' }).expect(200);
     await pdfShowing(id, 'Wrong car');
     const files = await platform.file.count({
@@ -167,13 +167,13 @@ describe('Invoice PDFs', () => {
       const spy = jest.spyOn(renderer, 'render').mockImplementationOnce(async (html) => {
         spy.mockRestore();
         await as(owner)
-          .post(`/v1/invoices/${id}/payments`, { amountCents: 4000, method: 'WHISH' })
+          .post(`/v1/invoices/${id}/payments`, { amountCents: 4000, method: 'CARD' })
           .expect(201);
-        await pdfShowing(id, 'Whish');
+        await pdfShowing(id, 'Visa card');
         return render(html);
       });
       await generate(id);
-      expect(await pdfShowing(id, 'Whish')).toContain('Whish');
+      expect(await pdfShowing(id, 'Visa card')).toContain('Visa card');
     });
   });
 

@@ -329,7 +329,7 @@ WhatsApp channel, appointment booking, parts and inventory, monthly report, cust
 | Decision | Default used in docs | Needed by |
 |---|---|---|
 | Staff login identifier | email + password | Phase 1 |
-| Subscription price | **Confirmed 2026-11-09:** $200/year, +$100 per extra branch, paid in cash or Whish; defaults in `system_settings`, editable by the admin | Phase 5 |
+| Subscription price | **Confirmed 2026-11-09:** $200/year, +$100 per extra branch, paid in cash or by Visa card (renamed from Whish, step 7.6); defaults in `system_settings`, editable by the admin | Phase 5 |
 | Reminder lead time | 500 km or 7 days before due (garage-editable) | Phase 4 |
 | Default daily km for a car with no history | **Confirmed 2026-10-23:** 35 km/day, a constant in `contracts` until `system_settings` exists (Phase 5); a garage can override it with `garage_settings.defaultDailyKm` | Phase 2 |
 | Daytime sending window | 09:00 to 20:00 garage time | Phase 4 |

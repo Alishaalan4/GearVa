@@ -382,6 +382,6 @@ The offer image (Bearer token, cacheable), 404 if none.
 
 ## 8. What is not in the app (on purpose)
 - No booking or chat with the garage (later, if wanted).
-- No payments in the app: owners pay at the garage (cash or Whish).
+- No payments in the app: owners pay at the garage (cash or Visa card).
 - Owners cannot add or edit cars or services; the garage records them.
 - No sign-up: an account exists only after a garage invites the owner (2.1).

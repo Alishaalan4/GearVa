@@ -215,7 +215,7 @@
     "method": "Method",
     "methods": {
       "CASH": "Cash",
-      "WHISH": "Whish"
+      "CARD": "Visa card"
     },
     "period": "Paid period",
     "extraBranches": "Extra branches",

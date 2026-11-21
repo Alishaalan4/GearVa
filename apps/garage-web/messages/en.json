@@ -61,10 +61,9 @@
     "switchLanguage": "العربية",
     "customers": "Customers",
     "invoices": "Invoices",
-    "debts": "Debts",
-    "income": "Income",
     "reminders": "Reminders",
-    "offers": "Offers"
+    "offers": "Offers",
+    "revenue": "Revenue"
   },
   "authSide": {
     "heading": "Know when every customer is due.",
@@ -444,7 +443,7 @@
     "replacedBy": "Replaced by invoice {number}",
     "method": {
       "CASH": "Cash",
-      "WHISH": "Whish"
+      "CARD": "Visa card"
     },
     "status": {
       "UNPAID": "Unpaid",
@@ -470,24 +469,6 @@
       "list": "Invoices",
       "settings": "Settings"
     }
-  },
-  "debts": {
-    "title": "Debts",
-    "count": "{count, plural, one {# customer owes money} other {# customers owe money}}",
-    "empty": "Nobody owes money. 🎉",
-    "owes": "Owes",
-    "remainingOf": "{remaining} of {total}"
-  },
-  "income": {
-    "title": "Income",
-    "today": "Today",
-    "month": "This month",
-    "received": "Received",
-    "invoiced": "Invoiced",
-    "branch": "Branch",
-    "allBranches": "All branches",
-    "refundNeeded": "Refund needed on cancelled invoices: {amount}",
-    "explain": "Received is the money taken (payments), on the day it was paid. Invoiced is the total of invoices issued, without cancelled ones. Money paid on an invoice that was later cancelled stays in received."
   },
   "invoiceSettings": {
     "title": "Invoice settings",
@@ -654,7 +635,7 @@
     "pricing": {
       "title": "One price for every garage",
       "perYear": "per year",
-      "details": "Each extra branch {branch} a year. The first {days} days are free. Pay in cash or with Whish.",
+      "details": "Each extra branch {branch} a year. The first {days} days are free. Pay in cash or by Visa card.",
       "ask": "Ask us for the price when we contact you.",
       "included": {
         "customers": "Unlimited customers and cars",
@@ -803,5 +784,58 @@
   "announcements": {
     "from": "Message from Gearva",
     "close": "Close"
+  },
+  "revenue": {
+    "title": "Revenue",
+    "debtsTitle": "Debts",
+    "allBranches": "All branches",
+    "branch": "Branch",
+    "period": "Period",
+    "periods": {
+      "DAY": "Day",
+      "MONTH": "Month",
+      "YEAR": "Year"
+    },
+    "previous": "Previous",
+    "next": "Next",
+    "pickDay": "Day",
+    "pickMonth": "Month",
+    "pickYear": "Year",
+    "revenue": "Revenue",
+    "revenueNote": "Invoices issued, not cancelled",
+    "collected": "Collected",
+    "collectedNote": "Money that came in",
+    "unpaid": "Unpaid",
+    "unpaidNote": "Still owed on this period's invoices",
+    "average": "Average invoice",
+    "invoiceCount": "{count, plural, one {# invoice} other {# invoices}}",
+    "refundNeeded": "{amount} was paid on invoices that were cancelled later: to refund.",
+    "byService": "By service type",
+    "byServiceNote": "Invoice lines before the invoice discount and VAT.",
+    "otherService": "Other",
+    "lines": "{count, plural, one {# line} other {# lines}}",
+    "byDay": "Day by day",
+    "byMonth": "Month by month",
+    "invoiced": "Invoiced",
+    "when": "When",
+    "hoverHint": "Point at a bar to see its numbers.",
+    "showNumbers": "Show the numbers",
+    "byMethod": "By payment method",
+    "methods": {
+      "CASH": "Cash",
+      "CARD": "Visa card"
+    },
+    "topCustomers": "Top customers",
+    "customer": "Customer",
+    "invoices": "Invoices",
+    "nothingYet": "Nothing in this period.",
+    "debtsNote": "What customers owe now, whatever the period above.",
+    "noDebts": "Nobody owes anything.",
+    "debtCount": "{count, plural, one {# customer owes money} other {# customers owe money}}",
+    "owes": "Owes",
+    "oldest": "oldest {date}",
+    "showInvoices": "Show the invoices",
+    "hideInvoices": "Hide the invoices",
+    "remainingOf": "{remaining} of {total}"
   }
 }

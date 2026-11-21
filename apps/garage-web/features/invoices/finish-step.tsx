@@ -174,8 +174,8 @@ export function FinishStep({
                 <Choice selected={method === 'CASH'} onClick={() => setMethod('CASH')}>
                   {t('method.CASH')}
                 </Choice>
-                <Choice selected={method === 'WHISH'} onClick={() => setMethod('WHISH')}>
-                  {t('method.WHISH')}
+                <Choice selected={method === 'CARD'} onClick={() => setMethod('CARD')}>
+                  {t('method.CARD')}
                 </Choice>
               </div>
             )}

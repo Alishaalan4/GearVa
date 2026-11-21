@@ -59,7 +59,9 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.1c Fix: API tests ran out of memory on the buyer's CI (private repository, small machine) | ✅ Done (CI green on both repositories) | 2026-11-21 |
 | 7 | 7.2 Invoice settings as a tab of the Invoices page | ✅ Done | 2026-11-21 |
 | 7 | 7.3 Reminders and the message log on one page | ✅ Done | 2026-11-21 |
-| 7 | 7.4 Reminder settings per garage move to the admin | Written, awaiting the user's local check | |
+| 7 | 7.4 Reminder settings per garage move to the admin | ✅ Done | 2026-11-21 |
+| 7 | 7.5 Revenue page: income and debts together | Written, awaiting the user's local check | |
+| 7 | 7.6 Whish renamed to Visa card | Written, awaiting the user's local check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2496,6 +2498,59 @@ User decision 2026-11-21: Gearva sets each garage's reminder settings (lead km, 
 
 **Verified:** the whole API suite: 32 suites, 362 tests (one fewer: two garage-route tenancy cases went with the routes, one admin test was added); typecheck and lint for the whole repo; every text the card uses exists in English and Arabic.
 
-**Commit:** _(pending)_ "Step 7.4: reminder settings per garage move to the admin"
+**Commit:** f1cb934 "Step 7.4: reminder settings per garage move to the admin"
+
+---
+
+## 7.5 Revenue page: income and debts together (2026-11-21)
+
+**Summary**
+User request: income and debts on one page, in the design of the prototype's Revenue screen, with a date picker, service types, customers and the debts as a table, side by side (flow.md 8.4).
+- **API:** `GET /v1/revenue?period=DAY|MONTH|YEAR&date=&branchId=` (owner, managers) replaces `GET /v1/income` (removed). For the period in the garage's timezone: invoiced, collected, unpaid, invoice count and average, refund needed; by service type (invoice lines, "Other" for lines without a service); by payment method; top 5 customers; a day-by-day (month) or month-by-month (year) series with no gaps. Same rules as before: cancelled invoices are not revenue, money counts the day it came in. Raw SQL on the one tenant transaction, branch-scoped like the rest.
+- **garage-web:** one **Revenue** page and menu item (Income and Debts removed; their addresses send here). Top: Day/Month/Year, previous/next, a date/month/year picker, branch filter. Four stat cards (revenue, collected, unpaid, average invoice) and the refund note. Left: service-type bars, the day/month chart (invoiced and collected, a legend, a readout of the bar under the pointer or focus, and the numbers in a table), payment methods with shares, top customers as a table. Right: the debts as a table, a row opening to its invoices. Receptionists see only the debts; mechanics never reach it.
+- **Chart colours:** two new theme tokens (`chart-1` invoiced, `chart-2` collected), checked with the dataviz validator in light (#e8560c, #0b72c4) and dark (#f2600f, #2f8fe0): lightness, chroma, colour-blind separation and contrast all pass.
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/invoices.ts` | `REVENUE_PERIODS`, `revenueQuerySchema`, `RevenueReport` (replace the income types) |
+| `apps/api/src/invoices/invoice-reports.service.ts`, `invoices.controller.ts`, the invoices module | `revenue()`, `periodBounds`, `RevenueController` |
+| `apps/api/test/invoice-changes.spec.ts`, `tenancy.spec.ts` | Revenue for a day, month and year (totals, methods, service types, customers, series, an empty past month, the default), a late payment, roles and bad periods, `/v1/income` gone; tenancy case for `/v1/revenue` |
+| `apps/garage-web/features/revenue/*` (new: page, charts, debts table), `app/[locale]/(app)/revenue/page.tsx` (new), `income/` and `debts/` (redirects), `components/app-shell.tsx`, `messages/*.json` | The page; `features/invoices/income-summary.tsx` and `debt-list.tsx` deleted |
+| `packages/ui/src/theme.css` | The two chart colours, light and dark |
+
+**Doc changes:** flow.md 8.3 (title), 8.4 (rewritten: the Revenue page and its API).
+
+**Verified:** API suite 32 suites, 362 tests (the three income tests became three revenue tests); contracts 83; typecheck, lint, format; all 114 texts of the page exist in English and Arabic.
+
+**Layout redo (same day, after the user's screenshot: not aligned or clean):** the toolbar controls are one height in one row (the date picker sits between its arrows; the year is shown, not typed); the page is two balanced rows of two sides (chart beside service types; debts beside payment methods and top customers) instead of one long left column; service bars sit on a full-width track with names and amounts aligned above them; the chart has guide lines with values, wider bars for a year and the readout and legend on top; the debts table has its own chevron column. flow.md 8.4 layout updated. Re-checked: typecheck, lint, format.
+
+**Commit:** _(pending)_ "Step 7.5: one Revenue page with income and debts"
+
+---
+
+## 7.6 Whish renamed to Visa card (2026-11-21, 18:30)
+
+**Summary**
+User request: "name everything related to Whish => Visa card". The payment method is renamed everywhere, not only its label:
+- **Database:** migration `20261121120000_payment_method_card` renames the enum value (`ALTER TYPE "PaymentMethod" RENAME VALUE 'WHISH' TO 'CARD'`); every existing invoice and subscription payment keeps its method.
+- **Code:** `CARD` in the Prisma schema, the contracts (`PAYMENT_METHODS`, `SUBSCRIPTION_PAYMENT_METHODS`), the finish step and the tests.
+- **Texts:** "Visa card" / "بطاقة فيزا" in garage-web, the admin, the invoice HTML and PDF, and the subscription price note.
+- The mobile app sends no payment method, so the Flutter contract is unchanged (only a sentence in mobile-api.md).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/database/prisma/schema.prisma`, new migration | `WHISH` → `CARD` |
+| `packages/contracts/src/invoices.ts`, `garages.ts` | method lists |
+| `apps/api/src/invoices/pdf/invoice-html.ts` | labels in English and Arabic |
+| `apps/garage-web/features/invoices/finish-step.tsx`, `apps/{garage-web,admin}/messages/*.json` | the method and its texts |
+| `apps/api/test/*` (6 files) | `CARD`; the "bad method" example is now `CHEQUE` |
+
+**Doc changes:** README (subscription price), database.md (PaymentMethod), flow.md (finish step, payments, admin payments), mobile-api.md, the design demo.
+
+**Verified:** Prisma client regenerated; test database rebuilt with the migration; API 32 suites, 362 tests; contracts 83; typecheck, lint, format for all workspaces.
+
+**Commit:** _(pending)_ "Step 7.6: Whish renamed to Visa card"
 
 ---

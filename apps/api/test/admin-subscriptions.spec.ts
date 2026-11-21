@@ -67,7 +67,7 @@ describe('Subscriptions', () => {
       const res = await asAdmin
         .post(
           `/admin/v1/garages/${garage.id}/payments`,
-          payment({ method: 'WHISH', note: 'Year 1' }),
+          payment({ method: 'CARD', note: 'Year 1' }),
         )
         .expect(201);
       const paid = res.body as GarageDetail;
@@ -76,7 +76,7 @@ describe('Subscriptions', () => {
       expect(paid.payments).toEqual([
         expect.objectContaining({
           amountCents: 20_000,
-          method: 'WHISH',
+          method: 'CARD',
           paidOn: day(),
           periodStart: day(),
           newExpiryDate: day(365),
@@ -142,7 +142,7 @@ describe('Subscriptions', () => {
       const url = `/admin/v1/garages/${garage.id}/payments`;
       await asAdmin.post(url, payment({ amountCents: 0 })).expect(400);
       await asAdmin.post(url, payment({ amountCents: 12.5 })).expect(400);
-      await asAdmin.post(url, payment({ method: 'CARD' })).expect(400);
+      await asAdmin.post(url, payment({ method: 'CHEQUE' })).expect(400);
       await asAdmin.post(url, payment({ paidOn: day(2) })).expect(400);
       await asAdmin.post(url, payment({ newExpiryDate: day(-1) })).expect(400);
       expect(await platform.subscriptionPayment.count({ where: { garageId: garage.id } })).toBe(0);

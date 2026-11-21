@@ -248,7 +248,7 @@ describe('Invoices and payments', () => {
     });
 
     it('a part payment leaves the rest', async () => {
-      const res = await quick({ payment: { method: 'WHISH', amountCents: 1500 } });
+      const res = await quick({ payment: { method: 'CARD', amountCents: 1500 } });
       expect(res.body.invoice).toMatchObject({
         status: 'PARTIALLY_PAID',
         paidCents: 1500,

@@ -59,7 +59,7 @@ export type SuspendGarageInput = z.infer<typeof suspendGarageSchema>;
 // Subscription lifecycle (flow.md 11.1, step 5.2)
 // ---------------------------------------------------------------------------
 
-export const SUBSCRIPTION_PAYMENT_METHODS = ['CASH', 'WHISH'] as const;
+export const SUBSCRIPTION_PAYMENT_METHODS = ['CASH', 'CARD'] as const;
 export type SubscriptionPaymentMethod = (typeof SUBSCRIPTION_PAYMENT_METHODS)[number];
 
 /**

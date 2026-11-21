@@ -2,7 +2,7 @@
 // Tenant isolation for these endpoints lives in tenancy.spec.ts (README 5.1.6).
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import type { DebtItem, InvoiceDetail, VisitDetail } from '@gearva/contracts';
+import type { DebtItem, InvoiceDetail, RevenueReport, VisitDetail } from '@gearva/contracts';
 import type { PrismaClient } from '@gearva/database';
 import request from 'supertest';
 import { PlatformDb } from '../src/common/db/platform-db';
@@ -322,19 +322,77 @@ describe('Changing invoices, debts and income', () => {
     });
   });
 
-  describe('income summary (flow.md 8.3)', () => {
-    it('separates received from invoiced, and counts the day of the money', async () => {
+  describe('revenue (flow.md 8.3, step 7.5)', () => {
+    /** Today in the garage's time zone (the test garages use Asia/Beirut). */
+    const today = () =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Beirut' }).format(new Date());
+
+    it('separates collected from invoiced, for a day, a month and a year', async () => {
       const garage = await createGarageWithOwner(app);
       const { cookie } = await staffLogin(app, garage.ownerEmail, garage.password);
-      await invoice({}, cookie, cookie); // invoiced 40, received 0
+      await invoice({}, cookie, cookie); // invoiced 40, collected 0
       await invoice({ payment: { method: 'CASH', amountCents: 1500 } }, cookie, cookie);
-      const cancelled = await invoice({ payment: { method: 'WHISH' } }, cookie, cookie);
+      const cancelled = await invoice({ payment: { method: 'CARD' } }, cookie, cookie);
       await as(cookie).post(`/v1/invoices/${cancelled.id}/cancel`, { reason: 'Oops' }).expect(200);
 
-      const res = await as(cookie).get('/v1/income').expect(200);
-      expect(res.body.today).toEqual({ receivedCents: 5500, invoicedCents: 8000 });
-      expect(res.body.month).toEqual({ receivedCents: 5500, invoicedCents: 8000 });
-      expect(res.body.refundNeededCents).toBe(4000);
+      const day = (await as(cookie).get('/v1/revenue?period=DAY').expect(200))
+        .body as RevenueReport;
+      expect(day).toMatchObject({
+        period: 'DAY',
+        from: today(),
+        to: today(),
+        today: today(),
+        invoicedCents: 8000, // the cancelled invoice is not revenue
+        collectedCents: 5500, // but its money came in
+        unpaidCents: 6500,
+        invoiceCount: 2,
+        averageInvoiceCents: 4000,
+        refundNeededCents: 4000,
+        series: [],
+      });
+      expect(day.byMethod).toEqual([
+        { method: 'CARD', amountCents: 4000 },
+        { method: 'CASH', amountCents: 1500 },
+      ]);
+      expect(day.byServiceType).toEqual([
+        expect.objectContaining({ serviceTypeId: oilId, totalCents: 8000, lines: 2 }),
+      ]);
+      expect(day.byServiceType[0]?.nameEn).toBeTruthy();
+      expect(day.topCustomers).toHaveLength(2);
+      expect(day.topCustomers[0]).toMatchObject({ invoicedCents: 4000, invoiceCount: 1 });
+      expect(day.topCustomers[0]?.phone).toMatch(/^\+961/);
+
+      const month = (await as(cookie).get('/v1/revenue?period=MONTH').expect(200))
+        .body as RevenueReport;
+      expect(month).toMatchObject({ invoicedCents: 8000, collectedCents: 5500 });
+      expect(month.from).toBe(`${today().slice(0, 7)}-01`);
+      expect(month.series).toHaveLength(Number(month.to.slice(8, 10)));
+      expect(month.series.find((d) => d.key === today())).toEqual({
+        key: today(),
+        invoicedCents: 8000,
+        collectedCents: 5500,
+      });
+
+      const year = (await as(cookie).get('/v1/revenue?period=YEAR').expect(200))
+        .body as RevenueReport;
+      expect(year).toMatchObject({ from: `${today().slice(0, 4)}-01-01`, invoicedCents: 8000 });
+      expect(year.series.map((m) => m.key)).toHaveLength(12);
+      expect(year.series.find((m) => m.key === today().slice(0, 7))?.invoicedCents).toBe(8000);
+
+      // Another month is empty; the default period is the month.
+      const past = (await as(cookie).get('/v1/revenue?period=MONTH&date=2020-01-15').expect(200))
+        .body as RevenueReport;
+      expect(past).toMatchObject({
+        from: '2020-01-01',
+        to: '2020-01-31',
+        invoicedCents: 0,
+        collectedCents: 0,
+        averageInvoiceCents: 0,
+        byServiceType: [],
+        topCustomers: [],
+      });
+      const byDefault = (await as(cookie).get('/v1/revenue').expect(200)).body as RevenueReport;
+      expect(byDefault.period).toBe('MONTH');
     });
 
     it('a late payment counts when it came in, not when the invoice was issued', async () => {
@@ -348,17 +406,24 @@ describe('Changing invoices, debts and income', () => {
       await as(cookie)
         .post(`/v1/invoices/${id}/payments`, { amountCents: 4000, method: 'CASH' })
         .expect(201);
-      const res = await as(cookie).get('/v1/income').expect(200);
-      expect(res.body.today).toEqual({ receivedCents: 4000, invoicedCents: 0 });
+      const now = (await as(cookie).get('/v1/revenue?period=DAY').expect(200)).body;
+      expect(now).toMatchObject({ collectedCents: 4000, invoicedCents: 0 });
+      const then = (await as(cookie).get('/v1/revenue?period=MONTH&date=2020-01-31').expect(200))
+        .body;
+      expect(then).toMatchObject({ collectedCents: 0, invoicedCents: 4000, unpaidCents: 0 });
     });
 
-    it('is for owners and managers only', async () => {
+    it('is for owners and managers only, and checks the period', async () => {
       const manager = await signInAsStaff(app, g, 'MANAGER');
-      await as(manager.cookie).get('/v1/income').expect(200);
+      await as(manager.cookie).get('/v1/revenue').expect(200);
       for (const role of ['MECHANIC', 'RECEPTIONIST'] as const) {
         const { cookie } = await signInAsStaff(app, g, role);
-        await as(cookie).get('/v1/income').expect(403);
+        await as(cookie).get('/v1/revenue').expect(403);
       }
+      await as(owner).get('/v1/revenue?period=WEEK').expect(400);
+      await as(owner).get('/v1/revenue?date=2026-13-01').expect(400);
+      // The old summary is gone.
+      await as(owner).get('/v1/income').expect(404);
     });
   });
 

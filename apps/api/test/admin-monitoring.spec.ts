@@ -238,7 +238,7 @@ describe('Admin monitoring', () => {
       data: {
         garageId: g.garageId,
         amountCents: 12_345,
-        method: 'WHISH',
+        method: 'CARD',
         paidAt: noon,
         periodStart: noon,
         newExpiryDate: new Date(noon.getTime() + 365 * DAY),
@@ -253,7 +253,7 @@ describe('Admin monitoring', () => {
       (month(after)?.revenueCents ?? 0) - (month(before)?.revenueCents ?? 0),
     ).toBeGreaterThanOrEqual(12_345);
     expect(after.revenueThisYearCents - before.revenueThisYearCents).toBeGreaterThanOrEqual(12_345);
-    expect(after.byMethod.WHISH - before.byMethod.WHISH).toBeGreaterThanOrEqual(12_345);
+    expect(after.byMethod.CARD - before.byMethod.CARD).toBeGreaterThanOrEqual(12_345);
     expect(month(after)?.newGarages).toBeGreaterThan(0);
     const total = Object.values(after.byStatus).reduce((a, b) => a + b, 0);
     expect(after.paid + after.unpaid).toBe(total);

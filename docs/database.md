@@ -124,7 +124,7 @@ Append-only (step 5.1): `gearva_platform` has `SELECT, INSERT` only, like `payme
 | id | uuid PK | |
 | garageId | uuid FK | |
 | amountCents | int | |
-| method | PaymentMethod | `CASH`, `WHISH` |
+| method | PaymentMethod | `CASH`, `CARD` |
 | paidAt | timestamptz | |
 | periodStart / newExpiryDate | date | the new expiry date set by this payment |
 | extraBranches | int | extra branches included in this payment |
@@ -413,7 +413,7 @@ Saving a new record for the same vehicle and service type marks the previous `AC
 | garageId | uuid FK | |
 | invoiceId | uuid FK | |
 | amountCents | int | `> 0` |
-| method | PaymentMethod | `CASH`, `WHISH` |
+| method | PaymentMethod | `CASH`, `CARD` |
 | paidAt | timestamptz | |
 | receivedById | uuid FK | |
 | note | text? | |
@@ -520,7 +520,7 @@ ActorType           STAFF | ADMIN | OWNER | SYSTEM
 DistanceUnit        KM | MI
 VisitStatus         IN_PROGRESS | WAITING_FOR_PARTS | DONE
 InvoiceStatus       UNPAID | PARTIALLY_PAID | PAID | CANCELLED
-PaymentMethod       CASH | WHISH
+PaymentMethod       CASH | CARD
 DiscountType        AMOUNT | PERCENT
 InvoiceEditWindow   SAME_DAY
 FileKind            LOGO | SERVICE_PHOTO | INVOICE_PDF | OFFER_IMAGE

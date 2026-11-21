@@ -9,7 +9,7 @@ import { paginationQuerySchema } from './pagination';
 export const INVOICE_STATUSES = ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
-export const PAYMENT_METHODS = ['CASH', 'WHISH'] as const;
+export const PAYMENT_METHODS = ['CASH', 'CARD'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const DISCOUNT_TYPES = ['AMOUNT', 'PERCENT'] as const;
@@ -183,11 +183,18 @@ export const invoiceListQuerySchema = paginationQuerySchema.extend({
 });
 export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>;
 
-export const incomeQuerySchema = z.object({
+/** Step 7.5 (flow.md 8.3): the Revenue page covers one day, month or year. */
+export const REVENUE_PERIODS = ['DAY', 'MONTH', 'YEAR'] as const;
+export type RevenuePeriod = (typeof REVENUE_PERIODS)[number];
+
+export const revenueQuerySchema = z.object({
+  period: z.enum(REVENUE_PERIODS).default('MONTH'),
+  /** any day inside the period, in the garage's timezone; default today */
+  date: z.iso.date().optional(),
   /** owners and managers may choose; staff of one branch always get theirs */
   branchId: z.uuid().optional(),
 });
-export type IncomeQuery = z.infer<typeof incomeQuerySchema>;
+export type RevenueQuery = z.infer<typeof revenueQuerySchema>;
 
 /** Invoice logo: PNG or JPEG, because the file is shown back and printed. */
 export const LOGO_MAX_BYTES = 1024 * 1024;
@@ -315,21 +322,49 @@ export interface DebtItem {
   invoices: (InvoiceSummary & { issuedAt: string; plate: string })[];
 }
 
-export interface IncomePeriod {
-  /** money that came in (`payments`) */
-  receivedCents: number;
-  /** invoices issued, without cancelled ones */
+/**
+ * GET /v1/revenue (flow.md 8.3, step 7.5). Days are the garage's own. "Invoiced" counts
+ * invoices issued in the period, without cancelled ones; "collected" counts the money
+ * that came in during the period (`payments`, also on invoices cancelled later, because
+ * the money really came in).
+ */
+export interface RevenueReport {
+  period: RevenuePeriod;
+  /** first and last day of the period, YYYY-MM-DD, both included */
+  from: string;
+  to: string;
+  /** today in the garage's timezone */
+  today: string;
   invoicedCents: number;
-}
-
-/** flow.md 8.3 */
-export interface IncomeSummary {
-  /** today in the garage's timezone, YYYY-MM-DD */
-  date: string;
-  today: IncomePeriod;
-  month: IncomePeriod;
-  /** paid on invoices that were later cancelled */
+  collectedCents: number;
+  /** still to pay on the invoices issued in the period */
+  unpaidCents: number;
+  invoiceCount: number;
+  /** invoicedCents / invoiceCount, rounded; 0 without invoices */
+  averageInvoiceCents: number;
+  /** paid on invoices that were later cancelled, all dates (flow.md 7.5) */
   refundNeededCents: number;
+  /** invoice lines of the period by service type, largest first (before discount and VAT) */
+  byServiceType: {
+    /** null: lines without a service (typed by hand) */
+    serviceTypeId: string | null;
+    nameEn: string | null;
+    nameAr: string | null;
+    totalCents: number;
+    lines: number;
+  }[];
+  /** money collected in the period by payment method */
+  byMethod: { method: PaymentMethod; amountCents: number }[];
+  /** the 5 customers invoiced most in the period */
+  topCustomers: {
+    customerId: string;
+    name: string;
+    phone: string;
+    invoicedCents: number;
+    invoiceCount: number;
+  }[];
+  /** each day of a month, or each month of a year (empty for one day) */
+  series: { key: string; invoicedCents: number; collectedCents: number }[];
 }
 
 export interface InvoiceSettings {

@@ -110,7 +110,7 @@ enum InvoiceStatus {
 
 enum PaymentMethod {
   CASH
-  WHISH
+  CARD
 }
 
 enum ApplicationStatus {

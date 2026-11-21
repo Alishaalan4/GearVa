@@ -215,7 +215,7 @@
     "method": "الطريقة",
     "methods": {
       "CASH": "نقدًا",
-      "WHISH": "Whish"
+      "CARD": "بطاقة فيزا"
     },
     "period": "الفترة المدفوعة",
     "extraBranches": "فروع إضافية",

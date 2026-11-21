@@ -54,7 +54,8 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | Deploy | D.1 Code ready for hosting: Blueprint, Resend and R2 adapters, visitor IPs, headers, Render DB setup | ✅ Done | 2026-11-11 |
 | Deploy | D.2 Live at gearva.online on free plans (test environment), checks by the user | ✅ Done | 2026-11-15 |
 | Deploy | D.3 Move to the buyer's accounts (Render, GitHub), at the end of the project (docs/deploy.md) | ✅ Done | 2026-11-21 |
-| 7 | 7.1 Email to the admin for each new garage application | Written, awaiting the user's local check | |
+| 7 | 7.1 Email to the admin for each new garage application | ✅ Pushed (8e85700); the live check by the user pending | 2026-11-21 |
+| 7 | 7.1b Fix: slow transactions failed (`Finish visit` 500 under load, the flaky CI test) | Written, awaiting commit | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2405,6 +2406,21 @@ User request after delivery: every application from the website reaches the admi
 
 **Verified:** API suite (3 workers) 32 suites, 363 tests; contracts 83; lint, typecheck and format pass. Locally the email is printed in the API window (console adapter).
 
-**Commit:** _(pending)_ "Step 7.1: email the admin for each new garage application"
+**Commit:** 8e85700 "Step 7.1: email the admin for each new garage application"
+
+---
+
+## 7.1b Fix: transactions cancelled after 5 seconds (2026-11-21)
+
+**Summary**
+The test that failed now and then (CI on 5a675cc, and the buyer's repository on 8e85700) was found in a local `npm test` log: `invoice-pdf.spec.ts`, "Finish visit" answered 500 with Prisma's *"A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5011 ms passed"*. Finishing a visit writes the visit, its records, the invoice and the notifications in one transaction; on a busy machine it passed Prisma's default 5 s. The same could happen on the free Render plan. Every Prisma client now gets `transactionOptions` `{ timeout: 20 s, maxWait: 10 s }` (defaults 5 s and 2 s), in `createPrismaClient`, so all roles and all transactions have it. Normal requests are unchanged.
+
+**Files changed:** `packages/database/src/client.ts`.
+
+**Doc changes:** none (an operational limit, explained in the code).
+
+**Verified:** the whole API suite with every file at once (the heavy mode that failed): 32 suites, 363 tests passed; database 31; typecheck passes.
+
+**Commit:** _(pending)_ "Fix: allow slower transactions (Finish visit failed under load)"
 
 ---

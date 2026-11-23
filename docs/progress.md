@@ -62,6 +62,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.4 Reminder settings per garage move to the admin | ✅ Done | 2026-11-21 |
 | 7 | 7.5 Revenue page: income and debts together | Done | 3a233b7 |
 | 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
+| 7 | 7.7 App store readiness: delete-account and support pages | Written, tests pass, awaiting the user's local check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2552,5 +2553,30 @@ User request: "name everything related to Whish => Visa card". The payment metho
 **Verified:** Prisma client regenerated; test database rebuilt with the migration; API 32 suites, 362 tests; contracts 83; typecheck, lint, format for all workspaces.
 
 **Commit:** 4f117f8 "Step 7.6: Whish renamed to Visa card"
+
+---
+
+## 7.7 App store readiness: delete-account and support pages (2026-11-23)
+
+**Summary**
+After a review of the Apple and Google store rules against our flow (user question 2026-11-23): a login-only app with no sign-up is accepted (accounts come from the garage's invite; reviewers get a demo login), in-app account deletion and the privacy policy already exist. Two gaps closed here:
+- **Google Play needs a web page to delete an account without the app.** New public page `gearva.online/delete-account` (en/ar): email, password and a confirmation box, then the same result as deleting in the app (login email, password, sessions and phone tokens removed; garages keep their records). It posts to the new `POST /mobile/v1/auth/delete-account` (mobile-api 2.6): public, the same credential checks, lockout and limit as the login (the login and this route now share `checkCredentials`), audit `owner.delete_account`. garage-web forwards it like the set-password endpoint.
+- **Apple asks for a support URL.** New public page `gearva.online/support`: how to get an account (the garage invites you), forgot password, contact. Support email `gearvalueapp@gmail.com` (user decision), also in the privacy policy instead of privacy@gearva.online (that mailbox does not exist).
+- Privacy policy: mentions deletion on the website, links to both pages, date 23 November 2026. Website footer: a Support link. The three public pages share one frame (`public-shell.tsx`).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/api/src/owners/owner-auth.service.ts`, `owner-auth.controller.ts` | `deleteAccount`, shared `checkCredentials`, the route |
+| `apps/api/test/owner-app.spec.ts`, `tenancy-owner.spec.ts` | Website deletion test (wrong password, unknown email, missing password, success, sessions and tokens gone, audit row); the route in `NO_OWNER_DATA` |
+| `apps/garage-web/features/website/` (new `public-shell.tsx`, `support-page.tsx`, `delete-account-form.tsx`; `privacy-page.tsx`, `landing-page.tsx`), `app/[locale]/{support,delete-account}/page.tsx` (new) | The pages and links |
+| `apps/garage-web/proxy.ts`, `next.config.ts`, `lib/api.ts` | Forward the new endpoint; no token refresh on it |
+| `apps/garage-web/messages/{en,ar}.json` | `support`, `deleteAccount`, privacy texts |
+
+**Doc changes:** flow.md (owner app: deletion on the website; support and delete pages, the support email); mobile-api.md 1.5 changelog and 2.6.
+
+**Verified:** typecheck and lint (api, garage-web), format, contracts 83 tests, every new text in English and Arabic. API suite run by the user after starting Docker: all 32 suites pass (the logged ERROR and WARN lines are the tests that fake a failing email and push provider).
+
+**Commit:** _(pending)_ "Step 7.7: delete-account and support pages for the app stores"
 
 ---

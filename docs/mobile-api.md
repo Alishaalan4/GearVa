@@ -9,6 +9,7 @@ The contract between the API and the owner app (V3, Flutter). The API is built t
 | 1.2 | 2026-11-16 | **Live:** garage logo (3.6), cars and history (4), invoices and PDFs (5). 4.3: `details` has one label/value pair per field the garage filled in (the example was a combined line); `date` is when the visit finished, or opened while in progress. 4.1: `nextService` order and the warranty/recommendation names written down. A garage that removed the person as a customer no longer shows anything in the app |
 | 1.3 | 2026-11-16 | **Live:** inbox, push and devices (6). The types sent today: `SERVICE_REMINDER` (also a recommended service) and `WARRANTY_END`, from the garages' reminder scan, between 09:00 and 20:00 garage time. 6.2: an id that is not the owner's is `NOT_FOUND`. 6.4: one phone token belongs to one owner (the latest to register it); up to 10 phones per owner. Push needs the project's Firebase key on the server; until then the inbox works without push |
 | 1.4 | 2026-11-16 | **Live:** offers (7). 7.1: at most 50, newest first; only offers that are on, started and not ended, of garages that are not locked. 7.2 and 7.3: an offer the owner cannot see (offers turned off for that garage, ended, locked garage) is `NOT_FOUND` |
+| 1.5 | 2026-11-23 | **Live (step 7.7):** 2.6, deleting the account on the website without the app (Google Play). The app does not call it. Support page for the store listings: `https://gearva.online/support`; account deletion page: `https://gearva.online/delete-account` |
 
 Status of each group: **Planned**, being built, or **Live** on the test server. The changelog says when each goes live. **Live:** every group (2 to 7).
 
@@ -116,6 +117,12 @@ Each refresh token works **once**: always store the new one. Using an old one ag
 { "email": "sara@example.com" }
 ```
 Always **202**, whether or not the email has an account (so nobody can test which emails are customers). If it has one, Gearva emails a reset link to the same set-password web page, valid 24 hours (at most one email per address per minute; a newer link replaces the older one). Limit: 5 requests per minute per IP.
+
+### 2.6 `POST /mobile/v1/auth/delete-account` (website only)
+```json
+{ "email": "sara@example.com", "password": "correct horse battery" }
+```
+**204.** For the page `https://gearva.online/delete-account` (`/ar/delete-account` in Arabic), so a person can delete their account without the app: Google Play asks for this link in the Data safety form. **The app does not call it**; in the app, use 3.5. Same result as 3.5. Errors and limits as the login (2.2): `INVALID_CREDENTIALS`, `RATE_LIMITED`.
 
 ---
 

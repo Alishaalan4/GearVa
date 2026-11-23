@@ -203,6 +203,9 @@ export function LandingPage() {
           <Link href="/privacy" className="underline">
             {t('privacy')}
           </Link>
+          <Link href="/support" className="underline">
+            {t('support')}
+          </Link>
           <Link href="/login" className="underline">
             {t('signIn')}
           </Link>

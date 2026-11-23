@@ -94,7 +94,7 @@ Same as above. **Two-factor authentication (TOTP) is optional per admin** (decis
 3. **Log in.** In the app, email + password. The API returns a 15-minute access token and a 30-day refresh token (Bearer, not cookies: a native app has no cookie jar to protect), for `SubjectType.OWNER`. A refresh token works once; reusing one ends all of the owner's sessions, as for staff and admins (README 5.2; sessions are not tracked per device). Same error for a wrong password, an unknown email and an account without a password.
 4. **Forgot password.** Always answers the same, whether or not the email has an account; if it has one, a reset link (24 hours) to the same page.
 5. **Several garages.** The owner is one person (`owners`, by phone). A second garage's invite to someone who already has an account sends nothing; their cars there simply appear. Each garage sees only its own records; only the owner app shows them together.
-6. **Delete account.** The owner can delete their app account in the app (the stores require it): the email, password hash, sessions and device tokens are removed; the garages keep their own records.
+6. **Delete account.** The owner can delete their app account in the app (the stores require it): the email, password hash, sessions and device tokens are removed; the garages keep their own records. The same can be done without the app on the website page `gearva.online/delete-account` with the email and password (step 7.7: Google Play requires a web path; mobile-api 2.6).
 7. **A locked garage** (subscription ended, 2.5): its customers still see their history and invoices from it in the app (read only); its offers are hidden and it sends no reminders.
 
 Details (step 6.1):
@@ -102,6 +102,7 @@ Details (step 6.1):
 - The customer page shows the app status: `NONE`, `INVITED` (this garage sent an invite, with the date) or `ACTIVE` (the person set a password, from any garage's invite). It never shows the login email, which another garage may have set.
 - Set password: the page posts to `POST /mobile/v1/auth/set-password` (`token`, `password`), forwarded by garage-web like `/v1`. It answers `{ email }` and signs nobody in; the page then says to download the app and sign in with that email. A used, replaced or expired link gives `INVALID_LINK`. It ends every app session of that owner, and writes an `owner.set_password` audit row (actor `OWNER`, no garage).
 - The privacy policy is public at `gearva.online/privacy` (English and Arabic), linked from the website footer and the set-password page. The stores need its address for the app.
+- Step 7.7: a **support page** at `gearva.online/support` (how to get an account, forgot password, contact; Apple asks for a support URL) and the **delete-account page** at `gearva.online/delete-account`, both public and linked from the privacy policy; the footer links to Support. The support and privacy contact email is `gearvalueapp@gmail.com`.
 - The WhatsApp invite recorded when a customer is added (section 3.1 step 5) stays as it is.
 
 Details (step 6.2):

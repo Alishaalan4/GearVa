@@ -325,5 +325,36 @@ describe('Owner app: auth and profile (step 6.2)', () => {
         .set('Cookie', staff)
         .expect(200);
     });
+
+    it('the website page (2.6) deletes with email and password, like the app', async () => {
+      const owner = await createOwnerAccount(app, staff);
+      const s = await ownerLogin(app, owner.email);
+      for (const body of [
+        { email: owner.email, password: 'wrong password 1' },
+        { email: 'nobody@example.com', password: OWNER_PASSWORD },
+      ]) {
+        const res = await http().post('/mobile/v1/auth/delete-account').send(body).expect(401);
+        expect(res.body.code).toBe('INVALID_CREDENTIALS');
+      }
+      await http().post('/mobile/v1/auth/delete-account').send({ email: owner.email }).expect(400);
+      await http().get('/mobile/v1/me').set(bearer(s.accessToken)).expect(200);
+
+      await http()
+        .post('/mobile/v1/auth/delete-account')
+        .send({ email: owner.email, password: OWNER_PASSWORD })
+        .expect(204);
+      await http().get('/mobile/v1/me').set(bearer(s.accessToken)).expect(401);
+      await http()
+        .post('/mobile/v1/auth/login')
+        .send({ email: owner.email, password: OWNER_PASSWORD })
+        .expect(401);
+      const row = await platform.owner.findUniqueOrThrow({ where: { id: owner.ownerId } });
+      expect(row).toMatchObject({ email: null, passwordHash: null });
+      expect(await platform.deviceToken.count({ where: { ownerId: owner.ownerId } })).toBe(0);
+      const audit = await platform.auditLog.findFirst({
+        where: { action: 'owner.delete_account', actorId: owner.ownerId },
+      });
+      expect(audit).not.toBeNull();
+    });
   });
 });

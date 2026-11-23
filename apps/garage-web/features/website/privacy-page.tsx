@@ -1,7 +1,6 @@
-import { Logo } from '@gearva/ui';
 import { useTranslations } from 'next-intl';
-import { LanguageToggle } from '@/components/language-toggle';
 import { Link } from '@/i18n/navigation';
+import { PublicShell, SUPPORT_EMAIL } from './public-shell';
 
 /** Each section has a title and paragraphs p1, p2, ... in messages (privacy.sections). */
 const SECTIONS = {
@@ -22,29 +21,28 @@ const SECTIONS = {
 export function PrivacyPage() {
   const t = useTranslations('privacy');
   return (
-    <div className="mx-auto max-w-200 px-4 sm:px-6">
-      <header className="flex flex-wrap items-center gap-2 py-4">
-        <Link href="/welcome" aria-label="Gearva">
-          <Logo />
+    <PublicShell>
+      <h1 className="text-3xl font-extrabold">{t('title')}</h1>
+      <p className="mt-2 text-sm text-muted">{t('updated')}</p>
+      <p className="mt-6 leading-relaxed">{t('intro')}</p>
+      {Object.entries(SECTIONS).map(([key, count]) => (
+        <section key={key} className="mt-8">
+          <h2 className="mb-2 text-xl font-bold">{t(`sections.${key}.title`)}</h2>
+          {Array.from({ length: count }, (_, i) => (
+            <p key={i} className="mb-3 leading-relaxed text-soft-ink">
+              {t(`sections.${key}.p${i + 1}`, { email: SUPPORT_EMAIL })}
+            </p>
+          ))}
+        </section>
+      ))}
+      <p className="mt-8 flex flex-wrap gap-4 text-sm">
+        <Link href="/delete-account" className="underline">
+          {t('deleteLink')}
         </Link>
-        <span className="flex-1" />
-        <LanguageToggle />
-      </header>
-      <main className="pb-12 pt-4">
-        <h1 className="text-3xl font-extrabold">{t('title')}</h1>
-        <p className="mt-2 text-sm text-muted">{t('updated')}</p>
-        <p className="mt-6 leading-relaxed">{t('intro')}</p>
-        {Object.entries(SECTIONS).map(([key, count]) => (
-          <section key={key} className="mt-8">
-            <h2 className="mb-2 text-xl font-bold">{t(`sections.${key}.title`)}</h2>
-            {Array.from({ length: count }, (_, i) => (
-              <p key={i} className="mb-3 leading-relaxed text-soft-ink">
-                {t(`sections.${key}.p${i + 1}`)}
-              </p>
-            ))}
-          </section>
-        ))}
-      </main>
-    </div>
+        <Link href="/support" className="underline">
+          {t('supportLink')}
+        </Link>
+      </p>
+    </PublicShell>
   );
 }

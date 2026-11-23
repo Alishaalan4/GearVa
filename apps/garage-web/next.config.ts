@@ -24,13 +24,18 @@ const nextConfig: NextConfig = {
   },
   // README 5.2: the browser only ever talks to this app. /v1/* is forwarded to the API,
   // so login cookies belong to the garage site and no CORS is needed. The owner's
-  // set-password page (flow.md 2.4) posts to the one owner app endpoint it needs.
+  // set-password page (flow.md 2.4) and the delete-account page (step 7.7) post to the two
+  // owner app endpoints they need.
   async rewrites() {
     return [
       { source: '/v1/:path*', destination: `${apiUrl}/v1/:path*` },
       {
         source: '/mobile/v1/auth/set-password',
         destination: `${apiUrl}/mobile/v1/auth/set-password`,
+      },
+      {
+        source: '/mobile/v1/auth/delete-account',
+        destination: `${apiUrl}/mobile/v1/auth/delete-account`,
       },
     ];
   },

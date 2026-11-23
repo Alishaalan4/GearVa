@@ -67,6 +67,15 @@ export class OwnerAuthController {
     return this.auth.logout(body.refreshToken);
   }
 
+  /** mobile-api.md 2.6: gearva.online/delete-account posts here (forwarded by garage-web). */
+  @Post('delete-account')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(AUTH_LIMIT)
+  @Audit('owner.delete_account', 'owner')
+  deleteAccount(@Body() body: OwnerLoginDto): Promise<void> {
+    return this.auth.deleteAccount(body);
+  }
+
   /** Always 202: the answer never tells whether the email has an account. */
   @Post('forgot-password')
   @HttpCode(HttpStatus.ACCEPTED)

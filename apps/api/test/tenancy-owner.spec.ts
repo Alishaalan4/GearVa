@@ -23,6 +23,7 @@ const NO_OWNER_DATA: Record<string, string> = {
   'POST /mobile/v1/auth/refresh': 'the refresh token decides the session',
   'POST /mobile/v1/auth/logout': 'revokes only the presented refresh token',
   'POST /mobile/v1/auth/forgot-password': 'always 202; emails only the account of that email',
+  'POST /mobile/v1/auth/delete-account': 'email + password decide the owner (the website page)',
 };
 
 interface Garage {

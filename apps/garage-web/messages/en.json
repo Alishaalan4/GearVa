@@ -683,11 +683,12 @@
       "again": "Send another application"
     },
     "footer": "Gearva · Keep you moving",
-    "privacy": "Privacy policy"
+    "privacy": "Privacy policy",
+    "support": "Support"
   },
   "privacy": {
     "title": "Privacy policy",
-    "updated": "Last updated: 16 November 2026",
+    "updated": "Last updated: 23 November 2026",
     "intro": "Gearva is a service that car garages use to keep their customers’ cars, services and invoices, and to remind customers when a service is due. This policy explains what information Gearva keeps, why, and what you can do about it. It covers the garage app, the Gearva owner app and this website.",
     "sections": {
       "who": {
@@ -714,11 +715,11 @@
       "keep": {
         "title": "How long we keep it",
         "p1": "Service records and invoices are the garage’s business records. They are kept while the garage uses Gearva and as long as the law requires; invoices are never deleted, only cancelled.",
-        "p2": "When you delete your owner app account (in the app), your login email, password, sessions and notification tokens are removed. The garages keep their own records of your visits and invoices."
+        "p2": "When you delete your owner app account (in the app, or on the “Delete your account” page of this website), your login email, password, sessions and notification tokens are removed. The garages keep their own records of your visits and invoices."
       },
       "rights": {
         "title": "Your choices and rights",
-        "p1": "You can ask your garage to correct your details, stop service reminders or offers from any garage (in the app or by asking the garage), and delete your app account at any time from the app.",
+        "p1": "You can ask your garage to correct your details, stop service reminders or offers from any garage (in the app or by asking the garage), and delete your app account at any time, in the app or on this website.",
         "p2": "You can also ask Gearva for a copy of your information or for its deletion, where the law allows."
       },
       "security": {
@@ -727,9 +728,11 @@
       },
       "contact": {
         "title": "Contact",
-        "p1": "For questions about your records, contact your garage. For anything else, or about this policy, write to Gearva at privacy@gearva.online. If we change this policy, we will update the date above."
+        "p1": "For questions about your records, contact your garage. For anything else, or about this policy, write to Gearva at {email}. If we change this policy, we will update the date above."
       }
-    }
+    },
+    "deleteLink": "Delete your app account",
+    "supportLink": "Support"
   },
   "offers": {
     "title": "Offers",
@@ -837,5 +840,33 @@
     "showInvoices": "Show the invoices",
     "hideInvoices": "Hide the invoices",
     "remainingOf": "{remaining} of {total}"
+  },
+  "support": {
+    "title": "Support",
+    "intro": "Gearva keeps your car’s services, invoices and reminders from the garages you visit. Here is how to get help with the Gearva app.",
+    "accountTitle": "Getting an account",
+    "account": "There is no sign-up in the app. Your garage invites you: ask them to add your email and tap “Invite to the app”. You will get an email to set your password, then sign in to the app with that email.",
+    "forgot": "Forgot your password? Tap “Forgot password” on the app’s sign-in screen and we will email you a link to choose a new one.",
+    "contactTitle": "Contact us",
+    "contact": "For your cars, services or invoices, contact your garage: they keep those records. For the app itself, write to us and we will answer within two working days.",
+    "deleteLink": "Delete your app account",
+    "privacyLink": "Privacy policy"
+  },
+  "deleteAccount": {
+    "title": "Delete your Gearva app account",
+    "intro": "Here you can delete your Gearva owner app account without the app. Sign in with the email and password you use in the app.",
+    "removed": "Removed at once: your login email, your password, every signed-in phone and its notifications.",
+    "kept": "Kept by your garages: their own records of your cars, visits and invoices (their business records). Ask a garage if you want them changed.",
+    "inApp": "You can also do this in the app: Profile, then “Delete account”.",
+    "email": "Email",
+    "emailInvalid": "Enter the email you use in the app.",
+    "password": "Password",
+    "passwordInvalid": "Enter your password.",
+    "sure": "I understand that my app account will be deleted and cannot be restored.",
+    "sureMissing": "Tick the box to confirm.",
+    "submit": "Delete my account",
+    "done": "Your Gearva app account is deleted. You have been signed out on every phone.",
+    "forgot": "Forgot your password, or no access to the app?",
+    "supportLink": "Contact support"
   }
 }

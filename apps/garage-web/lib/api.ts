@@ -28,6 +28,7 @@ const NO_REFRESH = [
   '/v1/auth/refresh',
   '/v1/auth/logout',
   '/mobile/v1/auth/set-password',
+  '/mobile/v1/auth/delete-account',
 ];
 
 async function send<T>(path: string, init?: RequestInit, asFile = false): Promise<T> {

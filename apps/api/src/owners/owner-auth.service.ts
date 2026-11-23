@@ -98,6 +98,28 @@ export class OwnerAuthService {
    * account whose password was never set, and the same time spent (PasswordService).
    */
   async login(input: OwnerLoginInput, meta: ClientMeta): Promise<OwnerAuthResponse> {
+    const owner = await this.checkCredentials(input);
+    const updated = await this.platformDb.client.owner.update({
+      where: { id: owner.id },
+      data: { lastLoginAt: new Date() },
+    });
+    const { session, refreshToken } = await this.sessions.create('OWNER', owner.id, meta);
+    return this.respond({ ...updated, email: owner.email }, session, refreshToken);
+  }
+
+  /**
+   * mobile-api.md 2.6 (step 7.7): the website's "Delete your account" page, for someone
+   * without the app (Google Play requires a web path). The same checks as the login, then
+   * the same result as deleting in the app (3.5).
+   */
+  async deleteAccount(input: OwnerLoginInput): Promise<void> {
+    const owner = await this.checkCredentials(input);
+    await this.closeAppAccount(owner.id);
+    this.setActor(owner.id);
+  }
+
+  /** Email and password, with the per-email lockout; never tells which one was wrong. */
+  private async checkCredentials(input: OwnerLoginInput): Promise<Owner & { email: string }> {
     await this.attempts.assertNotLockedOut('owner', input.email);
     const owner = await this.platformDb.client.owner.findUnique({ where: { email: input.email } });
     const ok = await this.passwords.verify(owner?.passwordHash, input.password);
@@ -110,12 +132,7 @@ export class OwnerAuthService {
       );
     }
     await this.attempts.clear('owner', input.email);
-    const updated = await this.platformDb.client.owner.update({
-      where: { id: owner.id },
-      data: { lastLoginAt: new Date() },
-    });
-    const { session, refreshToken } = await this.sessions.create('OWNER', owner.id, meta);
-    return this.respond({ ...updated, email: owner.email }, session, refreshToken);
+    return { ...owner, email: owner.email };
   }
 
   /**

@@ -62,7 +62,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.4 Reminder settings per garage move to the admin | ✅ Done | 2026-11-21 |
 | 7 | 7.5 Revenue page: income and debts together | Done | 3a233b7 |
 | 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
-| 7 | 7.7 App store readiness: delete-account and support pages | Written, tests pass, awaiting the user's local check | |
+| 7 | 7.7 App store readiness: delete-account and support pages | Done | 87db825 |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2577,6 +2577,6 @@ After a review of the Apple and Google store rules against our flow (user questi
 
 **Verified:** typecheck and lint (api, garage-web), format, contracts 83 tests, every new text in English and Arabic. API suite run by the user after starting Docker: all 32 suites pass (the logged ERROR and WARN lines are the tests that fake a failing email and push provider).
 
-**Commit:** _(pending)_ "Step 7.7: delete-account and support pages for the app stores"
+**Commit:** 87db825 "Step 7.7: delete-account and support pages for the app stores"
 
 ---

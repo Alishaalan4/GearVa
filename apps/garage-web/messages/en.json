@@ -684,7 +684,8 @@
     },
     "footer": "Gearva · Keep you moving",
     "privacy": "Privacy policy",
-    "support": "Support"
+    "support": "Support",
+    "terms": "Terms and conditions"
   },
   "privacy": {
     "title": "Privacy policy",
@@ -732,7 +733,8 @@
       }
     },
     "deleteLink": "Delete your app account",
-    "supportLink": "Support"
+    "supportLink": "Support",
+    "termsLink": "Terms and conditions"
   },
   "offers": {
     "title": "Offers",
@@ -850,7 +852,8 @@
     "contactTitle": "Contact us",
     "contact": "For your cars, services or invoices, contact your garage: they keep those records. For the app itself, write to us and we will answer within two working days.",
     "deleteLink": "Delete your app account",
-    "privacyLink": "Privacy policy"
+    "privacyLink": "Privacy policy",
+    "termsLink": "Terms and conditions"
   },
   "deleteAccount": {
     "title": "Delete your Gearva app account",
@@ -868,5 +871,83 @@
     "done": "Your Gearva app account is deleted. You have been signed out on every phone.",
     "forgot": "Forgot your password, or no access to the app?",
     "supportLink": "Contact support"
+  },
+  "terms": {
+    "title": "Terms and conditions",
+    "updated": "Last updated: 23 November 2026",
+    "intro": "These terms apply to the Gearva website, the Gearva garage app and the Gearva owner app (together, “Gearva”). By using Gearva you agree to them. Please read them together with our privacy policy.",
+    "privacyLink": "Privacy policy",
+    "supportLink": "Support",
+    "sections": {
+      "about": {
+        "title": "About Gearva",
+        "p1": "Gearva is a service that car garages use to record their customers’ cars, services and invoices, to send service reminders, and to share offers. Car owners invited by a garage can see their own records in the Gearva owner app.",
+        "p2": "Gearva provides the software only. The garages do the work on the cars, set their own prices and are responsible for their services."
+      },
+      "service": {
+        "title": "What Gearva offers",
+        "p1": "For garages: customer and car records, visits, invoices and payments, debts and revenue reports, reminders by email and in the app, offers, branches and staff accounts.",
+        "p2": "For car owners: their cars, service history, invoices, reminders and the offers of the garages they visit, in one app. The app takes no payments: owners pay the garage directly."
+      },
+      "accounts": {
+        "title": "Accounts",
+        "p1": "Garages apply on the website; Gearva reviews each application and creates the garage account. The garage owner then invites their staff. Car owners get an app account only when a garage invites them; there is no public sign-up.",
+        "p2": "Keep your password private and do not share your account. You are responsible for what is done with your account. Tell us at once if you think someone else has used it.",
+        "p3": "The information you give us must be true and kept up to date."
+      },
+      "garages": {
+        "title": "Subscriptions for garages",
+        "p1": "A garage pays a yearly subscription at the price shown when it subscribes, with an extra amount for each additional branch. A new garage gets a free trial period. Payment is made in cash or by Visa card, as agreed with Gearva.",
+        "p2": "If a subscription is not renewed, or the free trial ends, the garage account is locked: the garage can no longer add or change records until it pays. Nothing is deleted while the account is locked, and access returns as soon as the subscription is renewed.",
+        "p3": "Subscription fees already paid are not refunded, unless the law requires it or Gearva agrees otherwise in writing."
+      },
+      "garageDuties": {
+        "title": "What garages are responsible for",
+        "p1": "Each garage is responsible for the records it enters (customers, cars, services, invoices and prices), for having the right to record its customers’ details, and for the invoices it issues to them.",
+        "p2": "A garage may invite a customer to the app, send reminders and show offers only to its own customers. Customers can stop reminders and offers at any time."
+      },
+      "owners": {
+        "title": "For car owners",
+        "p1": "The records you see in the app are entered by your garages. If something is wrong, ask the garage that recorded it to correct it. Questions about a repair, a price or an invoice are between you and the garage.",
+        "p2": "Service reminders are a help, not a guarantee: keep following your car maker’s schedule and your garage’s advice."
+      },
+      "use": {
+        "title": "Fair use",
+        "p1": "Do not use Gearva to break the law, to send spam, to try to reach other people’s data, to copy or collect data in bulk, or to disturb the service (for example by testing its security or overloading it).",
+        "p2": "Do not copy, resell or take apart the Gearva software, its design or its name."
+      },
+      "data": {
+        "title": "Your data and privacy",
+        "p1": "How Gearva handles personal information is explained in our privacy policy. In short: each garage sees only its own customers, garages keep their own business records, and you can delete your owner app account at any time in the app or on our website."
+      },
+      "availability": {
+        "title": "Availability and changes to the service",
+        "p1": "We work to keep Gearva available and secure, but we cannot promise that it will always be available or free of errors. It may be paused for maintenance or updates.",
+        "p2": "We may improve, change or remove features. If a change takes away something important for garages, we will tell them in advance."
+      },
+      "liability": {
+        "title": "Responsibility",
+        "p1": "Gearva is provided “as is”. As far as the law allows, Gearva is not responsible for the work, prices or invoices of the garages, for decisions made from the records, for a reminder that was not received, or for indirect losses such as lost profit.",
+        "p2": "Nothing in these terms limits a responsibility that the law does not allow to be limited."
+      },
+      "ending": {
+        "title": "Ending",
+        "p1": "Car owners can delete their app account at any time, in the app or on the “Delete your account” page of our website.",
+        "p2": "A garage can stop using Gearva by not renewing its subscription, or by asking us to close its account.",
+        "p3": "We may suspend or close an account that breaks these terms or puts other users or the service at risk. Where we can, we tell the person or garage first."
+      },
+      "changes": {
+        "title": "Changes to these terms",
+        "p1": "We may update these terms. The date at the top shows the latest version. If a change is important, we will tell garages by email or in the app. Using Gearva after a change means you accept the new terms."
+      },
+      "law": {
+        "title": "Applicable law",
+        "p1": "These terms are governed by the laws of Lebanon. Any dispute that cannot be settled amicably goes to the competent courts of Lebanon."
+      },
+      "contact": {
+        "title": "Contact",
+        "p1": "Questions about these terms: write to us at {email}."
+      }
+    }
   }
 }

@@ -63,6 +63,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.5 Revenue page: income and debts together | Done | 3a233b7 |
 | 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
 | 7 | 7.7 App store readiness: delete-account and support pages | Done | 87db825 |
+| 7 | 7.8 Terms and conditions page | Written, awaiting the user's check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2578,5 +2579,25 @@ After a review of the Apple and Google store rules against our flow (user questi
 **Verified:** typecheck and lint (api, garage-web), format, contracts 83 tests, every new text in English and Arabic. API suite run by the user after starting Docker: all 32 suites pass (the logged ERROR and WARN lines are the tests that fake a failing email and push provider).
 
 **Commit:** 87db825 "Step 7.7: delete-account and support pages for the app stores"
+
+---
+
+## 7.8 Terms and conditions page (2026-11-23)
+
+**Summary**
+User request after 7.7 (the stores do not require terms, but the user wants them): a public **Terms and conditions** page at `gearva.online/terms`, English and Arabic, in the frame of the privacy policy, 14 numbered sections: about Gearva, what it offers, accounts (garages by application, staff and owners by invite, no public sign-up), garage subscriptions (yearly price shown at subscription, extra branches, free trial, cash or Visa card, locked but not deleted when unpaid, no refunds unless the law or Gearva agree), garage responsibilities, car owners, fair use, data and privacy, availability, responsibility, ending, changes, Lebanese law, contact (gearvalueapp@gmail.com). Linked from the website footer, the privacy policy and the support page. Also the earlier fix on the live site: the application alert email was not sent because the admin setting was empty; set by the user, emails arrive (no code change).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/features/website/terms-page.tsx`, `app/[locale]/terms/page.tsx` (new) | The page |
+| `apps/garage-web/features/website/landing-page.tsx`, `privacy-page.tsx`, `support-page.tsx` | Links |
+| `apps/garage-web/messages/{en,ar}.json` | `terms` texts and link labels |
+
+**Doc changes:** flow.md (owner app section: the terms page).
+
+**Verified:** typecheck and lint (garage-web), format, every text in both languages. To review: the refund rule and Lebanese law are assumptions for the user (or a lawyer) to confirm.
+
+**Commit:** _(pending)_ "Step 7.8: terms and conditions page"
 
 ---

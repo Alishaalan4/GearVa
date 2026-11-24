@@ -42,6 +42,9 @@ export function PrivacyPage() {
         <Link href="/support" className="underline">
           {t('supportLink')}
         </Link>
+        <Link href="/terms" className="underline">
+          {t('termsLink')}
+        </Link>
       </p>
     </PublicShell>
   );

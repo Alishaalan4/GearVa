@@ -103,6 +103,7 @@ Details (step 6.1):
 - Set password: the page posts to `POST /mobile/v1/auth/set-password` (`token`, `password`), forwarded by garage-web like `/v1`. It answers `{ email }` and signs nobody in; the page then says to download the app and sign in with that email. A used, replaced or expired link gives `INVALID_LINK`. It ends every app session of that owner, and writes an `owner.set_password` audit row (actor `OWNER`, no garage).
 - The privacy policy is public at `gearva.online/privacy` (English and Arabic), linked from the website footer and the set-password page. The stores need its address for the app.
 - Step 7.7: a **support page** at `gearva.online/support` (how to get an account, forgot password, contact; Apple asks for a support URL) and the **delete-account page** at `gearva.online/delete-account`, both public and linked from the privacy policy; the footer links to Support. The support and privacy contact email is `gearvalueapp@gmail.com`.
+- Step 7.8: **terms and conditions** at `gearva.online/terms` (English and Arabic, public), for the website, the garage app and the owner app: the service, accounts by invite, garage subscriptions (yearly, extra branches, free trial, locked not deleted when unpaid, no refunds unless the law or Gearva agree), garage and owner responsibilities, fair use, availability, responsibility limits, ending, Lebanese law. Linked from the footer, the privacy policy and the support page.
 - The WhatsApp invite recorded when a customer is added (section 3.1 step 5) stays as it is.
 
 Details (step 6.2):

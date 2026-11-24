@@ -64,7 +64,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
 | 7 | 7.7 App store readiness: delete-account and support pages | Done | 87db825 |
 | 7 | 7.8 Terms and conditions page | Done | d5ae066 |
-| 7 | 7.9 Website on gearva.online, garage app on app.gearva.online | Written, awaiting DNS and the user's check | |
+| 7 | 7.9 Website on gearva.online, garage app on app.gearva.online | Done | ebe0e08 |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2623,6 +2623,6 @@ User request: `gearva.online/en/welcome` opened at once but `gearva.online/en` d
 
 **Verified:** typecheck and lint (api, garage-web), format; a production build of garage-web started with `SITE_HOST=localhost` and `APP_HOST=127.0.0.1`: `/` → `/en`, `/en` and `/ar` 200 with the landing page, `/en/welcome` → `/en`, `/en/login`, `/en/customers` and `/set-password?token=…` → the app address with path and query, terms and owner set-password 200 on the website; on the app address `/en` and `/en/login` 200, `/en/privacy` and `/en/welcome` → the website.
 
-**Commit:** _(pending)_ "Step 7.9: website on gearva.online, garage app on app.gearva.online"
+**Commit:** ebe0e08 "Step 7.9: website on gearva.online, garage app on app.gearva.online"
 
 ---

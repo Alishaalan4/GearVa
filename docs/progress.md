@@ -64,6 +64,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
 | 7 | 7.7 App store readiness: delete-account and support pages | Done | 87db825 |
 | 7 | 7.8 Terms and conditions page | Done | d5ae066 |
+| 7 | 7.9 Website on gearva.online, garage app on app.gearva.online | Written, awaiting DNS and the user's check | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2599,5 +2600,29 @@ User request after 7.7 (the stores do not require terms, but the user wants them
 **Verified:** typecheck and lint (garage-web), format, every text in both languages. To review: the refund rule and Lebanese law are assumptions for the user (or a lawyer) to confirm.
 
 **Commit:** d5ae066 "Step 7.8: terms and conditions page"
+
+---
+
+## 7.9 Website on gearva.online, garage app on app.gearva.online (2026-11-24)
+
+**Summary**
+User request: `gearva.online/en/welcome` opened at once but `gearva.online/en` did not (it was the garage app's home: it waits for the API, asleep on the free plan, then sends a visitor to sign in). The user wants one address for the website, one for garages, and the admin on its own (chosen: `app.gearva.online`).
+- **garage-web `proxy.ts`:** one service answers both addresses (`SITE_HOST`, `APP_HOST`; unset in development = no split). On the website, `/en` and `/ar` show the landing page directly (no API call), `/welcome` redirects there, and the privacy, terms, support, delete-account and owner set-password pages stay. Every other page is sent to `app.gearva.online` with a 308 that keeps the path and query (old links and emails keep working). On the garage app address, the website pages are sent back to `gearva.online`. The API forwarding (`/v1`, the two owner endpoints) works on both addresses.
+- **API:** new `APP_URL_WEBSITE` (optional; falls back to `APP_URL_GARAGE`): owner invite and reset links and the logo in emails use the website; staff invite, reset and view-as links use `APP_URL_GARAGE`, now `https://app.gearva.online`.
+- **render.yaml:** garage-web gets the `app.gearva.online` domain and `SITE_HOST`/`APP_HOST`; the API gets the two URLs.
+- Staff signed in on `gearva.online` sign in once more on `app.gearva.online` (cookies belong to one address).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `apps/garage-web/proxy.ts` | Split by address |
+| `apps/api/src/config/env.ts`, `customers/customers.service.ts`, `owners/owner-auth.service.ts`, `notifications/adapters/resend-email.channel.ts` | `APP_URL_WEBSITE` for owner links and the email logo |
+| `render.yaml` | The new domain and environment values |
+
+**Doc changes:** README (services table), flow.md 2.1 and 2.2 (staff links and cookies on `app.gearva.online`), 11.6 (the addresses), deploy.md (addresses, the `app` CNAME, domain count).
+
+**Verified:** typecheck and lint (api, garage-web), format; a production build of garage-web started with `SITE_HOST=localhost` and `APP_HOST=127.0.0.1`: `/` → `/en`, `/en` and `/ar` 200 with the landing page, `/en/welcome` → `/en`, `/en/login`, `/en/customers` and `/set-password?token=…` → the app address with path and query, terms and owner set-password 200 on the website; on the app address `/en` and `/en/login` 200, `/en/privacy` and `/en/welcome` → the website.
+
+**Commit:** _(pending)_ "Step 7.9: website on gearva.online, garage app on app.gearva.online"
 
 ---

@@ -50,7 +50,9 @@ services:
         generateValue: true
       - key: TOTP_ENCRYPTION_KEY # 32 random bytes in base64, as generateValue makes
         generateValue: true
-      - key: APP_URL_GARAGE
+      - key: APP_URL_GARAGE # the garage app (step 7.9)
+        value: https://app.gearva.online
+      - key: APP_URL_WEBSITE # the public website: owner links, the logo in emails
         value: https://gearva.online
       - key: APP_URL_ADMIN # the link in the new-application email (step 7.1)
         value: https://admin.gearva.online
@@ -91,13 +93,19 @@ services:
     region: frankfurt
     buildCommand: npm ci --include=dev && npx turbo run build --filter=@gearva/garage-web
     startCommand: npm run start -w @gearva/garage-web
-    # The website and the garage app. Render also sends www.gearva.online here.
+    # The public website (gearva.online; Render also sends www here) and the garage app
+    # (app.gearva.online): one service, proxy.ts sends each page to its address (step 7.9).
     domains:
       - gearva.online
+      - app.gearva.online
     envVars:
       - fromGroup: gearva-shared
       - key: API_URL
         value: https://api.gearva.online
+      - key: SITE_HOST
+        value: gearva.online
+      - key: APP_HOST
+        value: app.gearva.online
       - key: PUPPETEER_SKIP_DOWNLOAD # Chrome is only for the API
         value: 'true'
 

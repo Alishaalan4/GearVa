@@ -43,8 +43,11 @@ const envSchema = z
     FCM_SERVICE_ACCOUNT_JSON: unsetIfEmpty(z.string()),
     // `stub` is for tests, which have no Chrome.
     PDF_ADAPTER: z.enum(['puppeteer', 'stub']).default('puppeteer'),
-    // Base URL of garage-web: invite and password-reset links point there.
+    // Base URL of the garage app: staff invite, password-reset and view-as links point there.
     APP_URL_GARAGE: z.url(),
+    // Base URL of the public website (step 7.9): the owner set-password links and the logo
+    // in emails. Unset: the garage app's address (one address for both, as in development).
+    APP_URL_WEBSITE: unsetIfEmpty(z.url()),
     // Base URL of the admin app: the link in the new-application email (step 7.1).
     APP_URL_ADMIN: unsetIfEmpty(z.url()),
     // Signs the 15-minute access tokens (and the 5-minute 2FA challenge).

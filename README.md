@@ -359,7 +359,7 @@ Everything runs on **Render**, managed from one dashboard, and is defined in `re
 | Render service | Type | Domain | Notes |
 |---|---|---|---|
 | `gearva-api` | Web Service (Node) | `api.gearva.online` | Health check `/health`. Runs the migrations and the seed at every start, then the API (with its BullMQ workers and Chrome for PDFs) |
-| `gearva-garage-web` | Web Service (Node) | `gearva.online` (and `www`) | Next.js (V1): the website and the garage app |
+| `gearva-garage-web` | Web Service (Node) | `gearva.online` (and `www`), `app.gearva.online` | Next.js (V1): the website on `gearva.online`, the garage app on `app.gearva.online` (one service, split by address since step 7.9) |
 | `gearva-admin` | Web Service (Node) | `admin.gearva.online` | Next.js (V2), separate service and domain |
 | `gearva-db` | Render Postgres 17 | n/a | Three roles, made once with `npm run bootstrap:render -w @gearva/database` (database.md 6.1) |
 | `gearva-redis` | Key Value (Redis-compatible) | n/a | BullMQ and rate limits. `noeviction`, reachable only inside Render |

@@ -202,7 +202,11 @@ export class OwnerAuthService {
     }
 
     const locale = owner.locale === 'en' ? 'en' : 'ar';
-    const link = newAccessLink(this.env.APP_URL_GARAGE, 'reset', `/${locale}/owner/set-password`);
+    const link = newAccessLink(
+      this.env.APP_URL_WEBSITE ?? this.env.APP_URL_GARAGE,
+      'reset',
+      `/${locale}/owner/set-password`,
+    );
     const notification = await db.$transaction(async (tx) => {
       await tx.owner.update({
         where: { id: owner.id },

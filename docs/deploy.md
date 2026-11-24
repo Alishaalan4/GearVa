@@ -6,7 +6,8 @@ What you do by hand to put Gearva online at **gearva.online**. The code side is 
 
 | Address | What it is |
 |---|---|
-| `https://gearva.online` (and `www`) | The website and the garage app |
+| `https://gearva.online` (and `www`) | The public website |
+| `https://app.gearva.online` | The garage app (step 7.9; the same Render service as the website) |
 | `https://admin.gearva.online` | The admin app |
 | `https://api.gearva.online` | The API (the two apps talk to it; you never open it) |
 
@@ -37,7 +38,7 @@ git push
 ### B1. Render
 1. Go to **render.com** and sign up **with GitHub**.
 2. When it asks, allow access to the **GearVa** repository.
-3. **Billing:** add a card. The Hobby plan includes 2 custom domains and we use 4 (`gearva.online`, `www`, `admin`, `api`), so expect about **$0.50 a month**. Everything else is free.
+3. **Billing:** add a card. The Hobby plan includes 2 custom domains and we use 5 (`gearva.online`, `www`, `app`, `admin`, `api`), so expect about **$0.75 a month**. Everything else is free.
 
 ### B2. Resend (sends the emails)
 1. Go to **resend.com** and sign up.
@@ -141,6 +142,7 @@ The three passwords exist only in Render now. If you ever need new ones, run the
 |---|---|---|
 | `A` | `@` | `216.24.57.1` |
 | `CNAME` | `www` | `gearva-garage-web.onrender.com` |
+| `CNAME` | `app` | `gearva-garage-web.onrender.com` (step 7.9) |
 | `CNAME` | `admin` | `gearva-admin.onrender.com` |
 | `CNAME` | `api` | `gearva-api.onrender.com` |
 | *(the Resend records)* | *exactly as the Resend page shows them* | |
@@ -164,7 +166,7 @@ Free services sleep after 15 minutes without visitors. The API took **about 90 s
 3. **Email:**
    - In admin, open **Applications** and approve your application. Use an **email address you can read** as the garage email.
    - Within a minute the invite email arrives (check spam too).
-   - Open its link, set a password, and sign in at `https://gearva.online`.
+   - Open its link, set a password, and sign in at `https://app.gearva.online`.
 4. **Files and PDFs:**
    - In the garage app, upload a **logo** in Settings.
    - Add a customer and a car, record a service with an invoice, and **download the invoice PDF**. The PDF shows the logo.

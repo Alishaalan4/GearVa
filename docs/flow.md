@@ -52,14 +52,14 @@ Details (Phase 1, step 1.5):
 - The garage email is also the owner's login email (`users.email` is globally unique, so an email that is already a login is refused with `EMAIL_ALREADY_USED` and nothing is created). The admin also enters the owner's name.
 - Trial: `trialEndsAt = now + 30 days` (constant until `trial.days` exists in Phase 5). Paid: the admin picks the last paid day; `expiresAt` is the end of that day (UTC).
 - Main branch: `code = BR1`, named after the garage.
-- Links: the invite lasts 7 days; a password reset lasts 24 hours. Both are `gearva.online/set-password?token=...` and share `users.inviteTokenHash` (only the token's SHA-256 is stored); a new link replaces the previous one. Resend invite only while the owner has no password (`OWNER_ALREADY_ACTIVE`), reset only after (`OWNER_NOT_ACTIVATED`).
+- Links: the invite lasts 7 days; a password reset lasts 24 hours. Both are `app.gearva.online/set-password?token=...` (`gearva.online` until step 7.9; old links are sent on to the new address) and share `users.inviteTokenHash` (only the token's SHA-256 is stored); a new link replaces the previous one. Resend invite only while the owner has no password (`OWNER_ALREADY_ACTIVE`), reset only after (`OWNER_NOT_ACTIVATED`).
 - Endpoints: `POST /admin/v1/garages`, `GET /admin/v1/garages` (`q`, `status`, pagination), `GET /admin/v1/garages/:garageId`, `POST .../:garageId/invite`, `.../password-reset`, `.../suspend` (reason required), `.../reactivate` (back to `TRIAL` if unpaid with a trial, else `ACTIVE`). Each mutation writes an audit row with the garage id.
 
 ### 2.2 Login (garage staff)
 1. `POST /v1/auth/login` with email and password.
 2. Auth looks up the user by email (platform DB role), checks `isActive`, verifies the argon2 hash, and loads the garage.
 3. If the garage is `SUSPENDED` or expired, return `GARAGE_LOCKED` (the web app shows a lock screen with the garage's renewal message).
-4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies, host-only on `gearva.online` through the app's API forwarding (README 5.2).
+4. Otherwise create a session, set httpOnly access (15 min) and refresh (30 days, rotated) cookies, host-only on `app.gearva.online` (`gearva.online` until step 7.9) through the app's API forwarding (README 5.2).
 5. Login attempts are rate limited per IP and per email.
 
 Details (Phase 1, step 1.6):
@@ -534,7 +534,8 @@ The public website is a few pages inside `garage-web` (no separate app): a landi
 3. The same email or phone can apply again later; the admin sees earlier applications from it.
 
 How it works (step 5.6):
-- **The website** is `/welcome` in garage-web. A visitor who is not signed in and opens `/` is sent there; every other app page still sends them to sign in. The sign-in page links to the Apply form (`/welcome#apply`). The prices come from `GET /v1/public/pricing` (year price, extra branch price, trial days).
+- **Addresses (step 7.9, user request 2026-11-24):** the website is at **`gearva.online`** (its landing page at `/en` and `/ar`; `/welcome` is an old name that redirects there) with the privacy, terms, support, delete-account and owner set-password pages; the **garage app** is at **`app.gearva.online`**; the admin stays at `admin.gearva.online`. One garage-web service answers both addresses: `proxy.ts` sends each page to its own address with a permanent redirect that keeps the path and query, so old links and emails keep working (`SITE_HOST`, `APP_HOST`; unset in development, where everything stays on one address). The API sends staff links (invite, reset, view-as) to `APP_URL_GARAGE` = `https://app.gearva.online` and owner set-password links and the email logo to `APP_URL_WEBSITE` = `https://gearva.online`. Staff signed in on `gearva.online` sign in once more on the new address (sessions are per address).
+- Before step 7.9: **the website** was `/welcome` in garage-web. A visitor who is not signed in and opens `/` is sent there; every other app page still sends them to sign in. The sign-in page links to the Apply form (`/welcome#apply`). The prices come from `GET /v1/public/pricing` (year price, extra branch price, trial days).
 - **Apply:** `POST /v1/public/applications`, at most 5 per hour from one IP. The answer is always `202` with nothing in it. When the hidden `website` field (the honeypot) is filled in, nothing is stored and only a warning is logged. The visitor is nobody, so there is no audit row; the application keeps the IP.
 - **Admin API:** `GET /admin/v1/applications` (new first, then newest; filter by status, search by garage, owner, email or phone), `GET /admin/v1/applications/:id` (with up to 20 earlier applications from the same email or phone), `POST …/:id/approve` (the body is the create-garage form; the garage and the application's `APPROVED` mark are saved in one transaction, so a garage that cannot be created leaves the application `NEW`, and two admins approving at once create one garage), and `POST …/:id/reject` (a reason, 3 to 500 characters). An application that was already reviewed answers `409 APPLICATION_ALREADY_REVIEWED`. Every admin may review.
 - The audit row of an approval is the new garage's (`application.approve`), like `garage.create`; a rejection's is the application's (`application.reject`).

@@ -176,7 +176,7 @@ export class CustomersService {
 
       const locale = customer.owner.locale === 'en' ? 'en' : 'ar';
       const link = newAccessLink(
-        this.env.APP_URL_GARAGE,
+        this.env.APP_URL_WEBSITE ?? this.env.APP_URL_GARAGE,
         'invite',
         `/${locale}/owner/set-password`,
       );

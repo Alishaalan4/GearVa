@@ -37,7 +37,7 @@ export class ResendEmailChannel implements NotificationChannel {
         subject: email.subject,
         text: email.text,
         // The same words with the Gearva logo (step 6.5c); mail apps pick the part they show.
-        html: emailHtml(email, input.locale, this.env.APP_URL_GARAGE),
+        html: emailHtml(email, input.locale, this.env.APP_URL_WEBSITE ?? this.env.APP_URL_GARAGE),
       }),
       signal: AbortSignal.timeout(15_000),
     });

@@ -63,7 +63,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.5 Revenue page: income and debts together | Done | 3a233b7 |
 | 7 | 7.6 Whish renamed to Visa card | Done | 4f117f8 |
 | 7 | 7.7 App store readiness: delete-account and support pages | Done | 87db825 |
-| 7 | 7.8 Terms and conditions page | Written, awaiting the user's check | |
+| 7 | 7.8 Terms and conditions page | Done | d5ae066 |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2598,6 +2598,6 @@ User request after 7.7 (the stores do not require terms, but the user wants them
 
 **Verified:** typecheck and lint (garage-web), format, every text in both languages. To review: the refund rule and Lebanese law are assumptions for the user (or a lawyer) to confirm.
 
-**Commit:** _(pending)_ "Step 7.8: terms and conditions page"
+**Commit:** d5ae066 "Step 7.8: terms and conditions page"
 
 ---

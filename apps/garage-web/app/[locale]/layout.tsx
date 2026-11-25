@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { IBM_Plex_Sans_Arabic, Plus_Jakarta_Sans } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -27,6 +27,9 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
+  // The language comes from the address: on gearva.online, proxy.ts shows /ar as /ar/welcome
+  // without the i18n step, so the address is the only place it can come from (step 7.9).
+  setRequestLocale(locale);
 
   return (
     <html

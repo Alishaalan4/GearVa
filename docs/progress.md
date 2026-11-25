@@ -65,7 +65,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.7 App store readiness: delete-account and support pages | Done | 87db825 |
 | 7 | 7.8 Terms and conditions page | Done | d5ae066 |
 | 7 | 7.9 Website on gearva.online, garage app on app.gearva.online | Done | ebe0e08 |
-| 7 | 7.9b Fix: gearva.online/ar showed English and "not found" | Written, awaiting push | |
+| 7 | 7.9b Fix: gearva.online/ar showed English and "not found" | Done | 7765a3d |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2643,6 +2643,6 @@ User report: `https://gearva.online/ar` said "not found". Since 7.9, `proxy.ts` 
 
 **Verified:** a production build started with `SITE_HOST=localhost`, `APP_HOST=127.0.0.1`: `/ar` answers `lang="ar" dir="rtl"` with the Arabic texts, `/en` English; no "not found" in the page; typecheck, lint, format.
 
-**Commit:** _(pending)_ "Fix: Arabic landing page on gearva.online/ar"
+**Commit:** `7765a3d` "Fix: Arabic landing page on gearva.online/ar"
 
 ---

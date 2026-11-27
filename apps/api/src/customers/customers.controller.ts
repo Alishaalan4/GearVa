@@ -18,10 +18,14 @@ import {
   type CustomerListItem,
   type Paginated,
   type SearchResult,
+  type WhatsappMessages,
+  type WhatsappSentResponse,
   createCustomerSchema,
   customerListQuerySchema,
   searchQuerySchema,
   updateCustomerSchema,
+  whatsappQuerySchema,
+  whatsappSentSchema,
 } from '@gearva/contracts';
 import type { Response } from 'express';
 import { createZodDto } from 'nestjs-zod';
@@ -29,16 +33,25 @@ import { Audit } from '../audit/audit.decorator';
 import { Roles } from '../auth/staff-access.decorators';
 import { CustomersService } from './customers.service';
 import { SearchService } from './search.service';
+import { WhatsappService } from './whatsapp.service';
 
 class CreateCustomerDto extends createZodDto(createCustomerSchema) {}
 class UpdateCustomerDto extends createZodDto(updateCustomerSchema) {}
 class SearchQueryDto extends createZodDto(searchQuerySchema) {}
 class CustomerListQueryDto extends createZodDto(customerListQuerySchema) {}
+class WhatsappQueryDto extends createZodDto(whatsappQuerySchema) {}
+class WhatsappSentDto extends createZodDto(whatsappSentSchema) {}
+
+/** Who may message customers on WhatsApp: as the reminder list (flow.md 1, 9.5). */
+const MESSAGE_ROLES = ['OWNER', 'MANAGER', 'RECEPTIONIST'] as const;
 
 /** flow.md 1: every staff role adds and edits customers. */
 @Controller('v1/customers')
 export class CustomersController {
-  constructor(private readonly customers: CustomersService) {}
+  constructor(
+    private readonly customers: CustomersService,
+    private readonly whatsapp: WhatsappService,
+  ) {}
 
   /** 201 for a new customer, 200 when this garage already has the phone (flow.md 13). */
   @Post()
@@ -84,6 +97,32 @@ export class CustomersController {
   @Audit('customer.app_invite', 'customer')
   inviteToApp(@Param('customerId', ParseUUIDPipe) customerId: string): Promise<CustomerDetail> {
     return this.customers.inviteToApp(customerId);
+  }
+
+  /**
+   * flow.md 9.7 (step 7.10): the ready WhatsApp messages for this customer, written in
+   * their language. With a visit, also "car ready" and the invoice.
+   */
+  @Get(':customerId/whatsapp')
+  @Roles(...MESSAGE_ROLES)
+  whatsappMessages(
+    @Param('customerId', ParseUUIDPipe) customerId: string,
+    @Query() query: WhatsappQueryDto,
+  ): Promise<WhatsappMessages> {
+    return this.whatsapp.messages(customerId, query.visitId);
+  }
+
+  /** Staff opened WhatsApp with one of them: a SENT WhatsApp row in the log. */
+  @Post(':customerId/whatsapp-sent')
+  @Roles(...MESSAGE_ROLES)
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Audit('customer.whatsapp_message', 'customer')
+  whatsappSent(
+    @Param('customerId', ParseUUIDPipe) customerId: string,
+    @Body() body: WhatsappSentDto,
+  ): Promise<WhatsappSentResponse> {
+    return this.whatsapp.sent(customerId, body);
   }
 }
 

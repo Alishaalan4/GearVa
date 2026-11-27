@@ -380,6 +380,27 @@ describe('Tenant isolation (test:tenancy)', () => {
       expect(await ownerOfB()).toEqual(before);
     },
 
+    'GET /v1/customers/:customerId/whatsapp': async () => {
+      // B's customer (with B's phone and name) is never written into A's messages.
+      await asA.get(`/v1/customers/${b.customerId}/whatsapp`).expect(404);
+      // A's own customer with B's visit: the visit is not found either.
+      await asA.get(`/v1/customers/${a.customerId}/whatsapp?visitId=${b.openVisitId}`).expect(404);
+    },
+
+    'POST /v1/customers/:customerId/whatsapp-sent': async () => {
+      await expectBUnchanged(async () => {
+        await asA
+          .post(`/v1/customers/${b.customerId}/whatsapp-sent`, { template: 'FREE' })
+          .expect(404);
+        await asA
+          .post(`/v1/customers/${a.customerId}/whatsapp-sent`, {
+            template: 'CAR_READY',
+            visitId: b.openVisitId,
+          })
+          .expect(404);
+      });
+    },
+
     'POST /v1/customers/:customerId/vehicles': async () => {
       await expectBUnchanged(async () => {
         const car = { plate: 'X 1', make: 'Kia', model: 'Rio', distanceUnit: 'KM', odometer: 1 };

@@ -549,7 +549,8 @@
       "INVITE": "Invite or password link",
       "CAR_READY": "Car ready",
       "PAYMENT_REMINDER": "Payment reminder",
-      "ANNOUNCEMENT": "Message from Gearva"
+      "ANNOUNCEMENT": "Message from Gearva",
+      "MESSAGE": "WhatsApp message"
     }
   },
   "viewAs": {
@@ -948,6 +949,27 @@
         "title": "Contact",
         "p1": "Questions about these terms: write to us at {email}."
       }
+    }
+  },
+  "whatsapp": {
+    "title": "Message on WhatsApp",
+    "intro": "Pick a ready message, change it if you like, and send it from your own WhatsApp.",
+    "start": "Write a message",
+    "pick": "Choose a message above.",
+    "text": "Message",
+    "send": "Open in WhatsApp",
+    "opened": "WhatsApp is open with the message. Press send there. Gearva notes that it was sent.",
+    "written": {
+      "en": "Written in English, the customer's language.",
+      "ar": "Written in Arabic, the customer's language."
+    },
+    "templates": {
+      "CAR_READY": "Car is ready",
+      "INVOICE_READY": "Invoice",
+      "PAYMENT_DUE": "Payment reminder",
+      "SERVICE_DUE": "Service reminder",
+      "THANK_YOU": "Thank you",
+      "FREE": "My own message"
     }
   }
 }

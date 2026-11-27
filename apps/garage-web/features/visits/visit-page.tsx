@@ -7,6 +7,7 @@ import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ApiErrorAlert } from '@/components/api-error';
 import { useStaff } from '@/features/auth/use-staff';
+import { WhatsappMessage } from '@/features/customers/whatsapp-message';
 import { FinishStep } from '@/features/invoices/finish-step';
 import { InvoiceStatusPill } from '@/features/invoices/invoice-status';
 import { ServicePicker, canRecordServices } from '@/features/quick-entry/service-picker';
@@ -145,6 +146,8 @@ export function VisitPage({ visitId, startFinish }: { visitId: string; startFini
           </Link>
         </Card>
       )}
+
+      <WhatsappMessage customerId={v.customer.id} visitId={v.id} />
 
       {canEdit && finishing && (
         <FinishStep

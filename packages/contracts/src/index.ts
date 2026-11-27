@@ -22,3 +22,4 @@ export * from './suggestions';
 export * from './system-settings';
 export * from './text-normalize';
 export * from './visits';
+export * from './whatsapp';

@@ -436,7 +436,7 @@ Payments are append-only. Rule: `SUM(payments.amountCents) = invoices.paidCents`
 | ownerId | uuid? FK | recipient owner (customer). The table is created in Phase 1 before `owners` exists, so the FK is added in the Phase 2 migration |
 | userId | uuid? FK | recipient staff member, for in-app staff notices |
 | channel | NotificationChannel | `EMAIL`, `IN_APP`, `PUSH`, `WHATSAPP` |
-| type | NotificationType | `SERVICE_REMINDER`, `MONTHLY_REMINDER`, `INVOICE`, `OFFER`, `INVITE`, `CAR_READY`, `WARRANTY_END`, `PAYMENT_REMINDER`, `ANNOUNCEMENT` (step 5.10: a message from Gearva to a garage owner, `refType` `announcement`) |
+| type | NotificationType | `SERVICE_REMINDER`, `MONTHLY_REMINDER`, `INVOICE`, `OFFER`, `INVITE`, `CAR_READY`, `WARRANTY_END`, `PAYMENT_REMINDER`, `ANNOUNCEMENT` (step 5.10: a message from Gearva to a garage owner, `refType` `announcement`), `MESSAGE` (step 7.10: a WhatsApp message staff sent themselves, flow.md 9.7) |
 | template | text | |
 | locale | text | |
 | recipient | text? | email, phone or token used |
@@ -527,7 +527,7 @@ FileKind            LOGO | SERVICE_PHOTO | INVOICE_PDF | OFFER_IMAGE
 ReminderKind        SERVICE_DUE | WARRANTY_END | RECOMMENDED_NEXT
 ReminderStatus      ACTIVE | SENT | COMPLETED | CANCELLED
 NotificationChannel EMAIL | IN_APP | PUSH | WHATSAPP
-NotificationType    SERVICE_REMINDER | MONTHLY_REMINDER | INVOICE | OFFER | INVITE | CAR_READY | WARRANTY_END | PAYMENT_REMINDER | ANNOUNCEMENT
+NotificationType    SERVICE_REMINDER | MONTHLY_REMINDER | INVOICE | OFFER | INVITE | CAR_READY | WARRANTY_END | PAYMENT_REMINDER | ANNOUNCEMENT | MESSAGE
 NotificationStatus  QUEUED | SENT | DELIVERED | FAILED | SKIPPED
 SuggestionField     OIL_BRAND | OIL_GRADE | FILTER_BRAND | BATTERY_BRAND | TIRE_BRAND | BRAKE_PAD_BRAND | SERVICE_NAME | VEHICLE_MAKE | VEHICLE_MODEL
 OfferTarget         ALL | OVERDUE | INACTIVE_6M

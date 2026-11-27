@@ -67,6 +67,8 @@ enum NotificationType {
   PAYMENT_REMINDER
   // step 5.10: a message from Gearva to a garage (flow.md 11.9)
   ANNOUNCEMENT
+  // step 7.10: a WhatsApp message staff sent themselves (thank you, or their own text)
+  MESSAGE
 }
 
 enum NotificationStatus {

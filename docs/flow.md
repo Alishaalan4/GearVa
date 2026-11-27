@@ -28,6 +28,7 @@ How the system behaves, step by step. `database.md` defines the tables used here
 | Cancel an invoice | yes | yes | no | no |
 | See income summary, revenue screens, debt list | yes | yes | no | debt list only |
 | Reminders due list (send on WhatsApp, section 9.5) | yes | yes | no | yes |
+| Message a customer on WhatsApp (ready messages, section 9.7) | yes | yes | no | yes |
 | Notification log | yes | yes | no | no |
 | Offers and broadcasts | yes | yes | no | no |
 | Staff, garage settings, branch name/address/phone | yes | no | no | no |
@@ -460,6 +461,21 @@ A "Reminders due" screen for OWNER, MANAGER and RECEPTIONIST lists the due remin
 - Titles and bodies are short texts (`templates/in-app.ts`) rendered in the row's language when the inbox is read. The monthly reminder (9.2) stays email only.
 - A test push to one phone: `npm run push:test -w @gearva/api -- <token>` (after a build, with the key in the environment).
 
+### 9.7 Message on WhatsApp (step 7.10)
+User request 2026-11-27: staff message a customer from their own WhatsApp with a ready text. Nothing is sent automatically; there is no WhatsApp provider and no cost.
+- A **Message on WhatsApp** card on the customer page and on every visit page (owner, managers, receptionists; not mechanics, as the reminder list).
+- **Write a message** shows the ready messages that fit. Each one is written in the customer's language (the owner's `locale`) and starts with "Hello {name}, this is {garage}.":
+  - **Car is ready** (visit page): the car and plate.
+  - **Invoice** (visit page, when the visit has an invoice that is not cancelled): the number, the total, and "fully paid" or what is left to pay.
+  - **Payment reminder** (when the customer owes this garage money: open invoices, counted as the debt list does, so branch staff see their branch).
+  - **Service reminder** (a general "time for the next service"; not offered when the customer opted out of reminders).
+  - **Thank you**.
+  - **My own message** (the greeting only; staff write the rest).
+- The templates are the same for every garage (user decision 2026-11-27: fixed until a change is needed; garages cannot edit them).
+- Staff may change the text, then **Open in WhatsApp** opens `https://wa.me/<phone>?text=<message>` and they press send there.
+- Opening WhatsApp writes a `WHATSAPP` notification, status `SENT` (as "Mark as sent" in 9.5, Gearva trusts the button): type `CAR_READY`, `INVOICE`, `PAYMENT_REMINDER`, `SERVICE_REMINDER`, or `MESSAGE` for "Thank you" and "My own message"; `payload` `{ template }` only, never the text; `refType` `visit` or `customer`; a new dedupe key per click (`WHATSAPP:{uuid}`). It does not count a reminder round: due reminders are still sent from the list in 9.5. The audit row `customer.whatsapp_message` records who sent it.
+- API: `GET /v1/customers/:customerId/whatsapp?visitId=` → `{ phone, locale, messages: [{ template, text }] }`; `POST /v1/customers/:customerId/whatsapp-sent` `{ template, visitId? }` → `{ id, notificationId }` (30 a minute). A message that does not fit (for example "Payment reminder" with nothing owed, or "Car is ready" without a visit) is `400`; a visit of another customer is `404`.
+
 ---
 
 ## 10. Offers and marketing (Phase 7)
@@ -616,6 +632,7 @@ The super admin's view of `audit_logs` (database.md 4.6) across all garages, rea
 /v1/invoices, /v1/invoices/:id/payments, /v1/invoices/:id/cancel, /v1/invoices/:id/pdf
 /v1/debts
 /v1/reminders/due, /v1/reminders/:id/whatsapp-sent, /v1/reminder-settings, /v1/notifications
+/v1/customers/:id/whatsapp, /v1/customers/:id/whatsapp-sent   ready WhatsApp messages (9.7)
 /v1/offers
 /v1/reports/*                 revenue screens
 /v1/audit

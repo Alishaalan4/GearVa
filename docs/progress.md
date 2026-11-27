@@ -66,6 +66,7 @@ Times are local (Asia/Beirut). Times marked `~` are approximate; commit times ar
 | 7 | 7.8 Terms and conditions page | Done | d5ae066 |
 | 7 | 7.9 Website on gearva.online, garage app on app.gearva.online | Done | ebe0e08 |
 | 7 | 7.9b Fix: gearva.online/ar showed English and "not found" | Done | 7765a3d |
+| 7 | 7.10 Message on WhatsApp (ready messages) | Written, awaiting migrate and tests | |
 | 6 | 6.0 Owner app contract and developer brief (Flutter) | ✅ Done | 2026-11-15 |
 | 6 | 6.1 Owner accounts, invite, set-password and privacy pages | ✅ Done | 2026-11-16 |
 | 6 | 6.2 Owner auth API (login, refresh, logout, forgot password, profile, preferences, delete) | ✅ Done | 2026-11-16 |
@@ -2644,5 +2645,32 @@ User report: `https://gearva.online/ar` said "not found". Since 7.9, `proxy.ts` 
 **Verified:** a production build started with `SITE_HOST=localhost`, `APP_HOST=127.0.0.1`: `/ar` answers `lang="ar" dir="rtl"` with the Arabic texts, `/en` English; no "not found" in the page; typecheck, lint, format.
 
 **Commit:** `7765a3d` "Fix: Arabic landing page on gearva.online/ar"
+
+---
+
+## 7.10 Message on WhatsApp with ready messages (2026-11-27)
+
+**Summary**
+User request: press a button, pick a ready message, and send it from the garage's own WhatsApp (not automatic; no WhatsApp provider). Templates fixed for every garage (user decision, option A).
+- A **Message on WhatsApp** card on the customer page and on every visit page (owner, managers, receptionists). It lists the ready messages that fit: car is ready, invoice (total and paid or left to pay), payment reminder (when the customer owes money), service reminder (not after a reminders opt-out), thank you, and "my own message". Each is written in the customer's language; staff can edit it, then **Open in WhatsApp** opens `wa.me/<phone>?text=...`.
+- Opening WhatsApp is logged as a `WHATSAPP` `SENT` notification (type by template, `MESSAGE` for thank you and own message; never the text) and a `customer.whatsapp_message` audit row.
+- New enum value `NotificationType.MESSAGE` (one-line migration).
+
+**Files changed**
+| File | Change |
+|---|---|
+| `packages/contracts/src/whatsapp.ts`, `index.ts` | Templates, query, request and response types |
+| `packages/database/prisma/schema.prisma`, `migrations/20261127120000_notification_type_message` | `MESSAGE` notification type |
+| `apps/api/src/notifications/templates/whatsapp-messages.ts` | The ready texts in English and Arabic |
+| `apps/api/src/customers/whatsapp.service.ts`, `customers.controller.ts`, `customers.module.ts` | `GET /v1/customers/:id/whatsapp`, `POST /v1/customers/:id/whatsapp-sent` |
+| `apps/garage-web/features/customers/whatsapp-message.tsx`, `customer-page.tsx`, `visits/visit-page.tsx` | The card |
+| `apps/garage-web/messages/en.json`, `ar.json` | `whatsapp` texts, log label `MESSAGE` |
+| `apps/api/test/whatsapp.spec.ts`, `tenancy.spec.ts` | Tests and the two tenancy cases |
+
+**Doc changes:** flow.md roles table, new 9.7, API list (14); database.md `NotificationType`.
+
+**Verified:** typecheck and lint (contracts, api, garage-web), format; after `db:migrate` and `test:prepare`, the full test run (contracts, database, api: 371 tests) with the tenancy suite and its two new cases; `whatsapp.spec.ts` 6 tests (the log test counts only SENT rows: the automatic invite and car-ready rows are SKIPPED WhatsApp rows of the same customer).
+
+**Commit:** _(pending)_ "Step 7.10: message customers on WhatsApp with ready messages"
 
 ---

@@ -18,6 +18,7 @@ import { useStaff } from '@/features/auth/use-staff';
 import { Link } from '@/i18n/navigation';
 import { ApiError, api, apiPatch, apiPost } from '@/lib/api';
 import { useDistance } from '@/lib/format';
+import { WhatsappMessage } from './whatsapp-message';
 
 /** flow.md 3.1, 3.2.1: the customer's file, their cars, and "Add car". */
 export function CustomerPage({ customerId, existing }: { customerId: string; existing: boolean }) {
@@ -76,6 +77,7 @@ export function CustomerPage({ customerId, existing }: { customerId: string; exi
       </Card>
 
       <OwnerAppCard customer={c} />
+      <WhatsappMessage customerId={c.id} />
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
